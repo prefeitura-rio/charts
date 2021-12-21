@@ -1,2 +1,6 @@
-# charts
-Helm charts para usuários da infraestrutura
+# Charts
+
+```sh
+helm repo add prefeitura-rio https://prefeitura-rio.github.io/charts
+helm repo update
+```
