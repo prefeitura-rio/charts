@@ -1,0 +1,25 @@
+apiVersion: v1
+entries:
+  bar:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2021-12-21T14:25:13.726604691Z"
+    description: A Helm chart for Kubernetes
+    digest: 03394ab9364b6ba8690fe60ace04b8d7c8a50bf3da68212a76ac9d9e1ea15b4e
+    name: bar
+    type: application
+    urls:
+    - https://github.com/prefeitura-rio/charts/releases/download/bar-0.1.2/bar-0.1.2.tgz
+    version: 0.1.2
+  foo:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2021-12-21T14:25:13.904564498Z"
+    description: A Helm chart for Kubernetes
+    digest: b60ec7483ec00b6b3b841bd9098b634fa837fc31186b5ff99e514e6b55356802
+    name: foo
+    type: application
+    urls:
+    - https://github.com/prefeitura-rio/charts/releases/download/foo-0.1.1/foo-0.1.1.tgz
+    version: 0.1.1
+generated: "2021-12-21T14:25:13.41844377Z"
