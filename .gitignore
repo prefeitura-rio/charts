@@ -37,5 +37,6 @@ Session.vim
 .history
 .deploy
 .env
+.pages
 bin
 cr
