@@ -21,8 +21,13 @@ jobs:
       - name: Install helm
         uses: azure/setup-helm@v1
         with:
-          version: v3.7.0
+          version: v3.4.0
 
-      - name: Release charts
-        run: |
-          ./.github/scripts/release.sh
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@v1.2.1
+        with:
+          charts_dir: charts
+          config: cr.yaml
+          charts_repo_url: https://prefeitura-rio.github.io/charts
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
