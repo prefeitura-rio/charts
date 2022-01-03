@@ -1,0 +1,9 @@
+app:
+  name: "your-exposed-app-name"
+  host: "example.com"
+  port: "80"
+
+vpn:
+  host: "vpn.example.com"
+  username: "admin"
+  password: "admin"

@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ .Values.app.name }}
+  labels:
+    app: {{ .Values.app.name }}
+spec:
+  containers:
+    - name: vpn-client
+      image: gabrielmilan/k8s-f5-service-vpn-client
+      env:
+        - name: VPNHOST
+          value: "{{ .Values.vpn.host }}"
+        - name: USERNAME
+          value: "{{ .Values.vpn.username }}"
+        - name: PASSWORD
+          value: "{{ .Values.vpn.password }}"
+      lifecycle:
+        postStart:
+          exec:
+            command:
+            - /post-start.sh
+      securityContext:
+        privileged: true
+    - name: port-forward
+      image: marcnuri/port-forward
+      env:
+        - name: REMOTE_HOST
+          value: "{{ .Values.app.host }}"
+        - name: REMOTE_PORT
+          value: "{{ .Values.app.port }}"
+        - name: LOCAL_PORT
+          value: "{{ .Values.app.port }}"
+      ports:
+        - name: exposed
+          containerPort: {{ .Values.app.port }}
+          protocol: TCP

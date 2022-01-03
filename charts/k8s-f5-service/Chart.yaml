@@ -1,0 +1,9 @@
+apiVersion: v2
+name: k8s-f5-service
+description: Exposing a service hosted inside a F5 VPN to the Kuberenetes cluster
+
+type: application
+
+version: 0.1.0
+
+appVersion: "1.16.0"
