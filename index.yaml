@@ -22,4 +22,15 @@ entries:
     urls:
     - https://github.com/prefeitura-rio/charts/releases/download/foo-0.1.1/foo-0.1.1.tgz
     version: 0.1.1
+  k8s-f5-service:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2022-01-03T19:17:55.83391822Z"
+    description: Exposing a service hosted inside a F5 VPN to the Kuberenetes cluster
+    digest: 26473cc8c2b3ee04aed08df72a30990ca9a8e473a9df397f9bfd8269b09c5fac
+    name: k8s-f5-service
+    type: application
+    urls:
+    - https://github.com/prefeitura-rio/charts/releases/download/k8s-f5-service-0.1.0/k8s-f5-service-0.1.0.tgz
+    version: 0.1.0
 generated: "2021-12-21T14:25:13.41844377Z"
