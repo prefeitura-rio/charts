@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.agent.name }}
+  labels: 
+    app.kubernetes.io/component: agent
+spec:
+  replicas: {{ .Values.agent.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: agent
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: agent
+    spec:
+      serviceAccountName: {{ .Values.agent.serviceAccountName }}
+      containers:
+        - name: agent
+          image: "{{ .Values.agent.image.name }}:{{ .Values.agent.image.tag }}"
+          command:
+            - bash
+            - "-c"
+            {{- if .Values.agent.jobTemplateFilePath }}
+            - "prefect agent kubernetes start --job-template {{ .Values.agent.jobTemplateFilePath }}"
+            {{- else }}
+            - "prefect agent kubernetes start"
+            {{- end }}
+          env:
+            - name: PREFECT__CLOUD__API
+              value: {{ .Values.agent.apollo_url }}
+            - name: NAMESPACE
+              value: {{ .Release.Namespace }}
+            - name: JOB_MEM_REQUEST
+              value: {{ .Values.agent.job.resources.requests.memory | quote }}
+            - name: JOB_MEM_LIMIT
+              value: {{ .Values.agent.job.resources.limits.memory | quote }}
+            - name: JOB_CPU_REQUEST
+              value: {{ .Values.agent.job.resources.requests.cpu | quote }}
+            - name: JOB_CPU_LIMIT
+              value: {{ .Values.agent.job.resources.limits.cpu | quote }}
+            - name: SERVICE_ACCOUNT_NAME
+              value: {{ .Values.agent.serviceAccountName | quote }}
+            - name: PREFECT__BACKEND
+              value: server
+            - name: PREFECT__CLOUD__AGENT__AGENT_ADDRESS
+              value: http://0.0.0.0:8080
+            - name: JOB_TEMPLATE_FILEPATH
+              value: {{ .Values.agent.jobTemplateFilePath | quote }}
+            - name: TAILSCALE_AUTHKEY
+              value: {{ .Values.tailscale.authkey | quote }}
+            {{- with .Values.agent.env }}
+              {{- toYaml . | nindent 10 }}
+            {{- end }}
+          livenessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /api/health
+              port: 8080
+            initialDelaySeconds: 40
+            periodSeconds: 40
+          {{- with .Values.agent.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN

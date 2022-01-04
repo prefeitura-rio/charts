@@ -1,0 +1,51 @@
+# tailscale configuration
+tailscale:
+  authkey: ""
+
+# agent configures a Prefect Kubernetes agent which will
+# schedule flows as jobs in the cluster
+agent:
+  # The name for the deployment
+  name: "prefect-agent"
+
+  # K8s service account name (will be created)
+  serviceAccountName: "prefect-agent"
+
+  # The number of replicas to deploy (1 is enough for most cases)
+  replicas: 1
+
+  # The image to use for the agent. Note that changing this may require
+  # setting up VPN connection on the image.
+  image:
+    name: "ghcr.io/prefeitura-rio/prefect-agent"
+    tag: "0.15.9"
+
+  # jobTemplateFilePath defines which template to use for the agent's jobs. Defaults
+  # to an empty string, which will use the default template.
+  # reference: https://docs.prefect.io/orchestration/agents/kubernetes.html#custom-job-template
+  jobTemplateFilePath: ""
+
+  # The Apollo GraphQL URL to use for the agent. Defaults to the
+  # city hall one (over VPN).
+  apollo_url: "http://prefect-apollo.prefect.svc.cluster.local:4200/"
+
+  # job configures values associated with jobs the agent launches
+  job:
+    # resources defines the computational resources for flow jobs
+    resources:
+      limits:
+        memory: ""
+        cpu: ""
+      requests:
+        memory: ""
+        cpu: ""
+
+  # General purpose environment variables to set on the agent pods
+  env: []
+
+  # resources defines the computational resources for the Prefect
+  # agent itself
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi

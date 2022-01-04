@@ -1,0 +1,10 @@
+apiVersion: v2
+name: prefect-agent
+description: Deploys Prefect Agents for Rio de Janeiro City Hall
+
+type: application
+
+version: 0.1.0
+
+# This should match the Prefect version we're using
+appVersion: "0.15.9"
