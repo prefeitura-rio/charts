@@ -14,6 +14,16 @@ entries:
   prefect-agent:
   - apiVersion: v2
     appVersion: 0.15.9
+    created: "2022-01-04T19:45:42.604373802Z"
+    description: Deploys Prefect Agents for Rio de Janeiro City Hall
+    digest: 6be409783b4611024f297117cce2f0242a79afcd536dcc06c7efb48fb3628a16
+    name: prefect-agent
+    type: application
+    urls:
+    - https://github.com/prefeitura-rio/charts/releases/download/prefect-agent-0.1.3/prefect-agent-0.1.3.tgz
+    version: 0.1.3
+  - apiVersion: v2
+    appVersion: 0.15.9
     created: "2022-01-04T19:33:13.442647891Z"
     description: Deploys Prefect Agents for Rio de Janeiro City Hall
     digest: fe400eefc1e8079172955f18062081eeb3d79f54dd183a8f25831d41f2c6192a
