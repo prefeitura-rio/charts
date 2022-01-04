@@ -31,6 +31,8 @@ spec:
               value: {{ .Values.agent.apollo_url }}
             - name: NAMESPACE
               value: {{ .Release.Namespace }}
+            - name: PREFECT__CLOUD__AGENT__LABELS
+              value: {{ .Values.agent.prefectLabels | toJson | quote }}
             - name: JOB_MEM_REQUEST
               value: {{ .Values.agent.job.resources.requests.memory | quote }}
             - name: JOB_MEM_LIMIT

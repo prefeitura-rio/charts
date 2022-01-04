@@ -8,6 +8,12 @@ agent:
   # The name for the deployment
   name: "prefect-agent"
 
+  # prefectLabels defines what scheduling labels (not K8s labels) should
+  # be associated with the agent
+  prefectLabels: []
+  # - label1
+  # - label2
+
   # K8s service account name (will be created)
   serviceAccountName: "prefect-agent"
 
