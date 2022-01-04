@@ -94,7 +94,7 @@ if __name__ == "__main__":
 
     sleep(5)
 
-    cmd = "sleep infinity"
+    cmd = "prefect agent kubernetes start"
     job_template_filepath = getenv("JOB_TEMPLATE_FILEPATH")
     cmd_args = f"--job-template {job_template_filepath}" if job_template_filepath else ""
     thread_prefect = run_threaded(
