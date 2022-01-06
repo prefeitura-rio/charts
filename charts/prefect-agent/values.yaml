@@ -1,7 +1,3 @@
-# tailscale configuration
-tailscale:
-  authkey: ""
-
 # agent configures a Prefect Kubernetes agent which will
 # schedule flows as jobs in the cluster
 agent:
@@ -23,7 +19,7 @@ agent:
   # The image to use for the agent. Note that changing this may require
   # setting up VPN connection on the image.
   image:
-    name: "ghcr.io/prefeitura-rio/prefect-agent"
+    name: "prefecthq/prefect"
     tag: "0.15.9"
 
   # jobTemplateFilePath defines which template to use for the agent's jobs. Defaults
@@ -32,8 +28,8 @@ agent:
   jobTemplateFilePath: ""
 
   # The Apollo GraphQL URL to use for the agent. Defaults to the
-  # city hall one (over VPN).
-  apollo_url: "http://prefect-apollo.prefect.svc.cluster.local:4200/"
+  # Apollo service (must have either Apollo or Istion setup)
+  apollo_url: "http://prefect-apollo:4200/"
 
   # job configures values associated with jobs the agent launches
   job:

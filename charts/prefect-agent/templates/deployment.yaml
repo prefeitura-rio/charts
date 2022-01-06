@@ -47,10 +47,6 @@ spec:
               value: server
             - name: PREFECT__CLOUD__AGENT__AGENT_ADDRESS
               value: http://0.0.0.0:8080
-            - name: JOB_TEMPLATE_FILEPATH
-              value: {{ .Values.agent.jobTemplateFilePath | quote }}
-            - name: TAILSCALE_AUTHKEY
-              value: {{ .Values.tailscale.authkey | quote }}
             {{- with .Values.agent.env }}
               {{- toYaml . | nindent 10 }}
             {{- end }}
