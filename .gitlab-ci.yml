@@ -9,6 +9,7 @@ stages:
   variables:
     CHART_NAME: ""
   script:
+    - apk add --update curl
     - helm package charts/${CHART_NAME}
     - chart_file=$(ls -l ${CHART_NAME}*.tgz | head -n 1 | awk '{print $NF}')
     - curl --request POST --user gitlab-ci-token:$CI_JOB_TOKEN --form "chart=@${chart_file}" "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/helm/api/stable/charts"
