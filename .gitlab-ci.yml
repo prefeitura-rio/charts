@@ -1,0 +1,14 @@
+stages:
+  - helm-publish
+
+.helm-publish:
+  stage: helm-publish
+  image:
+    name: alpine/helm:latest
+    entrypoint: [""]
+  variables:
+    CHART_NAME: ""
+  script:
+    - helm repo add --username ${CI_REGISTRY_USER} --password ${CI_REGISTRY_PASSWORD} charts-repo ${CI_REGISTRY}
+    - helm package charts/${CHART_NAME}
+    - helm push ${CHART_NAME}*.tgz charts-repo
