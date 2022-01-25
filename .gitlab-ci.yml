@@ -9,9 +9,9 @@ stages:
   variables:
     CHART_NAME: ""
   script:
-    - helm repo add --username ${CI_REGISTRY_USER} --password ${CI_REGISTRY_PASSWORD} charts-repo ${CI_REGISTRY}
     - helm package charts/${CHART_NAME}
-    - helm push ${CHART_NAME}*.tgz charts-repo
+    - chart_file=$(ls -l ${CHART_NAME}*.tgz | head -n 1 | awk '{print $NF}')
+    - curl --request POST --user gitlab-ci-token:$CI_JOB_TOKEN --form "chart=@${chart_file}" "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/helm/api/stable/charts"
 
 publish-chart-k8s-f5-service:
   extends: .helm-publish
