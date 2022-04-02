@@ -23,3 +23,8 @@ publish-chart-prefect-agent:
   extends: .helm-publish
   variables:
     CHART_NAME: prefect-agent
+
+publish-chart-whatsapp-bot:
+  extends: .helm-publish
+  variables:
+    CHART_NAME: whatsapp-bot
