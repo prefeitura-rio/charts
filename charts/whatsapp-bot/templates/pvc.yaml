@@ -1,0 +1,15 @@
+{{- if .Values.whatsapp_api.enablePersistence }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: whatsapp-api
+  name: whatsapp-session-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.whatsapp_api.persistentStorageSize }}
+{{- end }}

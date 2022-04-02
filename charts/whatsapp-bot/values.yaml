@@ -1,0 +1,72 @@
+#
+# Configuration for the handler API, which is the Python API
+# that receives messages, handles them, and returns a response.
+#
+handler_api:
+  # The name for the deployment
+  name: "handler-api"
+
+  # How many replicas to run
+  replicas: 1
+
+  # Define the image to use
+  image:
+    name: "gabrielmilan/handler-api"
+    tag: "latest"
+
+  # Define environment variables to set on the container
+  env:
+    - name: SEND_MESSAGE_URL
+      value: "http://whatsapp-api:3000/send"
+
+  # Define the resources to use
+  resources: {}
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+
+#
+# Configuration for the WhatsApp API, which is the JavaScript API
+# that handles WhatsApp Web directly.
+#
+whatsapp_api:
+  # The name for the deployment
+  name: "whatsapp-api"
+
+  # How many replicas to run
+  replicas: 1
+
+  # Define the image to use
+  image:
+    name: "gabrielmilan/whatsapp-api"
+    tag: "latest"
+
+  # Define environment variables to set on the container
+  env:
+    - name: LOG_LEVEL
+      value: "info"
+    - name: MESSAGE_HANDLE_URL
+      value: http://handler-api/message
+
+  # Define the resources to use
+  resources: {}
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+
+  # Define whether to enable persistent storage
+  enablePersistence: true
+  persistentStorageSize: "512Mi"
+
+  # Define the time to wait for the liveness probe to execute.
+  # This implies that the container will be restarted if the probe fails.
+  # If this is the first time you're deploying the application,
+  # you'll have to authenticate to WhatsApp through the QR code. It takes
+  # time to scan the QR code, so it's better to wait for a while.
+  initialDelaySeconds: 120

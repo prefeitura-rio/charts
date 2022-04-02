@@ -1,0 +1,106 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.handler_api.name }}
+spec:
+  replicas: {{ .Values.handler_api.replicas }}
+  selector:
+    matchLabels:
+      app: handler-api
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  minReadySeconds: 5
+  template:
+    metadata:
+      labels:
+        app: handler-api
+    spec:
+      containers:
+        - name: handler-api
+          image: "{{ .Values.handler_api.image.name }}:{{ .Values.handler_api.image.tag }}"
+          ports:
+            - containerPort: 80
+          {{- with .Values.handler_api.env }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.handler_api.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      restartPolicy: Always
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.whatsapp_api.name }}
+spec:
+  replicas: {{ .Values.whatsapp_api.replicas }}
+  selector:
+    matchLabels:
+      app: whatsapp-api
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  minReadySeconds: 5
+  template:
+    metadata:
+      labels:
+        app: whatsapp-api
+    spec:
+      containers:
+        - name: whatsapp-api
+          image: "{{ .Values.whatsapp_api.image.name }}:{{ .Values.whatsapp_api.image.tag }}"
+          ports:
+            - containerPort: 3000
+          {{- with .Values.whatsapp_api.env }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.whatsapp_api.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if .Values.whatsapp_api.enablePersistence }}
+          volumeMounts:
+            - name: session-storage
+              mountPath: /whatsapp-data
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: {{ .Values.whatsapp_api.initialDelaySeconds }}
+            periodSeconds: 5
+          securityContext:
+            capabilities:
+              add:
+                - SYS_ADMIN
+      initContainers:
+        - name: setup-permissions
+          image: busybox:1.31
+          volumeMounts:
+            - name: session-storage
+              mountPath: /whatsapp-data
+          command:
+            - /bin/sh
+            - -c
+            - chmod -R 777 /whatsapp-data
+      restartPolicy: Always
+      {{- if .Values.whatsapp_api.enablePersistence }}
+      volumes:
+        - name: session-storage
+          persistentVolumeClaim:
+            claimName: whatsapp-session-pvc
+      {{- end }}

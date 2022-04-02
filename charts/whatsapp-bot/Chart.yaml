@@ -1,0 +1,8 @@
+apiVersion: v2
+name: whatsapp-bot
+description: Deploys a WhatsApp bot that uses the template shown at https://github.com/prefeitura-rio/whatsapp-bot
+
+type: application
+
+version: 0.1.0 # Chart version
+appVersion: "0.1.0" # Whatsapp bot version
