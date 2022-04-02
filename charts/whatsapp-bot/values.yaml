@@ -11,8 +11,8 @@ handler_api:
 
   # Define the image to use
   image:
-    name: "gabrielmilan/handler-api"
-    tag: "latest"
+    name: "your-company/handler-api"
+    tag: "your-tag"
 
   # Define environment variables to set on the container
   env:
@@ -41,8 +41,8 @@ whatsapp_api:
 
   # Define the image to use
   image:
-    name: "gabrielmilan/whatsapp-api"
-    tag: "latest"
+    name: "your-company/whatsapp-api"
+    tag: "your-tag"
 
   # Define environment variables to set on the container
   env:
