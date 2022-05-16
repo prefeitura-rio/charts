@@ -43,13 +43,21 @@ spec:
               value: {{ .Values.agent.job.resources.limits.cpu | quote }}
             - name: SERVICE_ACCOUNT_NAME
               value: {{ .Values.agent.serviceAccountName | quote }}
+            {{- if .Values.agent.prefect_backend_server }}
             - name: PREFECT__BACKEND
               value: server
+            {{- end }}
             - name: PREFECT__CLOUD__AGENT__AGENT_ADDRESS
               value: http://0.0.0.0:8080
             {{- with .Values.agent.env }}
               {{- toYaml . | nindent 10 }}
             {{- end }}
+          {{- if .Values.agent.auth_secret_name }}
+          volumeMounts:
+            - name: prefect-auth-toml
+              mountPath: /root/.prefect/
+              readOnly: true
+          {{- end }}
           livenessProbe:
             failureThreshold: 2
             httpGet:
@@ -61,3 +69,9 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+      {{- if .Values.agent.auth_secret_name }}
+      volumes:
+        - name: prefect-auth-toml
+          secret:
+            secretName: {{ .Values.agent.auth_secret_name }}
+      {{- end }}

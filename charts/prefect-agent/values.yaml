@@ -31,6 +31,14 @@ agent:
   # Apollo service (must have either Apollo or Istion setup)
   apollo_url: "http://prefect-apollo:4200/"
 
+  # If using Prefect Server as backend, set this to true
+  prefect_backend_server: true
+
+  # For Prefect Cloud, one must provide the auth.toml file (that's usually located at
+  # $HOME/.prefect/auth.toml) in a secret for the agent to mount. Provide the name of
+  # the secret here.
+  auth_secret_name: ""
+
   # job configures values associated with jobs the agent launches
   job:
     # resources defines the computational resources for flow jobs
