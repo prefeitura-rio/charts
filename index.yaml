@@ -14,6 +14,16 @@ entries:
   prefect-agent:
   - apiVersion: v2
     appVersion: 0.15.9
+    created: "2022-06-07T21:35:01.73110923Z"
+    description: Deploys Prefect Agents for Rio de Janeiro City Hall
+    digest: 3f158ffb42a615551e4543e9d3ce6e448c32111f3e3bb9485f3a24fd80f3aefb
+    name: prefect-agent
+    type: application
+    urls:
+    - https://github.com/prefeitura-rio/charts/releases/download/prefect-agent-0.3.0/prefect-agent-0.3.0.tgz
+    version: 0.3.0
+  - apiVersion: v2
+    appVersion: 0.15.9
     created: "2022-01-06T18:12:57.007789231Z"
     description: Deploys Prefect Agents for Rio de Janeiro City Hall
     digest: be8f8b2a4bdda2f8aec9099c5a5480f46b22fc3d673503757a02b5c42d7a75a6
@@ -71,5 +81,16 @@ entries:
     type: application
     urls:
     - https://github.com/prefeitura-rio/charts/releases/download/prefect-agent-0.1.0/prefect-agent-0.1.0.tgz
+    version: 0.1.0
+  whatsapp-bot:
+  - apiVersion: v2
+    appVersion: 0.1.0
+    created: "2022-06-07T21:35:01.890555172Z"
+    description: Deploys a WhatsApp bot that uses the template shown at https://github.com/prefeitura-rio/whatsapp-bot
+    digest: f32fdd6ee02979cddeb38486a5d3eebe525165ca0d1774aa34ffbcd3332475d4
+    name: whatsapp-bot
+    type: application
+    urls:
+    - https://github.com/prefeitura-rio/charts/releases/download/whatsapp-bot-0.1.0/whatsapp-bot-0.1.0.tgz
     version: 0.1.0
 generated: "2021-12-21T14:25:13.41844377Z"
