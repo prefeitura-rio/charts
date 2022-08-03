@@ -17,7 +17,7 @@ deployment:
 # Ingress configurations.
 ingress:
   # Whether to enable or not the ingress.
-  enabled: true
+  enabled: false
   # Host to be used in the ingress rules.
   host: id.dados.rio
   # Annotations to be added to the ingress.
