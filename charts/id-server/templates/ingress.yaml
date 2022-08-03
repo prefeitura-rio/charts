@@ -1,0 +1,85 @@
+{{- if .Values.ingress.enabled }}
+---
+# Ingress - /auth
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: id-dados-rio-ingress-auth
+  namespace: {{ .Values.namespace.name | quote }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: /auth/
+            pathType: Prefix
+            backend:
+              service:
+                name: id-dados-rio
+                port:
+                  number: 80
+
+---
+# Ingress - /static
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: id-dados-rio-ingress-static
+  namespace: {{ .Values.namespace.name | quote }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: /static/
+            pathType: Prefix
+            backend:
+              service:
+                name: id-dados-rio
+                port:
+                  number: 80
+
+---
+# Ingress - /admin
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: id-dados-rio-ingress-admin
+  namespace: {{ .Values.namespace.name | quote }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: {{ .Values.ingress.admin_prefix | quote }}
+            pathType: Prefix
+            backend:
+              service:
+                name: id-dados-rio
+                port:
+                  number: 80
+{{- end }}

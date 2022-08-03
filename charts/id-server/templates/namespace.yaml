@@ -1,0 +1,7 @@
+{{- if .Values.namespace.create_namespace }}
+# Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: id-dados-rio
+{{- end }}

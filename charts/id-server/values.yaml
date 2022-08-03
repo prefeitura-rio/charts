@@ -1,0 +1,28 @@
+# Namespace configurations. All of this chart will be deployed in this namespace.
+namespace:
+  name: id-dados-rio
+  create_namespace: true # This makes sure to apply the namespace manifest.
+
+# Deployment configurations.
+deployment:
+  # Number of replicas for this deployment. Any number greater than 1 hasn't been properly tested.
+  replicas: 1
+  # The image to be deployed. We don't usually recommend setting the tag to `latest`, but this is
+  # default value for easing simple deployments.
+  image: ghcr.io/prefeitura-rio/id-dados-rio:latest
+  # This is the name of the secrets that must contain all environment variables
+  # needed by the image. Check the documentation at https://github.com/prefeitura-rio/id-dados-rio/
+  envFromSecret: id-dados-rio-secrets
+
+# Ingress configurations.
+ingress:
+  # Whether to enable or not the ingress.
+  enabled: true
+  # Host to be used in the ingress rules.
+  host: id.dados.rio
+  # Annotations to be added to the ingress.
+  annotations: {}
+  # TLS configuration.
+  tls: []
+  # Django admin URLs prefix.
+  admin_prefix: /admin/

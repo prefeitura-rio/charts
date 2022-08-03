@@ -1,0 +1,15 @@
+# Service
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: id-dados-rio
+  name: id-dados-rio
+  namespace: {{ .Values.namespace.name | quote }}
+spec:
+  ports:
+    - name: "80"
+      port: 80
+      targetPort: 80
+  selector:
+    app: id-dados-rio

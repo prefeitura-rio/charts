@@ -1,0 +1,10 @@
+apiVersion: v2
+name: id-server
+description: Deploys the identification server developed by Escritório de Dados Rio.
+
+type: application
+
+version: 0.1.0
+
+# Id server version
+appVersion: "0.1.0"
