@@ -6,8 +6,10 @@ kind: Ingress
 metadata:
   name: id-dados-rio-ingress-auth
   namespace: {{ .Values.namespace.name | quote }}
-  {{- with .Values.ingress.annotations }}
   annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/rewrite-target: /auth/
+  {{- with .Values.ingress.annotations }}
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
@@ -34,8 +36,10 @@ kind: Ingress
 metadata:
   name: id-dados-rio-ingress-static
   namespace: {{ .Values.namespace.name | quote }}
-  {{- with .Values.ingress.annotations }}
   annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/rewrite-target: /static/
+  {{- with .Values.ingress.annotations }}
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
@@ -62,8 +66,10 @@ kind: Ingress
 metadata:
   name: id-dados-rio-ingress-admin
   namespace: {{ .Values.namespace.name | quote }}
-  {{- with .Values.ingress.annotations }}
   annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/rewrite-target: {{ .Values.ingress.admin_prefix | quote }}
+  {{- with .Values.ingress.annotations }}
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:

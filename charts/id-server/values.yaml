@@ -1,7 +1,6 @@
 # Namespace configurations. All of this chart will be deployed in this namespace.
 namespace:
   name: id-dados-rio
-  create_namespace: true # This makes sure to apply the namespace manifest.
 
 # Deployment configurations.
 deployment:
