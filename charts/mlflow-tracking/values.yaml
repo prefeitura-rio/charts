@@ -1,0 +1,61 @@
+# nameOverride overrides the name of the chart. This is useful when you want to deploy multiple
+# instances of the same chart in the same namespace.
+nameOverride: ""
+
+# Configurations for the server
+server:
+  # Specs to serve the model on (deployment and service).
+  host: "0.0.0.0"
+  port: 5000
+  # Extra arguments to pass to the mlflow models serve command.
+  # Example:
+  #  extraArgs:
+  #    - "--serve-artifacts"
+  extraArgs: []
+
+# Deployment configurations.
+deployment:
+  # Number of replicas for this deployment. Any number greater than 1 hasn't been properly tested.
+  replicas: 1
+  # The image to be deployed.
+  image: ghcr.io/prefeitura-rio/mlflow-gke:latest-python3.9-mlflow1.28.0
+  # You'll need to provide a few environment variables for the image to work.
+  # You can provide them either directly here or through a secret.
+  # The mandatory ones are:
+  # - GOOGLE_APPLICATION_CREDENTIALS: path to the service account key file
+  # - ARTIFACT_STORE: path to the artifact store (e.g. gs://bucket-name)
+  # - DB_USERNAME: username for the PostgreSQL database
+  # - DB_PASSWORD: password for the PostgreSQL database
+  # - DB_URL: URL for the PostgreSQL database (e.g. host:port)
+  # - DB_NAME: name of the PostgreSQL database
+  env: []
+  # This is the name of the secret that must contain any other environment variables you want to
+  # provide to the image.
+  envFromSecret: ""
+  # This is the name of the secret that contains the gcloud credentials.
+  gcloudCredentialsSecret: ""
+  # Here you can specify where to mount the gcloud credentials (combine this with the
+  # GOOGLE_APPLICATION_CREDENTIALS environment variable to set credentials).
+  gcloudCredentialsMountPath: "/workdir/gcloud-credentials/"
+  # Define the resources for the deployment.
+  resources: {}
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+
+# Ingress configurations.
+ingress:
+  # Enable ingress.
+  enabled: false
+  # Hostname to serve the model on.
+  hostname: ""
+  # Annotations to add to the ingress.
+  annotations: {}
+  # TLS configuration for the ingress.
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local

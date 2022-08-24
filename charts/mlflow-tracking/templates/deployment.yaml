@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tracking.name" . }}
+  labels:
+      app: {{ include "tracking.name" . }}
+spec:
+  replicas: {{ .Values.deployment.replicas }}
+  selector:
+    matchLabels:
+      app: {{ include "tracking.name" . }}-pods
+  template:
+    metadata:
+      labels:
+        app: {{ include "tracking.name" . }}-pods
+    spec:
+      containers:
+        - name: {{ include "tracking.name" . }}-pod
+          image: {{ .Values.deployment.image | quote }}
+          imagePullPolicy: Always
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.server.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 5
+          {{ with .Values.deployment.resources }}
+          resources:
+            {{ toYaml . | nindent 12 }}
+          {{ end }}
+          command:
+            - bash
+            - "-c"
+            - "gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS && mlflow server {{ .Values.server.extraArgs | join " " }} --host {{ .Values.server.host }} --port {{ .Values.server.port }} --default-artifact-root $ARTIFACT_STORE --backend-store-uri postgresql://$DB_USERNAME:$DB_PASSWORD@$DB_URL/$DB_NAME"
+          {{ with .Values.deployment.env }}
+          env:
+            {{ toYaml . | nindent 12 }}
+          {{ end }}
+          {{- if .Values.deployment.envFromSecret }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.deployment.envFromSecret | quote }}
+          {{- end }}
+          {{- if .Values.deployment.gcloudCredentialsSecret }}
+          volumeMounts:
+            - name: mlflow-gcloud-credentials
+              mountPath: {{ .Values.deployment.gcloudCredentialsMountPath | quote }}
+              readOnly: true
+          {{- end }}
+      {{- if .Values.deployment.gcloudCredentialsSecret }}
+      volumes:
+      - name: mlflow-gcloud-credentials
+        secret:
+          secretName: {{ .Values.deployment.gcloudCredentialsSecret | quote }}
+      {{- end }}
