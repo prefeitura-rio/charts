@@ -1,0 +1,63 @@
+# nameOverride overrides the name of the chart. This is useful when you want to deploy multiple
+# instances of the same chart in the same namespace.
+nameOverride: ""
+
+# Configurations for the model
+model:
+  # URL for the MLflow tracking server.
+  trackingServerUri: "http://mlflow-tracking-server:5000"
+  # Model path (as in the MLflow model registry) to serve.
+  path: "models:/model"
+  # Extra arguments to pass to the mlflow models serve command.
+  # Example:
+  #  extraArgs:
+  #    - "--no-conda"
+  extraArgs: []
+  # Specs to serve the model on (deployment and service).
+  host: "0.0.0.0"
+  port: 5000
+  # Model environment manager
+  # - local: use local environment
+  # - conda: use conda
+  # - virtualenv: use virtualenv (and pyenv for Python version management)
+  envManager: "conda"
+  # Here you can add a few more pip packages to install in the model environment.
+  extraDependencies: []
+  #  - "scikit-learn==0.23.2"
+
+# Deployment configurations.
+deployment:
+  # Number of replicas for this deployment. Any number greater than 1 hasn't been properly tested.
+  replicas: 1
+  # The image to be deployed.
+  image: ghcr.io/prefeitura-rio/mlflow-gke:latest-python3.9-mlflow1.28.0
+  # This is the name of the secret that must contain all environment variables
+  # needed by the image.
+  envFromSecret: ""
+  # This is the name of the secret that contains the gcloud credentials.
+  gcloudCredentialsSecret: ""
+  # Here you can specify where to mount the gcloud credentials (combine this with the
+  # GOOGLE_APPLICATION_CREDENTIALS environment variable to set credentials).
+  gcloudCredentialsMountPath: "/workdir/gcloud-credentials/"
+  # Define the resources for the deployment.
+  resources: {}
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+
+# Ingress configurations.
+ingress:
+  # Enable ingress.
+  enabled: false
+  # Hostname to serve the model on.
+  hostname: ""
+  # Annotations to add to the ingress.
+  annotations: {}
+  # TLS configuration for the ingress.
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local

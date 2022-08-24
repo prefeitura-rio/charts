@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: {{ include "model.name" . }}
+  name: {{ include "model.name" . }}
+spec:
+  ports:
+  - port: {{ .Values.model.port }}
+    protocol: TCP
+    targetPort: {{ .Values.model.port }}
+  selector:
+    app: {{ include "model.name" . }}-pods

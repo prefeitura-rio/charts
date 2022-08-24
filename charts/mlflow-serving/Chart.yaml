@@ -1,0 +1,10 @@
+apiVersion: v2
+name: mlflow-serving
+description: Serves an MLflow model from a model registry
+
+type: application
+
+version: 0.1.0
+
+# MLflow version
+appVersion: "1.28.0"
