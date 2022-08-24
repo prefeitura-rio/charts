@@ -45,6 +45,17 @@ entries:
     urls:
     - https://github.com/prefeitura-rio/charts/releases/download/k8s-f5-service-0.1.0/k8s-f5-service-0.1.0.tgz
     version: 0.1.0
+  mlflow-serving:
+  - apiVersion: v2
+    appVersion: 1.28.0
+    created: "2022-08-24T11:41:08.455383999Z"
+    description: Serves an MLflow model from a model registry
+    digest: 6ca6df05747570d9b836678dd31f06c3b26fd3d7dad9b6cec51b0fac02414760
+    name: mlflow-serving
+    type: application
+    urls:
+    - https://github.com/prefeitura-rio/charts/releases/download/mlflow-serving-0.1.0/mlflow-serving-0.1.0.tgz
+    version: 0.1.0
   prefect-agent:
   - apiVersion: v2
     appVersion: 0.15.9
