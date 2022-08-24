@@ -31,7 +31,7 @@ spec:
           command:
             - bash
             - "-c"
-            - "{{ include "pip.command" . }} gcloud auth activate-service-account --key-file=/workdir/gcloud-credentials/gcloud-credentials.json && mlflow models serve --env-manager={{ .Values.model.envManager }} --host {{ .Values.model.host }} --port {{ .Values.model.port }} {{ .Values.model.extraArgs | join " " }} -m {{ .Values.model.path }}"
+            - "{{ include "pip.command" . }} gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS && mlflow models serve --env-manager={{ .Values.model.envManager }} --host {{ .Values.model.host }} --port {{ .Values.model.port }} {{ .Values.model.extraArgs | join " " }} -m {{ .Values.model.path }}"
           {{- if .Values.model.trackingServerUri }}
           env:
             - name: MLFLOW_TRACKING_URI
