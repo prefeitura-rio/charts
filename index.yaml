@@ -48,6 +48,16 @@ entries:
   mlflow-serving:
   - apiVersion: v2
     appVersion: 1.28.0
+    created: "2022-08-24T12:00:08.826777574Z"
+    description: Serves an MLflow model from a model registry
+    digest: aac545394cbf4dc971b6bf27ffe7fa086cf479bc3388f2893d970b6223db8cab
+    name: mlflow-serving
+    type: application
+    urls:
+    - https://github.com/prefeitura-rio/charts/releases/download/mlflow-serving-0.1.1/mlflow-serving-0.1.1.tgz
+    version: 0.1.1
+  - apiVersion: v2
+    appVersion: 1.28.0
     created: "2022-08-24T11:41:08.455383999Z"
     description: Serves an MLflow model from a model registry
     digest: 6ca6df05747570d9b836678dd31f06c3b26fd3d7dad9b6cec51b0fac02414760
