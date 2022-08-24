@@ -66,6 +66,17 @@ entries:
     urls:
     - https://github.com/prefeitura-rio/charts/releases/download/mlflow-serving-0.1.0/mlflow-serving-0.1.0.tgz
     version: 0.1.0
+  mlflow-tracking:
+  - apiVersion: v2
+    appVersion: 1.28.0
+    created: "2022-08-24T12:33:22.566503421Z"
+    description: Serves the MLflow Tracking Server
+    digest: 5cf352f43782e31269e4ec3ec537f021ab15add966e8e59a19387549bef88971
+    name: mlflow-tracking
+    type: application
+    urls:
+    - https://github.com/prefeitura-rio/charts/releases/download/mlflow-tracking-0.1.0/mlflow-tracking-0.1.0.tgz
+    version: 0.1.0
   prefect-agent:
   - apiVersion: v2
     appVersion: 0.15.9
