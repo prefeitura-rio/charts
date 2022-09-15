@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Values.agent.name }}
-  labels: 
+  labels:
     app.kubernetes.io/component: agent
 spec:
   replicas: {{ .Values.agent.replicas }}
@@ -22,9 +22,9 @@ spec:
             - bash
             - "-c"
             {{- if .Values.agent.jobTemplateFilePath }}
-            - "prefect agent kubernetes start --job-template {{ .Values.agent.jobTemplateFilePath }}"
+            - "prefect agent {{ .Values.agent.type }} start --job-template {{ .Values.agent.jobTemplateFilePath }}"
             {{- else }}
-            - "prefect agent kubernetes start"
+            - "prefect agent {{ .Values.agent.type }} start"
             {{- end }}
           env:
             - name: PREFECT__CLOUD__API
