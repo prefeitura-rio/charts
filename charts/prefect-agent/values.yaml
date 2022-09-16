@@ -4,6 +4,10 @@ agent:
   # The name for the deployment
   name: "prefect-agent"
 
+  # The type of agent to run
+  # https://docs-v1.prefect.io/orchestration/agents/overview.html#agent-types
+  type: "kubernetes"
+
   # prefectLabels defines what scheduling labels (not K8s labels) should
   # be associated with the agent
   prefectLabels: []
