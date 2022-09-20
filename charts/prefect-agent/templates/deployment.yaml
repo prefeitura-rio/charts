@@ -21,11 +21,21 @@ spec:
           command:
             - bash
             - "-c"
-            {{- if .Values.agent.jobTemplateFilePath }}
-            - "prefect agent {{ .Values.agent.type }} start --job-template {{ .Values.agent.jobTemplateFilePath }}"
+          {{- if eq .Values.agent.type "vertex" }}
+            {{- if .Values.agent.vertexServiceAccount }}
+            - "prefect agent vertex start --region-name {{ .Values.agent.vertexRegion }} --service-account {{ .Values.agent.vertexServiceAccount }}"
             {{- else }}
-            - "prefect agent {{ .Values.agent.type }} start"
+            - "prefect agent vertex start --region-name {{ .Values.agent.vertexRegion }}"
             {{- end }}
+          {{- else if eq .Values.agent.type "kubernetes" }}
+            {{- if .Values.agent.jobTemplateFilePath }}
+            - "prefect agent kubernetes start --job-template {{ .Values.agent.jobTemplateFilePath }}"
+            {{- else }}
+            - "prefect agent kubernetes start"
+            {{- end }}
+          {{- else }}
+            - "echo 'Invalid agent type. Please set agent.type to either kubernetes or vertex.'"
+          {{- end }}
           env:
             - name: PREFECT__CLOUD__API
               value: {{ .Values.agent.apollo_url }}
@@ -47,6 +57,10 @@ spec:
             - name: PREFECT__BACKEND
               value: server
             {{- end }}
+            {{- if eq .Values.agent.type "vertex" }}
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: /root/.config/gcloud/creds.json
+            {{- end }}
             - name: PREFECT__CLOUD__AGENT__AGENT_ADDRESS
               value: http://0.0.0.0:8080
             {{- with .Values.agent.env }}
@@ -56,6 +70,9 @@ spec:
           volumeMounts:
             - name: prefect-auth-toml
               mountPath: /root/.prefect/
+              readOnly: true
+            - name: google-application-credentials
+              mountPath: /root/.config/gcloud/
               readOnly: true
           {{- end }}
           livenessProbe:
@@ -74,4 +91,7 @@ spec:
         - name: prefect-auth-toml
           secret:
             secretName: {{ .Values.agent.auth_secret_name }}
+        - name: google-application-credentials
+          secret:
+            secretName: gcp-sa
       {{- end }}

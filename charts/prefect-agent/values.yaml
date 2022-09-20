@@ -8,6 +8,15 @@ agent:
   # https://docs-v1.prefect.io/orchestration/agents/overview.html#agent-types
   type: "kubernetes"
 
+  # Required if type is "vertex".
+  # https://docs-v1.prefect.io/orchestration/agents/vertex.html#region
+  # https://cloud.google.com/compute/docs/regions-zones/viewing-regions-zones#gcloud
+  vertexRegion: ""
+
+  # The service account to use for the "vertex" agent.
+  # https://docs-v1.prefect.io/orchestration/agents/vertex.html#service-account
+  vertexServiceAccount: ""
+
   # prefectLabels defines what scheduling labels (not K8s labels) should
   # be associated with the agent
   prefectLabels: []
