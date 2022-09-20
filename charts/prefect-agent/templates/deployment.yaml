@@ -93,5 +93,5 @@ spec:
             secretName: {{ .Values.agent.auth_secret_name }}
         - name: google-application-credentials
           secret:
-            secretName: gcp-sa
+            secretName: {{ .Values.agent.gcp_sa_secret_name }}
       {{- end }}
