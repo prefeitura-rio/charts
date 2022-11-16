@@ -3,6 +3,17 @@ entries:
   id-server:
   - apiVersion: v2
     appVersion: 0.1.0
+    created: "2022-11-16T18:56:07.461509096Z"
+    description: Deploys the identification server developed by Escritório de Dados
+      Rio.
+    digest: 6748ec1c1da5bed7c022016d8caa5e498735e93519acf41951a8aa84b78e6db7
+    name: id-server
+    type: application
+    urls:
+    - https://github.com/prefeitura-rio/charts/releases/download/id-server-0.1.3/id-server-0.1.3.tgz
+    version: 0.1.3
+  - apiVersion: v2
+    appVersion: 0.1.0
     created: "2022-08-04T14:33:37.95577217Z"
     description: Deploys the identification server developed by Escritório de Dados
       Rio.
