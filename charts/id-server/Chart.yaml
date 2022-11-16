@@ -4,7 +4,7 @@ description: Deploys the identification server developed by Escritório de Dados
 
 type: application
 
-version: 0.1.2
+version: 0.1.3
 
 # Id server version
 appVersion: "0.1.0"

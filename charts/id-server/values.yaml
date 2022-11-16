@@ -12,6 +12,9 @@ deployment:
   # This is the name of the secrets that must contain all environment variables
   # needed by the image. Check the documentation at https://github.com/prefeitura-rio/id-dados-rio/
   envFromSecret: id-dados-rio-secrets
+  # Resources to be allocated for this deployment. This is a good place to set
+  # CPU and memory limits.
+  resources: {}
 
 # Ingress configurations.
 ingress:
