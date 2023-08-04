@@ -1,5 +1,12 @@
 # Prefect Server Helm Chart
 
+> Note: This is not an official Prefect chart and is not supported by Prefect. It is not meant to be
+> backwards compatible with any of the official Prefect Server Helm charts or Prefect products. The
+> purpose of this modified chart is to provide an easy way of deploying our custom Prefect deployment
+> for supporting multi-tenancy auth using
+> [prefeitura-rio/prefect-ui](https://github.com/prefeitura-rio/prefect-ui) and
+> [prefeitura-rio/prefect-auth-proxy](https://github.com/prefeitura-rio/prefect-auth-proxy).
+
 <!-- TOC -->
 
 - [Usage](#usage)
@@ -38,7 +45,7 @@ The charts are hosted in a [Helm repository](https://helm.sh/docs/chart_reposito
 1. Let you local Helm manager know about the repository.
 
    ```
-   $ helm repo add prefecthq https://prefecthq.github.io/server/
+   $ helm repo add prefeitura-rio https://prefeitura-rio.github.io/charts
    ```
 
 2. Sync versions available in the repo to your local cache.
@@ -58,7 +65,7 @@ The charts are hosted in a [Helm repository](https://helm.sh/docs/chart_reposito
    Using default options
 
    ```
-   $ helm install prefecthq/prefect-server --generate-name
+   $ helm install prefeitura-rio/prefect-server --generate-name
    ```
 
    Setting some typical flags for customization
@@ -78,7 +85,7 @@ The charts are hosted in a [Helm repository](https://helm.sh/docs/chart_reposito
        --version $VERSION \
        --values $CONFIG_PATH \
        $NAME \
-       prefecthq/prefect-server
+       prefeitura-rio/prefect-server
    ```
 
    _If chart installation fails, `--debug` can provide more information_
@@ -144,7 +151,7 @@ Development versions of the Helm chart will always be available directly from th
    # Choose a version to upgrade to or omit the flag to use the latest version
    VERSION=2021.03.06
 
-   helm upgrade $NAME prefecthq/prefect-server --version $VERSION
+   helm upgrade $NAME prefeitura-rio/prefect-server --version $VERSION
    ```
 
    For development versions, make sure your cloned repository is updated (`git pull`) and reference the local chart
@@ -160,7 +167,7 @@ Development versions of the Helm chart will always be available directly from th
 
    helm upgrade \
        $NAME \
-       prefecthq/prefect-server \
+       prefeitura-rio/prefect-server \
        --set agent.enabled=true \
        --set jobs.createTenant.enabled=true
    ```
