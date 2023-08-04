@@ -8,19 +8,24 @@
 # configurations but it is not recommended.
 # See https://github.com/helm/helm/issues/8194 for details
 # on why the `appVersion` cannot be set at install time.
-serverVersionTag: null
+serverVersionTag: "core-1.4.1"
 
 # prefectVersionTag configures the default tag for Prefect Core based
 # services, including the agent and default tenant creation job.
 # This value is automatically pinned on chart release to the latest
 # core version.
-prefectVersionTag: "1.4.0"
+prefectVersionTag: "1.4.1"
+
+# prefectAuthProxyVersionTag configures the default tag for the
+# Prefect Auth Proxy service. This value is automatically pinned
+# on chart release to the latest auth proxy version.
+prefectAuthProxyVersionTag: "latest"
 
 # uiVersionTag configures the default tag for the Prefect UI service.
 # It is defined here for easy update using `sed` for automation.
 # This value is automatically pinned on chart release to the latest
 # ui version.
-uiVersionTag: "2022-09-14"
+uiVersionTag: "latest"
 
 # includeChartNameInComponents determines if the name of the chart should
 # be included in generated component names. By default, it will not
@@ -146,7 +151,7 @@ hasura:
   # Prefect
   image:
     name: hasura/graphql-engine
-    tag: v2.1.1
+    tag: v2.15.2
     pullPolicy: IfNotPresent
     pullSecrets: []
     # - name: "secret_name"
@@ -223,33 +228,8 @@ apollo:
   service:
     # type defines the service type and defaults to LoadBalancer
     # to expose the apollo service to users and the UI.
-    type: LoadBalancer
+    type: ClusterIP
     port: 4200
-
-  ingress:
-    enabled: false
-
-    # For Kubernetes >= 1.18 you should specify the ingress-controller via the field ingressClassName
-    # See https://kubernetes.io/blog/2020/04/02/improvements-to-the-ingress-api-in-kubernetes-1.18/#specifying-the-class-of-an-ingress
-    # ingressClassName: nginx
-
-    annotations: {}
-    labels: {}
-
-    ## Hosts must be provided if Ingress is enabled.
-    hosts:
-      []
-      # - prefecthq-apollo.domain.com
-
-    ## Path to use for ingress rules
-    path: /
-
-    ## TLS configuration for Prefect Ingress
-    ## Secret must be manually created in the namespace
-    tls: []
-    # - secretName: prefecthq-apollo-general-tls
-    #   hosts:
-    #   - prefecthq-apollo.example.com
 
   labels: {}
   annotations: {}
@@ -264,10 +244,67 @@ apollo:
   tolerations: []
   affinity: {}
 
+# authProxy configures the Prefect Auth Proxy deployment and service
+# which provides a proxy to the Prefect API that handles multi-tenant
+# authentication
+authProxy:
+  image:
+    name: ghcr.io/prefeitura-rio/prefect-auth-proxy
+    tag: null
+    pullPolicy: Always
+    pullSecrets: []
+    # - name: "secret_name"
+
+  options:
+    telemetryEnabled: true
+
+  service:
+    # type defines the service type and defaults to LoadBalancer
+    # to expose the apollo service to users and the UI.
+    type: ClusterIP
+    port: 80
+
+  # databaseUrlSecretName defines the name of the secret that
+  # contains the database url for the auth proxy. This secret
+  # must be created before the auth proxy is deployed. It must
+  # contain a single key called DATABASE_URL with a value of
+  # the database url.
+  databaseUrlSecretName: database-url
+
+  labels: {}
+  annotations: {}
+  podAnnotations: {}
+  replicas: 1
+  strategy: {}
+  podSecurityContext: {}
+  securityContext: {}
+  env:
+    - name: ALLOW_CREDENTIALS
+      value: "true"
+    - name: ALLOWED_HEADERS
+      value: "*"
+    - name: ALLOWED_METHODS
+      value: "*"
+    - name: ALLOWED_ORIGINS
+      value: "*"
+    # - name: ALLOWED_ORIGINS_REGEX
+    #   value: ".*"
+    # - name: PASSWORD_HASH_ALGORITHM
+    #   value: pbkdf2_sha256
+    # - name: PASSWORD_HASH_NUMBER_OF_ITERATIONS
+    #   value: 60000
+    # - name: TIMEZONE
+    #   value: America/Sao_Paulo
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+
 # ui configures the Prefect ui deployment and service
 ui:
   image:
-    name: prefecthq/ui
+    name: ghcr.io/prefeitura-rio/prefect-ui
     tag: null # See `uiVersionTag` instead
     pullPolicy: Always
     pullSecrets: []
@@ -277,38 +314,13 @@ ui:
   # GraphQL server. This location must be accessible by the
   # user of the API because the browser is making requests
   # (not the ui server)
-  apolloApiUrl: http://localhost:4200/graphql
+  apolloApiUrl: http://localhost:8000/proxy/
 
   service:
     # type defines the service type and defaults to LoadBalancer
     # to expose the ui service to users and the UI.
-    type: LoadBalancer
+    type: ClusterIP
     port: 8080
-
-  ingress:
-    enabled: false
-
-    # For Kubernetes >= 1.18 you should specify the ingress-controller via the field ingressClassName
-    # See https://kubernetes.io/blog/2020/04/02/improvements-to-the-ingress-api-in-kubernetes-1.18/#specifying-the-class-of-an-ingress
-    # ingressClassName: nginx
-
-    annotations: {}
-    labels: {}
-
-    ## Hosts must be provided if Ingress is enabled.
-    hosts:
-      []
-      # - prefecthq-ui.domain.com
-
-    ## Path to use for ingress rules
-    path: /
-
-    ## TLS configuration for Prefect Ingress
-    ## Secret must be manually created in the namespace
-    tls: []
-    # - secretName: prefecthq-ui-general-tls
-    #   hosts:
-    #   - prefecthq-ui.example.com
 
   labels: {}
   annotations: {}

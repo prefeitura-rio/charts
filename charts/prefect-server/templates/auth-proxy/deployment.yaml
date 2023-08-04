@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "prefect-server.nameField" (merge (dict "component" "auth-proxy") .) }}
+  labels: 
+    {{- include "prefect-server.commonLabels" . | nindent 4 }}
+    app.kubernetes.io/component: auth-proxy
+  annotations:
+    {{- merge .Values.auth-proxy.annotations .Values.annotations | toYaml | nindent 4 }}
+spec:
+  replicas: {{ .Values.auth-proxy.replicas }}
+  {{- with .Values.auth-proxy.strategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "prefect-server.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: auth-proxy
+  template:
+    metadata:
+      labels:
+        {{- include "prefect-server.matchLabels" . | nindent 8 }}
+        app.kubernetes.io/component: auth-proxy
+      {{- with .Values.auth-proxy.podAnnotations }}
+      annotations: {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+    {{- if .Values.auth-proxy.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.auth-proxy.image.pullSecrets | nindent 8 }}
+    {{- else if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+    {{- end }}
+      serviceAccountName: {{ include "prefect-server.serviceAccountName" . }}
+      {{- with .Values.auth-proxy.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: auth-proxy
+          {{- with .Values.auth-proxy.securityContext -}}          
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.auth-proxy.image.name }}:{{ .Values.auth-proxy.image.tag |  default .Values.prefectAuthProxyVersionTag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.auth-proxy.image.pullPolicy  }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.auth-proxy.databaseUrlSecretName }}
+          env:
+            - name: ENVIRONMENT
+              value: prod
+            - name: PREFECT_API_URL
+              value: {{ include "prefect-server.apollo-api-url" . }}
+            {{- with .Values.auth-proxy.env }}
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          # TODO: Add liveness and readiness probes
+          # livenessProbe:
+          #   httpGet:
+          #     path: /.well-known/auth-proxy/server-health
+          #     port: http
+          # readinessProbe:
+          #   httpGet:
+          #     path: /.well-known/auth-proxy/server-health
+          #     port: http
+          {{- with .Values.auth-proxy.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.auth-proxy.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.auth-proxy.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.auth-proxy.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
