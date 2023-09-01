@@ -33,7 +33,7 @@ agent:
   # setting up VPN connection on the image.
   image:
     name: "prefecthq/prefect"
-    tag: "0.15.9"
+    tag: "1.4.1"
 
   # jobTemplateFilePath defines which template to use for the agent's jobs. Defaults
   # to an empty string, which will use the default template.
