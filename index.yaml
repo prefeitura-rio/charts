@@ -90,6 +90,16 @@ entries:
     version: 0.1.0
   prefect-agent:
   - apiVersion: v2
+    appVersion: 1.4.1
+    created: "2023-09-01T14:46:04.317322093Z"
+    description: Deploys Prefect Agents for Rio de Janeiro City Hall
+    digest: 24fbb26e60e6a66d514ac7e1fb12cf2cf038a95638d84e2cbe05a5acab0e7c8c
+    name: prefect-agent
+    type: application
+    urls:
+    - https://github.com/prefeitura-rio/charts/releases/download/prefect-agent-1.0.0/prefect-agent-1.0.0.tgz
+    version: 1.0.0
+  - apiVersion: v2
     appVersion: 0.15.9
     created: "2022-09-20T16:46:48.665676502Z"
     description: Deploys Prefect Agents for Rio de Janeiro City Hall
@@ -179,6 +189,28 @@ entries:
     urls:
     - https://github.com/prefeitura-rio/charts/releases/download/prefect-agent-0.1.0/prefect-agent-0.1.0.tgz
     version: 0.1.0
+  prefect-server:
+  - apiVersion: v2
+    appVersion: 2022.09.23
+    created: "2023-09-01T14:46:04.519723099Z"
+    dependencies:
+    - condition: postgresql.useSubChart
+      name: postgresql
+      repository: https://charts.bitnami.com/bitnami
+      version: 11.x.x
+    description: Prefect Server application bundle
+    digest: 84bc042448a0f63a09da3cd36108ff94308bea727f7265fc1f2996a0aead7dcc
+    home: https://github.com/PrefectHQ
+    maintainers:
+    - email: michael@prefect.io
+      name: madkinsz
+    name: prefect-server
+    sources:
+    - https://github.com/PrefectHQ/server
+    type: application
+    urls:
+    - https://github.com/prefeitura-rio/charts/releases/download/prefect-server-2022.09.23/prefect-server-2022.09.23.tgz
+    version: 2022.09.23
   whatsapp-bot:
   - apiVersion: v2
     appVersion: 0.1.0
