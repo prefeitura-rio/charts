@@ -49,7 +49,7 @@ spec:
           command: 
             - "/intercept.sh"
           env:
-            - name: PREFECT_SERVER__APOLLO_URL
+            - name: PREFECT_AUTH_PROXY_URL
               value: {{ .Values.ui.apolloApiUrl }}
             {{- with .Values.ui.env }}
               {{- toYaml . | nindent 12 }}

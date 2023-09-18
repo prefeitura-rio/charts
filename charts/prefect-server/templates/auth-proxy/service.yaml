@@ -1,19 +1,19 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "prefect-server.nameField" (merge (dict "component" "auth-proxy") .) }}
+  name: {{ include "prefect-server.nameField" (merge (dict "component" "authproxy") .) }}
   labels: 
     {{- include "prefect-server.commonLabels" . | nindent 4 }}
-    app.kubernetes.io/component: auth-proxy
+    app.kubernetes.io/component: authproxy
   annotations:
-    {{- merge .Values.auth-proxy.annotations .Values.annotations | toYaml | nindent 4 }}
+    {{- merge .Values.authproxy.annotations .Values.annotations | toYaml | nindent 4 }}
 spec:
-  type: {{ .Values.auth-proxy.service.type }}
+  type: {{ .Values.authproxy.service.type }}
   ports:
-    - port: {{ .Values.auth-proxy.service.port }}
+    - port: {{ .Values.authproxy.service.port }}
       targetPort: http
       protocol: TCP
       name: http
   selector:
     {{- include "prefect-server.matchLabels" . | nindent 4 }}
-    app.kubernetes.io/component: auth-proxy
+    app.kubernetes.io/component: authproxy

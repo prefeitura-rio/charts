@@ -1,60 +1,60 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "prefect-server.nameField" (merge (dict "component" "auth-proxy") .) }}
+  name: {{ include "prefect-server.nameField" (merge (dict "component" "authproxy") .) }}
   labels: 
     {{- include "prefect-server.commonLabels" . | nindent 4 }}
-    app.kubernetes.io/component: auth-proxy
+    app.kubernetes.io/component: authproxy
   annotations:
-    {{- merge .Values.auth-proxy.annotations .Values.annotations | toYaml | nindent 4 }}
+    {{- merge .Values.authproxy.annotations .Values.annotations | toYaml | nindent 4 }}
 spec:
-  replicas: {{ .Values.auth-proxy.replicas }}
-  {{- with .Values.auth-proxy.strategy }}
+  replicas: {{ .Values.authproxy.replicas }}
+  {{- with .Values.authproxy.strategy }}
   strategy:
     {{- toYaml . | nindent 4 }}
   {{- end }}
   selector:
     matchLabels:
       {{- include "prefect-server.matchLabels" . | nindent 6 }}
-      app.kubernetes.io/component: auth-proxy
+      app.kubernetes.io/component: authproxy
   template:
     metadata:
       labels:
         {{- include "prefect-server.matchLabels" . | nindent 8 }}
-        app.kubernetes.io/component: auth-proxy
-      {{- with .Values.auth-proxy.podAnnotations }}
+        app.kubernetes.io/component: authproxy
+      {{- with .Values.authproxy.podAnnotations }}
       annotations: {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
-    {{- if .Values.auth-proxy.image.pullSecrets }}
+    {{- if .Values.authproxy.image.pullSecrets }}
       imagePullSecrets:
-        {{- toYaml .Values.auth-proxy.image.pullSecrets | nindent 8 }}
+        {{- toYaml .Values.authproxy.image.pullSecrets | nindent 8 }}
     {{- else if .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml .Values.imagePullSecrets | nindent 8 }}
     {{- end }}
       serviceAccountName: {{ include "prefect-server.serviceAccountName" . }}
-      {{- with .Values.auth-proxy.podSecurityContext }}
+      {{- with .Values.authproxy.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       containers:
-        - name: auth-proxy
-          {{- with .Values.auth-proxy.securityContext -}}          
+        - name: authproxy
+          {{- with .Values.authproxy.securityContext -}}          
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          image: "{{ .Values.auth-proxy.image.name }}:{{ .Values.auth-proxy.image.tag |  default .Values.prefectAuthProxyVersionTag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.auth-proxy.image.pullPolicy  }}
+          image: "{{ .Values.authproxy.image.name }}:{{ .Values.authproxy.image.tag |  default .Values.prefectAuthProxyVersionTag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.authproxy.image.pullPolicy  }}
           envFrom:
             - secretRef:
-                name: {{ .Values.auth-proxy.databaseUrlSecretName }}
+                name: {{ .Values.authproxy.databaseUrlSecretName }}
           env:
             - name: ENVIRONMENT
               value: prod
             - name: PREFECT_API_URL
               value: {{ include "prefect-server.apollo-api-url" . }}
-            {{- with .Values.auth-proxy.env }}
+            {{- with .Values.authproxy.env }}
               {{- toYaml . | nindent 12 }}
             {{- end }}
           ports:
@@ -64,25 +64,25 @@ spec:
           # TODO: Add liveness and readiness probes
           # livenessProbe:
           #   httpGet:
-          #     path: /.well-known/auth-proxy/server-health
+          #     path: /.well-known/authproxy/server-health
           #     port: http
           # readinessProbe:
           #   httpGet:
-          #     path: /.well-known/auth-proxy/server-health
+          #     path: /.well-known/authproxy/server-health
           #     port: http
-          {{- with .Values.auth-proxy.resources }}
+          {{- with .Values.authproxy.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-      {{- with .Values.auth-proxy.nodeSelector }}
+      {{- with .Values.authproxy.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-    {{- with .Values.auth-proxy.affinity }}
+    {{- with .Values.authproxy.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
     {{- end }}
-    {{- with .Values.auth-proxy.tolerations }}
+    {{- with .Values.authproxy.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
     {{- end }}

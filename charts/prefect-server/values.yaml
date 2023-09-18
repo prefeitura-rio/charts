@@ -244,10 +244,10 @@ apollo:
   tolerations: []
   affinity: {}
 
-# authProxy configures the Prefect Auth Proxy deployment and service
+# authproxy configures the Prefect Auth Proxy deployment and service
 # which provides a proxy to the Prefect API that handles multi-tenant
 # authentication
-authProxy:
+authproxy:
   image:
     name: ghcr.io/prefeitura-rio/prefect-auth-proxy
     tag: null
@@ -287,6 +287,10 @@ authProxy:
       value: "*"
     - name: ALLOWED_ORIGINS
       value: "*"
+    # - name: SENTRY_DSN
+    #   value: ""
+    # - name: SENTRY_ENVIRONMENT
+    #   value: ""
     # - name: ALLOWED_ORIGINS_REGEX
     #   value: ".*"
     # - name: PASSWORD_HASH_ALGORITHM
