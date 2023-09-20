@@ -16,4 +16,4 @@ sources:
 - https://github.com/prefeitura-rio/prefect-auth-proxy
 - https://github.com/prefeitura-rio/prefect-ui
 type: application
-version: 2023.09.18
+version: 2023.09.20

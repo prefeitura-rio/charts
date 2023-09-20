@@ -176,6 +176,14 @@ hasura:
   tolerations: []
   affinity: {}
 
+  # hpa configures the horizontal pod autoscaler
+  hpa:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+    cpuUtilization: 50
+    memoryUtilization: 50
+
 # graphql configures the Prefect graphql deployment and service
 # which provides a python graphql server on starlette
 graphql:
@@ -211,6 +219,14 @@ graphql:
     resources: {}
     securityContext: {}
 
+  # hpa configures the horizontal pod autoscaler
+  hpa:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+    cpuUtilization: 50
+    memoryUtilization: 50
+
 # apollo configures the Prefect apollo deployment and service
 # which provides a unified graphql schema for users and the UI
 # to interact with
@@ -243,6 +259,14 @@ apollo:
   nodeSelector: {}
   tolerations: []
   affinity: {}
+
+  # hpa configures the horizontal pod autoscaler
+  hpa:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+    cpuUtilization: 50
+    memoryUtilization: 50
 
 # authproxy configures the Prefect Auth Proxy deployment and service
 # which provides a proxy to the Prefect API that handles multi-tenant
@@ -304,6 +328,14 @@ authproxy:
   tolerations: []
   affinity: {}
 
+  # hpa configures the horizontal pod autoscaler
+  hpa:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+    cpuUtilization: 50
+    memoryUtilization: 50
+
 
 # ui configures the Prefect ui deployment and service
 ui:
@@ -361,69 +393,6 @@ towel:
   nodeSelector: {}
   tolerations: []
   affinity: {}
-
-# agent configures an optional Prefect Kubernetes agent which will
-# schedule flows as jobs in the cluster
-agent:
-  # enabled determines if the Prefect Kubernetes agent is deployed
-  enabled: false
-
-  # prefectLabels defines what scheduling labels (not K8s labels) should
-  # be associated with the agent
-  prefectLabels: []
-
-  # jobTemplateFilePath defines which template to use for the agent's jobs. Defaults
-  # to an empty string, which will use the default template.
-  # reference: https://docs.prefect.io/orchestration/agents/kubernetes.html#custom-job-template
-  jobTemplateFilePath: ""
-
-  # mount job template file from Kubernetes configmap. Filename in configmap must match the filename in jobTemplateFilePath.
-  jobTemplateFileConfigMap: ""
-
-  # image configures the container image for the agent deployment
-  image:
-    name: prefecthq/prefect
-    tag: null
-    pullPolicy: Always
-    pullSecrets: []
-    # - name: "secret_name"
-
-  labels: {}
-  annotations: {}
-  podAnnotations: {}
-  replicas: 1
-  strategy: {}
-  podSecurityContext: {}
-  securityContext: {}
-  env: []
-  nodeSelector: {}
-  tolerations: []
-  affinity: {}
-
-  # resources defines the computational resources for the Prefect Agent
-  resources:
-    limits:
-      cpu: 100m
-      memory: 128Mi
-
-  # job configures values associated with jobs the agent launches
-  job:
-    # resources defines the computational resources for flow jobs
-    resources:
-      limits:
-        memory: ""
-        cpu: ""
-      requests:
-        memory: ""
-        cpu: ""
-
-    # imagePullPolicy configures the image pull policy for the flow job
-    imagePullPolicy: ""
-
-    # imagePullSecrets defines image pull secrets for the flow job
-    # NOTE: These secrets are not merged with the global imagePullSecrets
-    imagePullSecrets: []
-    # - "secret_name"
 
 serviceAccount:
   # create specifies whether a service account should be created to be

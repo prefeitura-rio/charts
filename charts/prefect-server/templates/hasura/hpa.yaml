@@ -1,0 +1,29 @@
+{{- if .Values.hasura.hpa.enabled -}}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "prefect-server.nameField" (merge (dict "component" "hasura") .) }}-hpa
+  labels: 
+    {{- include "prefect-server.commonLabels" . | nindent 4 }}
+    app.kubernetes.io/component: hasura
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "prefect-server.nameField" (merge (dict "component" "hasura") .) }}
+  minReplicas: {{ .Values.hasura.hpa.minReplicas }}
+  maxReplicas: {{ .Values.hasura.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.hasura.hpa.cpuUtilization }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.hasura.hpa.memoryUtilization }}
+{{- end }}
