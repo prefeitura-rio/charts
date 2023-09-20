@@ -192,6 +192,29 @@ entries:
   prefect-server:
   - apiVersion: v2
     appVersion: 1.4.1
+    created: "2023-09-20T16:24:30.375695111Z"
+    dependencies:
+    - condition: postgresql.useSubChart
+      name: postgresql
+      repository: https://charts.bitnami.com/bitnami
+      version: 11.x.x
+    description: Prefect Server application bundle
+    digest: 401851a7897fb531bc4beecbe511ea7f342f4761f45a31985127e3852a5d48a0
+    home: https://github.com/prefeitura-rio/charts
+    maintainers:
+    - email: gabriel.gazola@poli.ufrj.br
+      name: gabriel-milan
+    name: prefect-server
+    sources:
+    - https://github.com/PrefectHQ/server
+    - https://github.com/prefeitura-rio/prefect-auth-proxy
+    - https://github.com/prefeitura-rio/prefect-ui
+    type: application
+    urls:
+    - https://github.com/prefeitura-rio/charts/releases/download/prefect-server-2023.09.20/prefect-server-2023.09.20.tgz
+    version: 2023.09.20
+  - apiVersion: v2
+    appVersion: 1.4.1
     created: "2023-09-18T12:46:00.149622375Z"
     dependencies:
     - condition: postgresql.useSubChart
