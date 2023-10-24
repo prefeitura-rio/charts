@@ -66,14 +66,23 @@ spec:
             {{- with .Values.agent.env }}
               {{- toYaml . | nindent 10 }}
             {{- end }}
-          {{- if .Values.agent.auth_secret_name }}
           volumeMounts:
+          {{- if .Values.agent.auth_secret_name }}
             - name: prefect-auth-toml
               mountPath: /root/.prefect/
               readOnly: true
+          {{- end }}
+          {{- if .Values.agent.gcp_sa_secret_name }}
             - name: google-application-credentials
               mountPath: /root/.config/gcloud/
               readOnly: true
+          {{- end }}
+          {{- if not .Values.agent.auth_secret_name }}
+            {{- if not .Values.agent.gcp_sa_secret_name }}
+              - name: empty-volume
+                mountPath: /root/.prefect/
+                emptyDir: {}
+            {{- end }}
           {{- end }}
           livenessProbe:
             failureThreshold: 2
@@ -86,12 +95,20 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-      {{- if .Values.agent.auth_secret_name }}
       volumes:
+      {{- if .Values.agent.auth_secret_name }}
         - name: prefect-auth-toml
           secret:
             secretName: {{ .Values.agent.auth_secret_name }}
+      {{- end }}
+      {{- if .Values.agent.gcp_sa_secret_name }}
         - name: google-application-credentials
           secret:
             secretName: {{ .Values.agent.gcp_sa_secret_name }}
+      {{- end }}
+      {{- if not .Values.agent.auth_secret_name }}
+        {{- if not .Values.agent.gcp_sa_secret_name }}
+          - name: empty-volume
+            emptyDir: {}
+        {{- end }}
       {{- end }}

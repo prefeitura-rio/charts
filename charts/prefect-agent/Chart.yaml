@@ -4,7 +4,7 @@ description: Deploys Prefect Agents for Rio de Janeiro City Hall
 
 type: application
 
-version: 1.0.0
+version: 1.0.1
 
 # This should match the Prefect version we're using
 appVersion: "1.4.1"
