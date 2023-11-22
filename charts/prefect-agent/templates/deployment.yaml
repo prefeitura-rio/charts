@@ -108,7 +108,7 @@ spec:
       {{- end }}
       {{- if not .Values.agent.auth_secret_name }}
         {{- if not .Values.agent.gcp_sa_secret_name }}
-          - name: empty-volume
-            emptyDir: {}
+        - name: empty-volume
+          emptyDir: {}
         {{- end }}
       {{- end }}
