@@ -59,6 +59,16 @@ entries:
   letta:
   - apiVersion: v2
     appVersion: 0.7.8
+    created: "2025-05-01T17:13:17.831720498Z"
+    description: Deploys Letta based on the documentation at https://docs.letta.com/quickstart/docker
+    digest: 8b1b6d16f78c4e3cfb49b80ee29c8fb62b9639b70a3be914de69142cce6fff2c
+    name: letta
+    type: application
+    urls:
+    - https://github.com/prefeitura-rio/charts/releases/download/letta-0.1.1/letta-0.1.1.tgz
+    version: 0.1.1
+  - apiVersion: v2
+    appVersion: 0.7.8
     created: "2025-05-01T16:59:35.435763374Z"
     description: Deploys Letta based on the documentation at https://docs.letta.com/quickstart/docker
     digest: 1ae3e09b036cb8c559191490d8a57654fb1614a8d11dde54fc5615f6f7741a2e
