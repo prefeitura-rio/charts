@@ -56,6 +56,17 @@ entries:
     urls:
     - https://github.com/prefeitura-rio/charts/releases/download/k8s-f5-service-0.1.0/k8s-f5-service-0.1.0.tgz
     version: 0.1.0
+  letta:
+  - apiVersion: v2
+    appVersion: 0.7.8
+    created: "2025-05-01T16:59:35.435763374Z"
+    description: Deploys Letta based on the documentation at https://docs.letta.com/quickstart/docker
+    digest: 1ae3e09b036cb8c559191490d8a57654fb1614a8d11dde54fc5615f6f7741a2e
+    name: letta
+    type: application
+    urls:
+    - https://github.com/prefeitura-rio/charts/releases/download/letta-0.1.0/letta-0.1.0.tgz
+    version: 0.1.0
   mlflow-serving:
   - apiVersion: v2
     appVersion: 1.28.0
