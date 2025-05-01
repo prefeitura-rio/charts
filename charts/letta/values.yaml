@@ -20,7 +20,7 @@ persistence:
 deployment:
   # The image to be deployed. We don't usually recommend setting the tag to `latest`, but this is
   # default value for easing simple deployments.
-  image: ghcr.io/prefeitura-rio/id-dados-rio:latest
+  image: letta/letta:latest
   imagePullPolicy: IfNotPresent
 
   env: []

@@ -4,7 +4,7 @@ description: Deploys Letta based on the documentation at https://docs.letta.com/
 
 type: application
 
-version: 0.1.0
+version: 0.1.1
 
 # Letta version
 appVersion: "0.7.8"
