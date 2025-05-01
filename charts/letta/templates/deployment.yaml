@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: {{ .Release.Name }}
+          image: {{ .Values.image | quote }}
+          imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
+          ports:
+            - containerPort: 8283
+          env:
+            - name: PGDATA
+              value: '/var/lib/postgresql/data/pgdata'
+          {{- range $key, $value := .Values.deployment.env }}
+            - name: {{ $key | quote }}
+              value: {{ $value | quote }}
+          {{- end }}
+          {{- if .Values.deployment.envFromSecret }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.deployment.envFromSecret | quote }}
+          {{- end }}
+          {{ with .Values.deployment.resources }}
+          resources:
+            {{ toYaml . | nindent 12 }}
+          {{ end }}
+          {{- if .Values.persistence.enabled }}
+          volumeMounts:
+            - name: letta-storage
+              mountPath: /var/lib/postgresql/data
+          {{- end }}
+      {{- if .Values.persistence.enabled }}
+      volumes:
+        - name: letta-storage
+          persistentVolumeClaim:
+            claimName: letta-pvc
+      {{- end }}
+      restartPolicy: Always

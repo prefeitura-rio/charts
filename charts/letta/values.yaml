@@ -1,0 +1,41 @@
+# Whether this is going to be installed by ArgoCD or not. This helps to set a few
+# annotations that are useful for ArgoCD.
+argocd:
+  enabled: false
+
+# Persistence configurations.
+persistence:
+  # Whether to enable or not the persistence.
+  enabled: true
+  # Whether to create the persistence volume or not. If not created, one must be provided by the
+  # user.
+  create: true
+  # The storage class to be used for the persistence. If not set, it will use the default storage
+  # class of the cluster.
+  storageClassName: ""
+  # The size of the persistence volume.
+  size: 10Gi
+
+# Deployment configurations.
+deployment:
+  # The image to be deployed. We don't usually recommend setting the tag to `latest`, but this is
+  # default value for easing simple deployments.
+  image: ghcr.io/prefeitura-rio/id-dados-rio:latest
+  imagePullPolicy: IfNotPresent
+
+  env: []
+  envFromSecret: ""
+
+  # Resources to be allocated for this deployment.
+  resources: {}
+
+# Ingress configurations.
+ingress:
+  # Whether to enable or not the ingress.
+  enabled: false
+  # Host to be used in the ingress rules.
+  host: letta.example.com
+  # Annotations to be added to the ingress.
+  annotations: {}
+  # TLS configuration.
+  tls: []
