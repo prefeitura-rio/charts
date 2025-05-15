@@ -4,6 +4,7 @@ kind: Ingress
 metadata:
   name: {{ .Release.Name }}
   {{- with .Values.ingress.annotations }}
+  annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
