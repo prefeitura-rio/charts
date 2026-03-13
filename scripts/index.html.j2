@@ -131,12 +131,6 @@
             color: #1976d2;
         }
 
-        .badge-featured {
-            background: #fff3e0;
-            color: #f57c00;
-            font-weight: bold;
-        }
-
         footer {
             text-align: center;
             margin-top: 3rem;
@@ -180,9 +174,6 @@ helm repo update</code></pre>
             <div class="chart-card">
                 <h3>{{ chart.name }}</h3>
                 <span class="chart-version">v{{ chart.version }}</span>
-                {% if chart.featured %}
-                <span class="badge badge-featured">Featured</span>
-                {% endif %}
                 {% if chart.keywords %}
                 <div>
                 {% for keyword in chart.keywords %}

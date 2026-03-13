@@ -27,15 +27,11 @@ class ChartData(TypedDict):
     version: str
     app_version: str
     description: str
-    featured: bool
     keywords: list[str]
 
 
 class HelmIndex(TypedDict):
     entries: dict[str, list[ChartVersion]]
-
-
-FEATURED_CHARTS: set[str] = {"base-chart"}
 
 
 def load_index_yaml(yaml_path: Path) -> HelmIndex:
@@ -50,7 +46,6 @@ def extract_chart_data(chart_name: str, versions: list[ChartVersion]) -> ChartDa
         "version": latest_version.get("version", "unknown"),
         "app_version": latest_version.get("appVersion", "N/A"),
         "description": latest_version.get("description", "No description available"),
-        "featured": chart_name in FEATURED_CHARTS,
         "keywords": latest_version.get("keywords", []),
     }
 
@@ -65,7 +60,7 @@ def parse_charts(index_data: HelmIndex) -> list[ChartData]:
         chart_data = extract_chart_data(chart_name, versions)
         charts.append(chart_data)
 
-    charts.sort(key=lambda chart: (not chart["featured"], chart["name"]))
+    charts.sort(key=lambda chart: chart["name"])
 
     return charts
 
