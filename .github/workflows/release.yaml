@@ -40,15 +40,10 @@ jobs:
 
       - name: Copy index.html to gh-pages
         run: |
-          # Save index.html from main branch
           git show main:index.html > /tmp/index.html
-          # Switch to gh-pages
           git checkout gh-pages
-          # Copy the saved file
           cp /tmp/index.html .
-          # Add the file
           git add index.html
-          # Commit and push if there are changes (staged or new file)
           if git diff --staged --quiet; then
             echo "No changes to index.html"
           else
