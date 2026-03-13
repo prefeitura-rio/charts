@@ -9,53 +9,43 @@
 
 import sys
 from pathlib import Path
+from typing import Any, TypedDict
 
 import yaml
 from jinja2 import Environment, FileSystemLoader
 
 
-CHART_BADGES = {
-    "base-chart": {
-        "featured": True,
-        "badges": ["Istio", "KEDA", "Infisical", "Valkey", "RabbitMQ"],
-    },
-    "letta": {
-        "featured": False,
-        "badges": ["LLM", "PostgreSQL", "Memory"],
-    },
-    "typesense": {
-        "featured": False,
-        "badges": ["Search", "Clustering", "HA"],
-    },
-}
-
-DEPRECATED_CHARTS = {"id-server", "k8s-f5-service", "letta-bot", "sequin"}
+class ChartData(TypedDict):
+    name: str
+    version: str
+    app_version: str
+    description: str
+    featured: bool
+    keywords: list[str]
 
 
-def load_index_yaml(yaml_path: Path) -> dict:
-    with open(yaml_path) as file:
-        return yaml.safe_load(file)
+DEPRECATED_CHARTS: set[str] = {"id-server", "k8s-f5-service", "letta-bot", "sequin"}
+FEATURED_CHARTS: set[str] = {"base-chart"}
 
 
-def get_chart_config(chart_name: str) -> dict:
-    return CHART_BADGES.get(chart_name, {"featured": False, "badges": []})
+def load_index_yaml(yaml_path: Path) -> dict[str, Any]:
+    return yaml.safe_load(yaml_path.read_text())
 
 
-def extract_chart_data(chart_name: str, versions: list) -> dict:
+def extract_chart_data(chart_name: str, versions: list[dict[str, Any]]) -> ChartData:
     latest_version = versions[0]
-    config = get_chart_config(chart_name)
 
     return {
         "name": chart_name,
         "version": latest_version.get("version", "unknown"),
         "app_version": latest_version.get("appVersion", "N/A"),
         "description": latest_version.get("description", "No description available"),
-        "featured": config["featured"],
-        "badges": config["badges"],
+        "featured": chart_name in FEATURED_CHARTS,
+        "keywords": latest_version.get("keywords", []),
     }
 
 
-def parse_charts(index_data: dict) -> list[dict]:
+def parse_charts(index_data: dict[str, Any]) -> list[ChartData]:
     charts = []
 
     for chart_name, versions in index_data.get("entries", {}).items():
@@ -74,15 +64,14 @@ def load_template(template_dir: Path) -> Environment:
     return env
 
 
-def generate_html(charts: list[dict], template_dir: Path) -> str:
+def generate_html(charts: list[ChartData], template_dir: Path) -> str:
     env = load_template(template_dir)
     template = env.get_template("index.html.j2")
     return template.render(charts=charts)
 
 
 def write_html(html_content: str, output_path: Path) -> None:
-    with open(output_path, "w") as file:
-        file.write(html_content)
+    output_path.write_text(html_content)
 
 
 def main() -> None:

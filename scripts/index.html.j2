@@ -183,10 +183,10 @@ helm repo update</code></pre>
                 {% if chart.featured %}
                 <span class="badge badge-featured">Featured</span>
                 {% endif %}
-                {% if chart.badges %}
+                {% if chart.keywords %}
                 <div>
-                {% for badge in chart.badges %}
-                    <span class="badge badge-primary">{{ badge }}</span>
+                {% for keyword in chart.keywords %}
+                    <span class="badge badge-primary">{{ keyword }}</span>
                 {% endfor %}
                 </div>
                 {% endif %}
