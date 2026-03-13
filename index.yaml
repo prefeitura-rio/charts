@@ -1,5 +1,28 @@
 apiVersion: v1
 entries:
+  base-chart:
+  - apiVersion: v2
+    appVersion: "1.25"
+    created: "2026-03-13T16:01:35.647222982Z"
+    dependencies:
+    - alias: valkey
+      condition: valkey.enabled
+      name: valkey
+      repository: oci://registry-1.docker.io/cloudpirates
+      version: 0.17.0
+    - alias: rabbitmq
+      condition: rabbitmq.enabled
+      name: rabbitmq
+      repository: oci://registry-1.docker.io/cloudpirates
+      version: 0.17.0
+    description: A Helm chart for basic deployments in Kubernetes
+    digest: dc9919ee8eaaa6b4200af612140f53e19b83042d79188f5ccf7ad15ddc501455
+    icon: https://helm.sh/img/helm.svg
+    name: base-chart
+    type: application
+    urls:
+    - https://github.com/prefeitura-rio/charts/releases/download/base-chart-2.2.3/base-chart-2.2.3.tgz
+    version: 2.2.3
   id-server:
   - apiVersion: v2
     appVersion: 0.1.0
