@@ -1,0 +1,351 @@
+suite: test configmap
+templates:
+  - configmap.yaml
+tests:
+  - it: should not render ConfigMap when disabled (default)
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render ConfigMap when enabled
+    set:
+      configMap:
+        enabled: true
+        data:
+          LOG_LEVEL: "info"
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+
+  - it: should include correct labels
+    set:
+      configMap:
+        enabled: true
+        data:
+          KEY: "value"
+    asserts:
+      - isSubset:
+          path: metadata.labels
+          content:
+            app.kubernetes.io/name: base-chart
+            app.kubernetes.io/instance: RELEASE-NAME
+
+  - it: should have sync-wave -1 annotation for ArgoCD
+    set:
+      configMap:
+        enabled: true
+        data:
+          KEY: "value"
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "-1"
+
+  - it: should include string data values
+    set:
+      configMap:
+        enabled: true
+        data:
+          LOG_LEVEL: "info"
+          DATABASE_POOL_SIZE: "10"
+          API_TIMEOUT: "30"
+    asserts:
+      - equal:
+          path: data.LOG_LEVEL
+          value: "info"
+      - equal:
+          path: data.DATABASE_POOL_SIZE
+          value: "10"
+      - equal:
+          path: data.API_TIMEOUT
+          value: "30"
+
+  - it: should handle empty data
+    set:
+      configMap:
+        enabled: true
+        data: {}
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: data
+          value: null
+
+  - it: should handle numeric values as strings
+    set:
+      configMap:
+        enabled: true
+        data:
+          PORT: 8080
+          WORKERS: 4
+    asserts:
+      - equal:
+          path: data.PORT
+          value: "8080"
+      - equal:
+          path: data.WORKERS
+          value: "4"
+
+  - it: should handle boolean values as strings
+    set:
+      configMap:
+        enabled: true
+        data:
+          DEBUG: true
+          PRODUCTION: false
+    asserts:
+      - equal:
+          path: data.DEBUG
+          value: "true"
+      - equal:
+          path: data.PRODUCTION
+          value: "false"
+
+  - it: should use fullnameOverride when specified
+    set:
+      fullnameOverride: "my-custom-app"
+      configMap:
+        enabled: true
+        data:
+          KEY: "value"
+    asserts:
+      - equal:
+          path: metadata.name
+          value: my-custom-app
+
+  - it: should use nameOverride when specified
+    set:
+      nameOverride: "my-app"
+      configMap:
+        enabled: true
+        data:
+          KEY: "value"
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-my-app
+
+---
+suite: test deployment with configmap
+templates:
+  - deployment.yaml
+  - configmap.yaml
+tests:
+  - it: should add configMapRef to envFrom when mountAsEnv is true (default)
+    set:
+      configMap:
+        enabled: true
+        data:
+          LOG_LEVEL: "info"
+    asserts:
+      - template: deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            configMapRef:
+              name: RELEASE-NAME
+
+  - it: should add configMapRef when mountAsEnv is explicitly true
+    set:
+      configMap:
+        enabled: true
+        mountAsEnv: true
+        data:
+          LOG_LEVEL: "info"
+    asserts:
+      - template: deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            configMapRef:
+              name: RELEASE-NAME
+
+  - it: should not add configMapRef when mountAsEnv is false
+    set:
+      configMap:
+        enabled: true
+        mountAsEnv: false
+        mountPath: "/etc/config"
+        data:
+          config.yaml: "key: value"
+    asserts:
+      - template: deployment.yaml
+        notContains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            configMapRef:
+              name: RELEASE-NAME
+
+  - it: should have both infisical secret and configmap in envFrom
+    set:
+      infisicalSecret:
+        enabled: true
+        secretName: my-app-secrets
+      configMap:
+        enabled: true
+        data:
+          LOG_LEVEL: "info"
+    asserts:
+      - template: deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            secretRef:
+              name: my-app-secrets
+      - template: deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            configMapRef:
+              name: RELEASE-NAME
+
+  - it: should add volume mount when mountPath is specified
+    set:
+      configMap:
+        enabled: true
+        mountPath: "/etc/myapp"
+        data:
+          config.yaml: "key: value"
+    asserts:
+      - template: deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: configmap-volume
+            mountPath: "/etc/myapp"
+            readOnly: true
+
+  - it: should add volume when mountPath is specified
+    set:
+      configMap:
+        enabled: true
+        mountPath: "/etc/myapp"
+        data:
+          config.yaml: "key: value"
+    asserts:
+      - template: deployment.yaml
+        contains:
+          path: spec.template.spec.volumes
+          content:
+            name: configmap-volume
+            configMap:
+              name: RELEASE-NAME
+              defaultMode: 420
+
+  - it: should use custom defaultMode for volume
+    set:
+      configMap:
+        enabled: true
+        mountPath: "/etc/myapp"
+        defaultMode: 0755
+        data:
+          script.sh: "#!/bin/bash"
+    asserts:
+      - template: deployment.yaml
+        contains:
+          path: spec.template.spec.volumes
+          content:
+            name: configmap-volume
+            configMap:
+              name: RELEASE-NAME
+              defaultMode: 493
+
+  - it: should not add volume when mountPath is not specified
+    set:
+      configMap:
+        enabled: true
+        data:
+          LOG_LEVEL: "info"
+    asserts:
+      - template: deployment.yaml
+        isNull:
+          path: spec.template.spec.volumes
+
+  - it: should support both envFrom and volume mount simultaneously
+    set:
+      configMap:
+        enabled: true
+        mountAsEnv: true
+        mountPath: "/etc/config"
+        data:
+          LOG_LEVEL: "info"
+          config.yaml: "key: value"
+    asserts:
+      - template: deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            configMapRef:
+              name: RELEASE-NAME
+      - template: deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: configmap-volume
+            mountPath: "/etc/config"
+            readOnly: true
+
+  - it: should add checksum annotation when configmap is enabled
+    set:
+      configMap:
+        enabled: true
+        data:
+          LOG_LEVEL: "info"
+    asserts:
+      - template: deployment.yaml
+        exists:
+          path: metadata.annotations["checksum/configmap"]
+
+  - it: should not have checksum annotation when configmap is disabled
+    asserts:
+      - template: deployment.yaml
+        notExists:
+          path: metadata.annotations["checksum/configmap"]
+
+  - it: should preserve existing volumes alongside configmap volume
+    set:
+      configMap:
+        enabled: true
+        mountPath: "/etc/config"
+        data:
+          config.yaml: "key: value"
+      volumes:
+        - name: my-secret
+          secret:
+            secretName: my-secret
+      volumeMounts:
+        - name: my-secret
+          mountPath: "/etc/secrets"
+    asserts:
+      - template: deployment.yaml
+        contains:
+          path: spec.template.spec.volumes
+          content:
+            name: configmap-volume
+            configMap:
+              name: RELEASE-NAME
+              defaultMode: 420
+      - template: deployment.yaml
+        contains:
+          path: spec.template.spec.volumes
+          content:
+            name: my-secret
+            secret:
+              secretName: my-secret
+      - template: deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: configmap-volume
+            mountPath: "/etc/config"
+            readOnly: true
+      - template: deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: my-secret
+            mountPath: "/etc/secrets"

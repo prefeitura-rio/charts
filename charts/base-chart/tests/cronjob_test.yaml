@@ -1,0 +1,152 @@
+suite: test cronjob
+templates:
+  - cronjob.yaml
+tests:
+  - it: should not render when no cronjobs defined
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should not render when cronjob is disabled
+    set:
+      cronjobs:
+        cleanup:
+          enabled: false
+          schedule: "0 2 * * *"
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render cronjob when enabled
+    set:
+      cronjobs:
+        cleanup:
+          enabled: true
+          schedule: "0 2 * * *"
+          command:
+            - /bin/sh
+            - -c
+            - echo hello
+    asserts:
+      - isKind:
+          of: CronJob
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-cleanup
+      - equal:
+          path: spec.schedule
+          value: "0 2 * * *"
+
+  - it: should have sync-wave 2 annotation
+    set:
+      cronjobs:
+        cleanup:
+          enabled: true
+          schedule: "0 2 * * *"
+          command:
+            - echo
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "2"
+
+  - it: should use default image from deployment
+    set:
+      image:
+        repository: myapp
+        tag: "v1.0.0"
+      cronjobs:
+        cleanup:
+          enabled: true
+          schedule: "0 2 * * *"
+          command:
+            - echo
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].image
+          value: "myapp:v1.0.0"
+
+  - it: should use custom image when specified
+    set:
+      cronjobs:
+        backup:
+          enabled: true
+          schedule: "0 5 * * *"
+          image:
+            repository: postgres
+            tag: "15"
+          command:
+            - pg_dump
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].image
+          value: "postgres:15"
+
+  - it: should render multiple cronjobs
+    set:
+      cronjobs:
+        cleanup:
+          enabled: true
+          schedule: "0 2 * * *"
+          command:
+            - echo
+        backup:
+          enabled: true
+          schedule: "0 5 * * *"
+          command:
+            - backup
+    asserts:
+      - hasDocuments:
+          count: 2
+
+  - it: should set concurrencyPolicy
+    set:
+      cronjobs:
+        cleanup:
+          enabled: true
+          schedule: "0 2 * * *"
+          concurrencyPolicy: Replace
+          command:
+            - echo
+    asserts:
+      - equal:
+          path: spec.concurrencyPolicy
+          value: Replace
+
+  - it: should set resource limits
+    set:
+      cronjobs:
+        backup:
+          enabled: true
+          schedule: "0 5 * * *"
+          command:
+            - backup
+          resources:
+            limits:
+              cpu: 1
+              memory: 2Gi
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].resources.limits.cpu
+          value: 1
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].resources.limits.memory
+          value: 2Gi
+
+  - it: should include infisical secret in envFrom
+    set:
+      infisicalSecret:
+        enabled: true
+        secretName: my-secrets
+      cronjobs:
+        cleanup:
+          enabled: true
+          schedule: "0 2 * * *"
+          command:
+            - echo
+    asserts:
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].envFrom
+          content:
+            secretRef:
+              name: my-secrets

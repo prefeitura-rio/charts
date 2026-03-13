@@ -1,0 +1,371 @@
+suite: test imageupdater
+templates:
+  - imageupdater.yaml
+tests:
+  - it: should not render ImageUpdater when disabled (default)
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render ImageUpdater when enabled
+    set:
+      argoImageUpdater.enabled: true
+    asserts:
+      - isKind:
+          of: ImageUpdater
+      - isAPIVersion:
+          of: argocd-image-updater.argoproj.io/v1alpha1
+
+  - it: should use default namespace "argo-cd" when not specified
+    set:
+      argoImageUpdater.enabled: true
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: argo-cd
+      - equal:
+          path: spec.namespace
+          value: argo-cd
+
+  - it: should use custom namespace when specified
+    set:
+      argoImageUpdater.enabled: true
+      argoImageUpdater.namespace: custom-argocd
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: custom-argocd
+      - equal:
+          path: spec.namespace
+          value: custom-argocd
+
+  - it: should use release name as namePattern by default
+    set:
+      argoImageUpdater.enabled: true
+    asserts:
+      - equal:
+          path: spec.applicationRefs[0].namePattern
+          value: RELEASE-NAME
+
+  - it: should use custom namePattern when specified
+    set:
+      argoImageUpdater.enabled: true
+      argoImageUpdater.applicationRef.namePattern: "my-custom-app"
+    asserts:
+      - equal:
+          path: spec.applicationRefs[0].namePattern
+          value: my-custom-app
+
+  - it: should use release namespace as applicationRef namespace by default
+    release:
+      namespace: production
+    set:
+      argoImageUpdater.enabled: true
+    asserts:
+      - equal:
+          path: spec.applicationRefs[0].namespace
+          value: production
+
+  - it: should use custom applicationRef namespace when specified
+    set:
+      argoImageUpdater.enabled: true
+      argoImageUpdater.applicationRef.namespace: "custom-namespace"
+    asserts:
+      - equal:
+          path: spec.applicationRefs[0].namespace
+          value: custom-namespace
+
+  - it: should auto-generate image from deployment values when images list is empty
+    set:
+      argoImageUpdater.enabled: true
+      image.repository: ghcr.io/myorg/myapp
+      image.tag: v1.2.3
+    asserts:
+      - equal:
+          path: spec.applicationRefs[0].images[0].alias
+          value: RELEASE-NAME
+      - equal:
+          path: spec.applicationRefs[0].images[0].imageName
+          value: "ghcr.io/myorg/myapp:v1.2.3"
+
+  - it: should use fullnameOverride as alias when set
+    set:
+      argoImageUpdater.enabled: true
+      fullnameOverride: my-custom-name
+      image.repository: ghcr.io/myorg/myapp
+      image.tag: v1.0.0
+    asserts:
+      - equal:
+          path: spec.applicationRefs[0].images[0].alias
+          value: my-custom-name
+
+  - it: should use nameOverride as alias when set (without fullnameOverride)
+    set:
+      argoImageUpdater.enabled: true
+      nameOverride: my-short-name
+      image.repository: ghcr.io/myorg/myapp
+      image.tag: v1.0.0
+    asserts:
+      - equal:
+          path: spec.applicationRefs[0].images[0].alias
+          value: RELEASE-NAME-my-short-name
+
+  - it: should use default updateStrategy "digest" for auto-generated images
+    set:
+      argoImageUpdater.enabled: true
+      image.repository: ghcr.io/myorg/myapp
+      image.tag: latest
+    asserts:
+      - equal:
+          path: spec.applicationRefs[0].images[0].commonUpdateSettings.updateStrategy
+          value: digest
+
+  - it: should use custom updateStrategy for auto-generated images
+    set:
+      argoImageUpdater.enabled: true
+      argoImageUpdater.updateStrategy: semver
+      image.repository: ghcr.io/myorg/myapp
+      image.tag: v1.0.0
+    asserts:
+      - equal:
+          path: spec.applicationRefs[0].images[0].commonUpdateSettings.updateStrategy
+          value: semver
+
+  - it: should include semverConstraint when updateStrategy is semver
+    set:
+      argoImageUpdater.enabled: true
+      argoImageUpdater.updateStrategy: semver
+      argoImageUpdater.semverConstraint: "^1.0.0"
+      image.repository: ghcr.io/myorg/myapp
+      image.tag: v1.0.0
+    asserts:
+      - equal:
+          path: spec.applicationRefs[0].images[0].commonUpdateSettings.updateStrategy
+          value: semver
+      - equal:
+          path: spec.applicationRefs[0].images[0].commonUpdateSettings.semverConstraint
+          value: "^1.0.0"
+
+  - it: should use appVersion as tag when image.tag is empty
+    set:
+      argoImageUpdater.enabled: true
+      image.repository: ghcr.io/myorg/myapp
+      image.tag: ""
+    asserts:
+      - matchRegex:
+          path: spec.applicationRefs[0].images[0].imageName
+          pattern: "ghcr.io/myorg/myapp:.*"
+
+  - it: should use explicit images list when provided
+    set:
+      argoImageUpdater.enabled: true
+      argoImageUpdater.images:
+        - alias: api
+          imageName: ghcr.io/myorg/api:latest
+          commonUpdateSettings:
+            updateStrategy: latest
+    asserts:
+      - equal:
+          path: spec.applicationRefs[0].images[0].alias
+          value: api
+      - equal:
+          path: spec.applicationRefs[0].images[0].imageName
+          value: "ghcr.io/myorg/api:latest"
+      - equal:
+          path: spec.applicationRefs[0].images[0].commonUpdateSettings.updateStrategy
+          value: latest
+
+  - it: should support multiple explicit images
+    set:
+      argoImageUpdater.enabled: true
+      argoImageUpdater.images:
+        - alias: api
+          imageName: ghcr.io/myorg/api:latest
+          commonUpdateSettings:
+            updateStrategy: digest
+        - alias: worker
+          imageName: ghcr.io/myorg/worker:latest
+          commonUpdateSettings:
+            updateStrategy: semver
+            semverConstraint: "~1.0"
+    asserts:
+      - equal:
+          path: spec.applicationRefs[0].images[0].alias
+          value: api
+      - equal:
+          path: spec.applicationRefs[0].images[1].alias
+          value: worker
+      - equal:
+          path: spec.applicationRefs[0].images[1].commonUpdateSettings.semverConstraint
+          value: "~1.0"
+
+  - it: should include registrySecret when provided in explicit images
+    set:
+      argoImageUpdater.enabled: true
+      argoImageUpdater.images:
+        - alias: api
+          imageName: private-registry.io/myorg/api:latest
+          registrySecret: registry-credentials
+          commonUpdateSettings:
+            updateStrategy: digest
+    asserts:
+      - equal:
+          path: spec.applicationRefs[0].images[0].registrySecret
+          value: registry-credentials
+
+  - it: should include standard labels
+    set:
+      argoImageUpdater.enabled: true
+    asserts:
+      - exists:
+          path: metadata.labels["helm.sh/chart"]
+      - exists:
+          path: metadata.labels["app.kubernetes.io/name"]
+      - exists:
+          path: metadata.labels["app.kubernetes.io/instance"]
+      - exists:
+          path: metadata.labels["app.kubernetes.io/managed-by"]
+
+  - it: should add custom annotations when provided
+    set:
+      argoImageUpdater.enabled: true
+      argoImageUpdater.annotations:
+        custom-annotation: custom-value
+    asserts:
+      - equal:
+          path: metadata.annotations["custom-annotation"]
+          value: custom-value
+
+  - it: should add custom labels when provided
+    set:
+      argoImageUpdater.enabled: true
+      argoImageUpdater.labels:
+        custom-label: custom-value
+    asserts:
+      - equal:
+          path: metadata.labels["custom-label"]
+          value: custom-value
+
+  - it: should use fullname helper for metadata name
+    set:
+      argoImageUpdater.enabled: true
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+
+  - it: should use fullnameOverride for metadata name when set
+    set:
+      argoImageUpdater.enabled: true
+      fullnameOverride: my-app
+    asserts:
+      - equal:
+          path: metadata.name
+          value: my-app
+
+  - it: "scenario: minimal config - just enable argoImageUpdater"
+    release:
+      name: atlas-api
+      namespace: atlas
+    set:
+      argoImageUpdater.enabled: true
+      image.repository: ghcr.io/prefeitura-rio/atlas-api
+      image.tag: staging
+      fullnameOverride: api
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: argo-cd
+      - equal:
+          path: spec.applicationRefs[0].namePattern
+          value: atlas-api
+      - equal:
+          path: spec.applicationRefs[0].namespace
+          value: atlas
+      - equal:
+          path: spec.applicationRefs[0].images[0].alias
+          value: api
+      - equal:
+          path: spec.applicationRefs[0].images[0].imageName
+          value: "ghcr.io/prefeitura-rio/atlas-api:staging"
+      - equal:
+          path: spec.applicationRefs[0].images[0].commonUpdateSettings.updateStrategy
+          value: digest
+
+  - it: "scenario: semver strategy with constraint"
+    release:
+      name: my-app
+      namespace: production
+    set:
+      argoImageUpdater.enabled: true
+      argoImageUpdater.updateStrategy: semver
+      argoImageUpdater.semverConstraint: "^2.0.0"
+      image.repository: ghcr.io/myorg/myapp
+      image.tag: v2.1.0
+    asserts:
+      - equal:
+          path: spec.applicationRefs[0].images[0].commonUpdateSettings.updateStrategy
+          value: semver
+      - equal:
+          path: spec.applicationRefs[0].images[0].commonUpdateSettings.semverConstraint
+          value: "^2.0.0"
+
+  - it: should auto-derive registrySecret from imagePullSecrets
+    set:
+      argoImageUpdater.enabled: true
+      imagePullSecrets:
+        - name: ghcr-credentials
+      image.repository: ghcr.io/myorg/myapp
+      image.tag: latest
+    asserts:
+      - equal:
+          path: spec.applicationRefs[0].images[0].registrySecret
+          value: ghcr-credentials
+
+  - it: should use first imagePullSecret when multiple are defined
+    set:
+      argoImageUpdater.enabled: true
+      imagePullSecrets:
+        - name: first-secret
+        - name: second-secret
+      image.repository: ghcr.io/myorg/myapp
+      image.tag: latest
+    asserts:
+      - equal:
+          path: spec.applicationRefs[0].images[0].registrySecret
+          value: first-secret
+
+  - it: should not set registrySecret when imagePullSecrets is empty
+    set:
+      argoImageUpdater.enabled: true
+      imagePullSecrets: []
+      image.repository: ghcr.io/myorg/myapp
+      image.tag: latest
+    asserts:
+      - notExists:
+          path: spec.applicationRefs[0].images[0].registrySecret
+
+  - it: should allow explicit registrySecret override
+    set:
+      argoImageUpdater.enabled: true
+      argoImageUpdater.registrySecret: custom-secret
+      imagePullSecrets:
+        - name: default-secret
+      image.repository: ghcr.io/myorg/myapp
+      image.tag: latest
+    asserts:
+      - equal:
+          path: spec.applicationRefs[0].images[0].registrySecret
+          value: custom-secret
+
+  - it: should set registrySecret for explicitly defined images
+    set:
+      argoImageUpdater.enabled: true
+      argoImageUpdater.images:
+        - alias: api
+          imageName: ghcr.io/myorg/api:latest
+          registrySecret: api-secret
+    asserts:
+      - equal:
+          path: spec.applicationRefs[0].images[0].registrySecret
+          value: api-secret

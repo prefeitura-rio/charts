@@ -1,0 +1,24 @@
+apiVersion: v2
+name: base-chart
+description: A Helm chart for basic deployments in Kubernetes
+type: application
+version: 2.2.3
+appVersion: "1.25"
+icon: https://helm.sh/img/helm.svg
+
+dependencies:
+  # Valkey - Cache (Redis-compatible)
+  # https://github.com/cloudpirates/helm-charts/tree/main/charts/valkey
+  - name: valkey
+    version: "0.17.0"
+    repository: "oci://registry-1.docker.io/cloudpirates"
+    condition: valkey.enabled
+    alias: valkey
+
+  # RabbitMQ - Message Queue
+  # https://github.com/cloudpirates/helm-charts/tree/main/charts/rabbitmq
+  - name: rabbitmq
+    version: "0.17.0"
+    repository: "oci://registry-1.docker.io/cloudpirates"
+    condition: rabbitmq.enabled
+    alias: rabbitmq

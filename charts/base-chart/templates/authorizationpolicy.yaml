@@ -1,0 +1,26 @@
+{{- if and .Values.istio.enabled .Values.istio.authorizationPolicy.enabled -}}
+{{- $fullName := include "base-chart.fullname" . -}}
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: {{ $fullName }}
+  labels:
+    {{- include "base-chart.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  selector:
+    matchLabels:
+      {{- include "base-chart.selectorLabels" . | nindent 6 }}
+  {{- if .Values.istio.authorizationPolicy.action }}
+  action: {{ .Values.istio.authorizationPolicy.action }}
+  {{- end }}
+  {{- if .Values.istio.authorizationPolicy.provider }}
+  provider:
+    name: {{ .Values.istio.authorizationPolicy.provider.name }}
+  {{- end }}
+  {{- with .Values.istio.authorizationPolicy.rules }}
+  rules:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}

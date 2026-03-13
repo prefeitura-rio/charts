@@ -1,0 +1,160 @@
+suite: test argocd sync-wave annotations
+tests:
+  - it: InfisicalSecret should have sync-wave -1
+    templates:
+      - infisicalsecret.yaml
+    set:
+      infisicalSecret:
+        enabled: true
+        secretName: test-secret
+        projectSlug: test-project
+        envSlug: prod
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "-1"
+
+  - it: ServiceAccount should have sync-wave 0
+    templates:
+      - serviceaccount.yaml
+    set:
+      serviceAccount:
+        create: true
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "0"
+
+  - it: Service should have sync-wave 1
+    templates:
+      - service.yaml
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "1"
+
+  - it: Deployment should have sync-wave 1
+    templates:
+      - deployment.yaml
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "1"
+
+  - it: ScaledObject should have sync-wave 2
+    templates:
+      - scaledobject.yaml
+    set:
+      autoscaling:
+        enabled: true
+        keda:
+          enabled: true
+          triggers:
+            - type: prometheus
+              metadata:
+                serverAddress: http://prometheus:9090
+                metricName: test_metric
+                threshold: "100"
+                query: "sum(rate(test_total[2m]))"
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "2"
+
+  - it: HPA should have sync-wave 2
+    templates:
+      - hpa.yaml
+    set:
+      autoscaling:
+        enabled: true
+        minReplicas: 1
+        maxReplicas: 10
+        targetCPUUtilizationPercentage: 80
+        keda:
+          enabled: false
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "2"
+
+  - it: PodDisruptionBudget should have sync-wave 2
+    templates:
+      - poddisruptionbudget.yaml
+    set:
+      podDisruptionBudget:
+        enabled: true
+        minAvailable: 1
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "2"
+
+  - it: CronJob should have sync-wave 2
+    templates:
+      - cronjob.yaml
+    set:
+      cronjobs:
+        cleanup:
+          enabled: true
+          schedule: "0 2 * * *"
+          command:
+            - /bin/sh
+            - -c
+            - "echo cleanup"
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "2"
+
+  - it: VirtualService should have sync-wave 3
+    templates:
+      - virtualservice.yaml
+    set:
+      istio:
+        enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "3"
+
+  - it: DestinationRule should have sync-wave 3
+    templates:
+      - destinationrule.yaml
+    set:
+      istio:
+        enabled: true
+        destinationRule:
+          enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "3"
+
+  - it: AuthorizationPolicy should have sync-wave 3
+    templates:
+      - authorizationpolicy.yaml
+    set:
+      istio:
+        enabled: true
+        authorizationPolicy:
+          enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "3"
+
+  - it: RequestAuthentication should have sync-wave 3
+    templates:
+      - requestauthentication.yaml
+    set:
+      istio:
+        enabled: true
+        requestAuthentication:
+          enabled: true
+          jwtRules:
+            - issuer: "https://auth.example.com"
+              jwksUri: "https://auth.example.com/.well-known/jwks.json"
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "3"

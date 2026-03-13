@@ -1,0 +1,292 @@
+suite: test istio virtual service
+templates:
+  - virtualservice.yaml
+tests:
+  - it: should not render when istio is disabled
+    set:
+      istio.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render when istio is enabled
+    set:
+      istio.enabled: true
+    asserts:
+      - isKind:
+          of: VirtualService
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+
+  - it: should configure path-based routing when enabled
+    set:
+      istio.enabled: true
+      istio.virtualService.pathBasedRouting.enabled: true
+      istio.virtualService.pathBasedRouting.servicePath: "api"
+    asserts:
+      - equal:
+          path: spec.http[0].match[0].uri.prefix
+          value: "/api/"
+      - equal:
+          path: spec.http[0].rewrite.uri
+          value: "/"
+
+  - it: should configure canary deployment when enabled
+    set:
+      istio.enabled: true
+      istio.virtualService.pathBasedRouting.enabled: true
+      istio.virtualService.canary.enabled: true
+      istio.virtualService.canary.weight: 20
+    asserts:
+      - equal:
+          path: spec.http[0].route[0].weight
+          value: 80
+      - equal:
+          path: spec.http[0].route[1].weight
+          value: 20
+      - equal:
+          path: spec.http[0].route[1].destination.host
+          value: RELEASE-NAME-canary
+
+  - it: should configure custom hosts when specified
+    set:
+      istio.enabled: true
+      istio.virtualService.hosts:
+        - api.example.com
+        - internal.mesh.local
+    asserts:
+      - contains:
+          path: spec.hosts
+          content: api.example.com
+      - contains:
+          path: spec.hosts
+          content: internal.mesh.local
+
+  - it: should configure gateways when specified
+    set:
+      istio.enabled: true
+      istio.virtualService.gateways:
+        - istio-system/my-gateway
+        - mesh
+    asserts:
+      - contains:
+          path: spec.gateways
+          content: istio-system/my-gateway
+      - contains:
+          path: spec.gateways
+          content: mesh
+
+  - it: should have sync-wave 3 annotation
+    set:
+      istio.enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "3"
+
+  - it: should configure timeout when specified
+    set:
+      istio.enabled: true
+      istio.virtualService.timeout: "30s"
+    asserts:
+      - equal:
+          path: spec.http[0].timeout
+          value: "30s"
+
+  - it: should configure retries when specified
+    set:
+      istio.enabled: true
+      istio.virtualService.retries:
+        attempts: 3
+        perTryTimeout: "2s"
+        retryOn: "connect-failure,refused-stream"
+    asserts:
+      - equal:
+          path: spec.http[0].retries.attempts
+          value: 3
+      - equal:
+          path: spec.http[0].retries.perTryTimeout
+          value: "2s"
+      - equal:
+          path: spec.http[0].retries.retryOn
+          value: "connect-failure,refused-stream"
+
+  - it: should configure response headers when specified
+    set:
+      istio.enabled: true
+      istio.virtualService.headers:
+        response:
+          set:
+            cache-control: "public, max-age=86400"
+            x-custom-header: "value"
+    asserts:
+      - equal:
+          path: spec.http[0].headers.response.set.cache-control
+          value: "public, max-age=86400"
+      - equal:
+          path: spec.http[0].headers.response.set.x-custom-header
+          value: "value"
+
+  - it: should configure request headers when specified
+    set:
+      istio.enabled: true
+      istio.virtualService.headers:
+        request:
+          set:
+            x-api-version: "v1"
+          remove:
+            - x-internal-header
+    asserts:
+      - equal:
+          path: spec.http[0].headers.request.set.x-api-version
+          value: "v1"
+      - contains:
+          path: spec.http[0].headers.request.remove
+          content: x-internal-header
+
+  - it: should configure CORS policy when specified
+    set:
+      istio.enabled: true
+      istio.virtualService.corsPolicy:
+        allowOrigins:
+          - exact: "https://example.com"
+        allowMethods:
+          - GET
+          - POST
+        allowHeaders:
+          - Authorization
+          - Content-Type
+        maxAge: "24h"
+        allowCredentials: true
+    asserts:
+      - equal:
+          path: spec.http[0].corsPolicy.allowOrigins[0].exact
+          value: "https://example.com"
+      - contains:
+          path: spec.http[0].corsPolicy.allowMethods
+          content: GET
+      - contains:
+          path: spec.http[0].corsPolicy.allowMethods
+          content: POST
+      - contains:
+          path: spec.http[0].corsPolicy.allowHeaders
+          content: Authorization
+      - equal:
+          path: spec.http[0].corsPolicy.maxAge
+          value: "24h"
+      - equal:
+          path: spec.http[0].corsPolicy.allowCredentials
+          value: true
+
+  - it: should configure headers with path-based routing
+    set:
+      istio.enabled: true
+      istio.virtualService.pathBasedRouting.enabled: true
+      istio.virtualService.pathBasedRouting.servicePath: "api"
+      istio.virtualService.pathBasedRouting.headers:
+        response:
+          set:
+            x-route-header: "path-based"
+    asserts:
+      - equal:
+          path: spec.http[0].headers.response.set.x-route-header
+          value: "path-based"
+
+  - it: should configure timeout with path-based routing
+    set:
+      istio.enabled: true
+      istio.virtualService.pathBasedRouting.enabled: true
+      istio.virtualService.timeout: "60s"
+    asserts:
+      - equal:
+          path: spec.http[0].timeout
+          value: "60s"
+
+  - it: should auto-derive destination host when not specified in http routes
+    release:
+      namespace: myns
+    set:
+      istio.enabled: true
+      istio.virtualService.http:
+        - match:
+            - uri:
+                prefix: /
+          timeout: 30s
+    asserts:
+      - equal:
+          path: spec.http[0].route[0].destination.host
+          value: RELEASE-NAME.myns.svc.cluster.local
+
+  - it: should auto-derive destination port when not specified in http routes
+    set:
+      istio.enabled: true
+      service.port: 8080
+      istio.virtualService.http:
+        - match:
+            - uri:
+                prefix: /
+    asserts:
+      - equal:
+          path: spec.http[0].route[0].destination.port.number
+          value: 8080
+
+  - it: should use explicit destination host when provided
+    set:
+      istio.enabled: true
+      istio.virtualService.http:
+        - match:
+            - uri:
+                prefix: /
+          route:
+            - destination:
+                host: custom-service.other-ns.svc.cluster.local
+                port:
+                  number: 9000
+    asserts:
+      - equal:
+          path: spec.http[0].route[0].destination.host
+          value: custom-service.other-ns.svc.cluster.local
+      - equal:
+          path: spec.http[0].route[0].destination.port.number
+          value: 9000
+
+  - it: should add default route when http routes have no route section
+    release:
+      namespace: test-ns
+    set:
+      istio.enabled: true
+      service.port: 80
+      istio.virtualService.http:
+        - match:
+            - uri:
+                prefix: /api
+          timeout: 60s
+    asserts:
+      - equal:
+          path: spec.http[0].route[0].destination.host
+          value: RELEASE-NAME.test-ns.svc.cluster.local
+      - equal:
+          path: spec.http[0].route[0].destination.port.number
+          value: 80
+
+  - it: should use default gateway when not specified
+    set:
+      istio.enabled: true
+    asserts:
+      - contains:
+          path: spec.gateways
+          content: istio-system/istio-gateway
+
+  - it: should use custom gateway when specified
+    set:
+      istio.enabled: true
+      istio.virtualService.gateways:
+        - my-namespace/my-gateway
+    asserts:
+      - contains:
+          path: spec.gateways
+          content: my-namespace/my-gateway
+      - notContains:
+          path: spec.gateways
+          content: istio-system/istio-gateway

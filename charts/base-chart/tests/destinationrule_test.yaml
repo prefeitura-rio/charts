@@ -1,0 +1,83 @@
+suite: test istio destination rule
+templates:
+  - destinationrule.yaml
+tests:
+  - it: should not render when istio is disabled
+    set:
+      istio.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should not render when destinationRule is disabled
+    set:
+      istio.enabled: true
+      istio.destinationRule.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render when enabled
+    set:
+      istio.enabled: true
+      istio.destinationRule.enabled: true
+    asserts:
+      - isKind:
+          of: DestinationRule
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+
+  - it: should have sync-wave 3 annotation
+    set:
+      istio.enabled: true
+      istio.destinationRule.enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "3"
+
+  - it: should configure connection pool TCP settings
+    set:
+      istio.enabled: true
+      istio.destinationRule.enabled: true
+    asserts:
+      - equal:
+          path: spec.trafficPolicy.connectionPool.tcp.maxConnections
+          value: 100
+      - equal:
+          path: spec.trafficPolicy.connectionPool.tcp.connectTimeout
+          value: "30s"
+
+  - it: should configure connection pool HTTP settings
+    set:
+      istio.enabled: true
+      istio.destinationRule.enabled: true
+    asserts:
+      - equal:
+          path: spec.trafficPolicy.connectionPool.http.http2MaxRequests
+          value: 100
+      - equal:
+          path: spec.trafficPolicy.connectionPool.http.maxRetries
+          value: 3
+
+  - it: should configure outlier detection
+    set:
+      istio.enabled: true
+      istio.destinationRule.enabled: true
+    asserts:
+      - equal:
+          path: spec.trafficPolicy.outlierDetection.consecutiveGatewayErrors
+          value: 5
+      - equal:
+          path: spec.trafficPolicy.outlierDetection.interval
+          value: "30s"
+
+  - it: should configure load balancer
+    set:
+      istio.enabled: true
+      istio.destinationRule.enabled: true
+    asserts:
+      - equal:
+          path: spec.trafficPolicy.loadBalancer.simple
+          value: LEAST_REQUEST

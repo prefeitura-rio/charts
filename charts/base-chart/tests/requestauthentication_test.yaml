@@ -1,0 +1,94 @@
+suite: test istio request authentication
+templates:
+  - requestauthentication.yaml
+tests:
+  - it: should not render when istio is disabled
+    set:
+      istio.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should not render when requestAuthentication is disabled
+    set:
+      istio.enabled: true
+      istio.requestAuthentication.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render when enabled with jwtRules
+    set:
+      istio.enabled: true
+      istio.requestAuthentication.enabled: true
+      istio.requestAuthentication.jwtRules:
+        - issuer: "https://auth.example.com"
+          jwksUri: "https://auth.example.com/.well-known/jwks.json"
+    asserts:
+      - isKind:
+          of: RequestAuthentication
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+
+  - it: should have sync-wave 3 annotation
+    set:
+      istio.enabled: true
+      istio.requestAuthentication.enabled: true
+      istio.requestAuthentication.jwtRules:
+        - issuer: "https://auth.example.com"
+          jwksUri: "https://auth.example.com/.well-known/jwks.json"
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "3"
+
+  - it: should configure JWT issuer and jwksUri
+    set:
+      istio.enabled: true
+      istio.requestAuthentication.enabled: true
+      istio.requestAuthentication.jwtRules:
+        - issuer: "https://auth.example.com"
+          jwksUri: "https://auth.example.com/.well-known/jwks.json"
+    asserts:
+      - equal:
+          path: spec.jwtRules[0].issuer
+          value: "https://auth.example.com"
+      - equal:
+          path: spec.jwtRules[0].jwksUri
+          value: "https://auth.example.com/.well-known/jwks.json"
+
+  - it: should configure multiple JWT rules
+    set:
+      istio.enabled: true
+      istio.requestAuthentication.enabled: true
+      istio.requestAuthentication.jwtRules:
+        - issuer: "https://auth1.example.com"
+          jwksUri: "https://auth1.example.com/.well-known/jwks.json"
+        - issuer: "https://auth2.example.com"
+          jwksUri: "https://auth2.example.com/.well-known/jwks.json"
+    asserts:
+      - equal:
+          path: spec.jwtRules[0].issuer
+          value: "https://auth1.example.com"
+      - equal:
+          path: spec.jwtRules[1].issuer
+          value: "https://auth2.example.com"
+
+  - it: should configure audiences when specified
+    set:
+      istio.enabled: true
+      istio.requestAuthentication.enabled: true
+      istio.requestAuthentication.jwtRules:
+        - issuer: "https://auth.example.com"
+          jwksUri: "https://auth.example.com/.well-known/jwks.json"
+          audiences:
+            - my-api
+            - my-service
+    asserts:
+      - contains:
+          path: spec.jwtRules[0].audiences
+          content: my-api
+      - contains:
+          path: spec.jwtRules[0].audiences
+          content: my-service

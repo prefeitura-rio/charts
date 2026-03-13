@@ -1,0 +1,132 @@
+suite: test istio authorization policy
+templates:
+  - authorizationpolicy.yaml
+tests:
+  - it: should not render when istio is disabled
+    set:
+      istio.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should not render when authorizationPolicy is disabled
+    set:
+      istio.enabled: true
+      istio.authorizationPolicy.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render when enabled
+    set:
+      istio.enabled: true
+      istio.authorizationPolicy.enabled: true
+    asserts:
+      - isKind:
+          of: AuthorizationPolicy
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+
+  - it: should have sync-wave 3 annotation
+    set:
+      istio.enabled: true
+      istio.authorizationPolicy.enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "3"
+
+  - it: should configure ALLOW action by default
+    set:
+      istio.enabled: true
+      istio.authorizationPolicy.enabled: true
+      istio.authorizationPolicy.action: "ALLOW"
+    asserts:
+      - equal:
+          path: spec.action
+          value: "ALLOW"
+
+  - it: should configure DENY action when specified
+    set:
+      istio.enabled: true
+      istio.authorizationPolicy.enabled: true
+      istio.authorizationPolicy.action: "DENY"
+    asserts:
+      - equal:
+          path: spec.action
+          value: "DENY"
+
+  - it: should configure CUSTOM action with provider for Cerbos
+    set:
+      istio.enabled: true
+      istio.authorizationPolicy.enabled: true
+      istio.authorizationPolicy.action: "CUSTOM"
+      istio.authorizationPolicy.provider:
+        name: "cerbos-authz"
+    asserts:
+      - equal:
+          path: spec.action
+          value: "CUSTOM"
+      - equal:
+          path: spec.provider.name
+          value: "cerbos-authz"
+
+  - it: should configure CUSTOM action with provider for OPA
+    set:
+      istio.enabled: true
+      istio.authorizationPolicy.enabled: true
+      istio.authorizationPolicy.action: "CUSTOM"
+      istio.authorizationPolicy.provider:
+        name: "opa-authz"
+    asserts:
+      - equal:
+          path: spec.action
+          value: "CUSTOM"
+      - equal:
+          path: spec.provider.name
+          value: "opa-authz"
+
+  - it: should not include provider when not specified
+    set:
+      istio.enabled: true
+      istio.authorizationPolicy.enabled: true
+      istio.authorizationPolicy.action: "ALLOW"
+    asserts:
+      - notExists:
+          path: spec.provider
+
+  - it: should include custom rules when specified
+    set:
+      istio.enabled: true
+      istio.authorizationPolicy.enabled: true
+      istio.authorizationPolicy.rules:
+        - from:
+            - source:
+                principals:
+                  - "cluster.local/ns/default/sa/my-service"
+          to:
+            - operation:
+                methods:
+                  - "GET"
+                  - "POST"
+                paths:
+                  - "/api/*"
+    asserts:
+      - equal:
+          path: spec.rules[0].from[0].source.principals[0]
+          value: "cluster.local/ns/default/sa/my-service"
+      - contains:
+          path: spec.rules[0].to[0].operation.methods
+          content: "GET"
+      - contains:
+          path: spec.rules[0].to[0].operation.methods
+          content: "POST"
+
+  - it: should configure selector with correct labels
+    set:
+      istio.enabled: true
+      istio.authorizationPolicy.enabled: true
+    asserts:
+      - exists:
+          path: spec.selector.matchLabels

@@ -1,0 +1,266 @@
+suite: test autoscaling
+templates:
+  - hpa.yaml
+  - scaledobject.yaml
+tests:
+  - it: HPA should not render when autoscaling is disabled
+    template: hpa.yaml
+    set:
+      autoscaling.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: HPA should not render when KEDA is enabled (default)
+    template: hpa.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: HPA should render when autoscaling enabled and KEDA disabled
+    template: hpa.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.enabled: false
+    asserts:
+      - isKind:
+          of: HorizontalPodAutoscaler
+      - equal:
+          path: spec.minReplicas
+          value: 1
+      - equal:
+          path: spec.maxReplicas
+          value: 10
+
+  - it: HPA should use custom min/max replicas
+    template: hpa.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.enabled: false
+      autoscaling.minReplicas: 2
+      autoscaling.maxReplicas: 50
+    asserts:
+      - equal:
+          path: spec.minReplicas
+          value: 2
+      - equal:
+          path: spec.maxReplicas
+          value: 50
+
+  - it: HPA should configure CPU target
+    template: hpa.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.enabled: false
+      autoscaling.targetCPUUtilizationPercentage: 70
+    asserts:
+      - equal:
+          path: spec.metrics[0].resource.name
+          value: cpu
+      - equal:
+          path: spec.metrics[0].resource.target.averageUtilization
+          value: 70
+
+  - it: HPA should configure memory target when specified
+    template: hpa.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.enabled: false
+      autoscaling.targetMemoryUtilizationPercentage: 85
+    asserts:
+      - contains:
+          path: spec.metrics
+          content:
+            type: Resource
+            resource:
+              name: memory
+              target:
+                type: Utilization
+                averageUtilization: 85
+
+  - it: KEDA should render by default when autoscaling enabled
+    template: scaledobject.yaml
+    set:
+      autoscaling.enabled: true
+    asserts:
+      - isKind:
+          of: ScaledObject
+      - equal:
+          path: spec.minReplicaCount
+          value: 1
+      - equal:
+          path: spec.maxReplicaCount
+          value: 10
+
+  - it: KEDA should not render when autoscaling disabled
+    template: scaledobject.yaml
+    set:
+      autoscaling.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: KEDA should not render when keda.enabled is false
+    template: scaledobject.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: KEDA should use shared min/max replicas from autoscaling
+    template: scaledobject.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.minReplicas: 3
+      autoscaling.maxReplicas: 15
+    asserts:
+      - equal:
+          path: spec.minReplicaCount
+          value: 3
+      - equal:
+          path: spec.maxReplicaCount
+          value: 15
+
+  - it: KEDA should use custom polling and cooldown
+    template: scaledobject.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.pollingInterval: 60
+      autoscaling.keda.cooldownPeriod: 600
+    asserts:
+      - equal:
+          path: spec.pollingInterval
+          value: 60
+      - equal:
+          path: spec.cooldownPeriod
+          value: 600
+
+  - it: KEDA should configure prometheus trigger with explicit query
+    template: scaledobject.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.triggers:
+        - type: prometheus
+          metadata:
+            serverAddress: http://prometheus:9090
+            metricName: http_requests_per_second
+            threshold: "100"
+            query: sum(rate(http_requests_total[2m]))
+    asserts:
+      - equal:
+          path: spec.triggers[0].type
+          value: prometheus
+      - equal:
+          path: spec.triggers[0].metadata.threshold
+          value: "100"
+      - equal:
+          path: spec.triggers[0].metadata.query
+          value: sum(rate(http_requests_total[2m]))
+
+  - it: KEDA should auto-generate prometheus query when not provided
+    template: scaledobject.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.triggers:
+        - type: prometheus
+          metadata:
+            serverAddress: http://prometheus:9090
+            threshold: "50"
+    asserts:
+      - equal:
+          path: spec.triggers[0].type
+          value: prometheus
+      - matchRegex:
+          path: spec.triggers[0].metadata.query
+          pattern: 'sum\(rate\(istio_requests_total\{destination_app=".*"\}\[2m\]\)\)'
+
+  - it: KEDA should use default metricName for prometheus when not provided
+    template: scaledobject.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.triggers:
+        - type: prometheus
+          metadata:
+            serverAddress: http://prometheus:9090
+            threshold: "50"
+    asserts:
+      - equal:
+          path: spec.triggers[0].metadata.metricName
+          value: istio_requests_total
+
+  - it: KEDA should pass through non-prometheus triggers
+    template: scaledobject.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.triggers:
+        - type: rabbitmq
+          metadata:
+            host: rabbitmq:5672
+            queueName: tasks
+            queueLength: "10"
+    asserts:
+      - equal:
+          path: spec.triggers[0].type
+          value: rabbitmq
+      - equal:
+          path: spec.triggers[0].metadata.queueName
+          value: tasks
+
+  - it: KEDA should use default serverAddress when not provided
+    template: scaledobject.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.triggers:
+        - type: prometheus
+    asserts:
+      - equal:
+          path: spec.triggers[0].metadata.serverAddress
+          value: http://prometheus-server.istio-system.svc.cluster.local:9090
+
+  - it: KEDA should use default threshold when not provided
+    template: scaledobject.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.triggers:
+        - type: prometheus
+    asserts:
+      - equal:
+          path: spec.triggers[0].metadata.threshold
+          value: "100"
+
+  - it: KEDA should use custom serverAddress when provided
+    template: scaledobject.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.triggers:
+        - type: prometheus
+          metadata:
+            serverAddress: http://custom-prometheus:9090
+    asserts:
+      - equal:
+          path: spec.triggers[0].metadata.serverAddress
+          value: http://custom-prometheus:9090
+
+  - it: HPA should have sync-wave 2
+    template: hpa.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.enabled: false
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "2"
+
+  - it: KEDA ScaledObject should have sync-wave 2
+    template: scaledobject.yaml
+    set:
+      autoscaling.enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "2"

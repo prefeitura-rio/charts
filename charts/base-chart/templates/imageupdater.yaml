@@ -1,0 +1,98 @@
+{{- if .Values.argoImageUpdater.enabled }}
+{{- /*
+  Smart defaults:
+  - namespace: defaults to "argo-cd"
+  - applicationRef.namePattern: defaults to .Release.Name
+  - applicationRef.namespace: defaults to .Release.Namespace
+  - images: if empty, auto-generates from image.repository and image.tag
+  - registrySecret: if not specified, auto-derives from imagePullSecrets[0].name
+*/ -}}
+{{- $namespace := .Values.argoImageUpdater.namespace | default "argo-cd" }}
+{{- $namePattern := .Values.argoImageUpdater.applicationRef.namePattern | default .Release.Name }}
+{{- $appNamespace := .Values.argoImageUpdater.applicationRef.namespace | default .Release.Namespace }}
+{{- $alias := include "base-chart.fullname" . }}
+{{- $imageTag := .Values.image.tag | default .Chart.AppVersion }}
+{{- $imageName := printf "%s:%s" .Values.image.repository $imageTag }}
+{{- $updateStrategy := .Values.argoImageUpdater.updateStrategy | default "digest" }}
+{{- $semverConstraint := .Values.argoImageUpdater.semverConstraint }}
+{{- $registrySecret := "" }}
+{{- if .Values.argoImageUpdater.registrySecret }}
+{{- $registrySecret = .Values.argoImageUpdater.registrySecret }}
+{{- else if .Values.imagePullSecrets }}
+{{- $registrySecret = (index .Values.imagePullSecrets 0).name }}
+{{- end }}
+apiVersion: argocd-image-updater.argoproj.io/v1alpha1
+kind: ImageUpdater
+metadata:
+  name: {{ include "base-chart.fullname" . }}
+  namespace: {{ $namespace }}
+  {{- with .Values.argoImageUpdater.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- include "base-chart.labels" . | nindent 4 }}
+    {{- with .Values.argoImageUpdater.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  namespace: {{ $namespace }}
+  applicationRefs:
+    - namePattern: {{ $namePattern | quote }}
+      namespace: {{ $appNamespace | quote }}
+      images:
+        {{- if .Values.argoImageUpdater.images }}
+        {{- /* Use explicitly defined images */ -}}
+        {{- range .Values.argoImageUpdater.images }}
+        - alias: {{ .alias | quote }}
+          imageName: {{ .imageName | quote }}
+          {{- if .registrySecret }}
+          registrySecret: {{ .registrySecret | quote }}
+          {{- end }}
+          {{- if .commonUpdateSettings }}
+          commonUpdateSettings:
+            {{- with .commonUpdateSettings.updateStrategy }}
+            updateStrategy: {{ . | quote }}
+            {{- end }}
+            {{- with .commonUpdateSettings.kustomizePath }}
+            kustomizePath: {{ . | quote }}
+            {{- end }}
+            {{- with .commonUpdateSettings.helmPath }}
+            helmPath: {{ . | quote }}
+            {{- end }}
+            {{- with .commonUpdateSettings.helmValues }}
+            helmValues: {{ . | quote }}
+            {{- end }}
+            {{- with .commonUpdateSettings.platforms }}
+            platforms:
+              {{- toYaml . | nindent 14 }}
+            {{- end }}
+            {{- with .commonUpdateSettings.ignoreDigests }}
+            ignoreDigests:
+              {{- toYaml . | nindent 14 }}
+            {{- end }}
+            {{- with .commonUpdateSettings.ignoreTags }}
+            ignoreTags:
+              {{- toYaml . | nindent 14 }}
+            {{- end }}
+            {{- with .commonUpdateSettings.semverConstraint }}
+            semverConstraint: {{ . | quote }}
+            {{- end }}
+            {{- with .commonUpdateSettings.matchOption }}
+            matchOption: {{ . | quote }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+        {{- else }}
+        - alias: {{ $alias | quote }}
+          imageName: {{ $imageName | quote }}
+          {{- if $registrySecret }}
+          registrySecret: {{ $registrySecret | quote }}
+          {{- end }}
+          commonUpdateSettings:
+            updateStrategy: {{ $updateStrategy | quote }}
+            {{- if and (eq $updateStrategy "semver") $semverConstraint }}
+            semverConstraint: {{ $semverConstraint | quote }}
+            {{- end }}
+        {{- end }}
+{{- end }}

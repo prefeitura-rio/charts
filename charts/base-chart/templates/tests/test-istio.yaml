@@ -1,0 +1,24 @@
+{{- if and .Values.istio.enabled .Values.istio.virtualService.enabled }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "base-chart.fullname" . }}-test-istio"
+  labels:
+    {{- include "base-chart.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-weight": "2"
+spec:
+  containers:
+    - name: kubectl
+      image: bitnami/kubectl:1.28
+      command: ['sh']
+      args:
+        - -c
+        - |
+          echo "Testing Istio resources..."
+          kubectl get virtualservice {{ include "base-chart.fullname" . }} -n {{ .Release.Namespace }} || exit 1
+          kubectl get destinationrule {{ include "base-chart.fullname" . }} -n {{ .Release.Namespace }} || exit 1
+          echo "✅ Istio resources test passed"
+  restartPolicy: Never
+{{- end }}

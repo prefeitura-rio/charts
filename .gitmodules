@@ -1,0 +1,6 @@
+[submodule "charts/sequin"]
+	path = charts/sequin
+	url = https://github.com/sequinstream/helm-chart-sequin
+[submodule "charts/typesense"]
+	path = charts/typesense
+	url = https://github.com/Marta-Barea/typesense-helm

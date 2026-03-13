@@ -1,0 +1,40 @@
+{{- if and .Values.autoscaling.enabled .Values.autoscaling.keda.enabled -}}
+{{- $fullName := include "base-chart.fullname" . -}}
+{{- $minReplicas := .Values.autoscaling.minReplicas | default 1 -}}
+{{- $maxReplicas := .Values.autoscaling.maxReplicas | default 10 -}}
+{{- $keda := .Values.autoscaling.keda -}}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ $fullName }}
+  labels:
+    {{- include "base-chart.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  pollingInterval: {{ $keda.pollingInterval | default 30 }}
+  cooldownPeriod: {{ $keda.cooldownPeriod | default 300 }}
+  minReplicaCount: {{ $minReplicas }}
+  maxReplicaCount: {{ $maxReplicas }}
+  scaleTargetRef:
+    name: {{ $fullName }}
+  {{- if $keda.triggers }}
+  triggers:
+    {{- range $keda.triggers }}
+    - type: {{ .type }}
+      metadata:
+        {{- if eq .type "prometheus" }}
+        {{- /* Smart defaults for Prometheus triggers */ -}}
+        {{- $defaultServer := "http://prometheus-server.istio-system.svc.cluster.local:9090" -}}
+        {{- $metadata := .metadata | default dict -}}
+        {{- $query := $metadata.query | default (printf "sum(rate(istio_requests_total{destination_app=\"%s\"}[2m]))" $fullName) }}
+        serverAddress: {{ $metadata.serverAddress | default $defaultServer }}
+        metricName: {{ $metadata.metricName | default "istio_requests_total" }}
+        threshold: {{ $metadata.threshold | default "100" | quote }}
+        query: {{ $query }}
+        {{- else }}
+        {{- toYaml .metadata | nindent 8 }}
+        {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}

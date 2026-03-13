@@ -1,0 +1,308 @@
+suite: test integration scenarios
+tests:
+  - it: "scenario: full API deployment with all features"
+    templates:
+      - deployment.yaml
+      - service.yaml
+      - virtualservice.yaml
+      - destinationrule.yaml
+      - scaledobject.yaml
+      - poddisruptionbudget.yaml
+      - infisicalsecret.yaml
+    release:
+      name: atlas-api
+      namespace: atlas
+    set:
+      fullnameOverride: api
+      image:
+        repository: ghcr.io/myorg/api
+        tag: v1.0.0
+      healthCheck:
+        path: /health
+      service:
+        port: 80
+        containerPort: 8000
+      autoscaling:
+        minReplicas: 2
+        maxReplicas: 10
+        keda:
+          triggers:
+            - type: prometheus
+      istio:
+        virtualService:
+          hosts:
+            - api.example.com
+      infisicalSecret:
+        enabled: true
+        secretName: api-secrets
+        projectSlug: my-project
+        envSlug: prod
+    asserts:
+      # Deployment assertions
+      - template: deployment.yaml
+        equal:
+          path: metadata.name
+          value: api
+      - template: deployment.yaml
+        equal:
+          path: spec.template.spec.containers[0].image
+          value: "ghcr.io/myorg/api:v1.0.0"
+      - template: deployment.yaml
+        equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.path
+          value: /health
+      # Service assertions
+      - template: service.yaml
+        equal:
+          path: metadata.name
+          value: api
+      # VirtualService assertions
+      - template: virtualservice.yaml
+        contains:
+          path: spec.hosts
+          content: api.example.com
+      - template: virtualservice.yaml
+        contains:
+          path: spec.gateways
+          content: istio-system/istio-gateway
+      # ScaledObject assertions
+      - template: scaledobject.yaml
+        equal:
+          path: spec.minReplicaCount
+          value: 2
+      - template: scaledobject.yaml
+        equal:
+          path: spec.maxReplicaCount
+          value: 10
+      # InfisicalSecret assertions
+      - template: infisicalsecret.yaml
+        equal:
+          path: metadata.name
+          value: api-secrets
+
+  - it: "scenario: minimal config with smart defaults"
+    templates:
+      - deployment.yaml
+      - service.yaml
+      - virtualservice.yaml
+      - scaledobject.yaml
+    release:
+      name: myapp
+      namespace: default
+    set:
+      fullnameOverride: myapp
+      image:
+        repository: nginx
+        tag: latest
+      healthCheck:
+        path: /
+      istio:
+        virtualService:
+          hosts:
+            - myapp.example.com
+      autoscaling:
+        keda:
+          triggers:
+            - type: prometheus
+    asserts:
+      # Check smart defaults work
+      - template: deployment.yaml
+        equal:
+          path: spec.template.spec.securityContext.runAsNonRoot
+          value: true
+      - template: deployment.yaml
+        exists:
+          path: spec.template.spec.affinity.podAntiAffinity
+      - template: virtualservice.yaml
+        contains:
+          path: spec.gateways
+          content: istio-system/istio-gateway
+      - template: scaledobject.yaml
+        matchRegex:
+          path: spec.triggers[0].metadata.serverAddress
+          pattern: prometheus.*9090
+
+  - it: "scenario: worker with RabbitMQ"
+    templates:
+      - deployment.yaml
+      - scaledobject.yaml
+    set:
+      fullnameOverride: worker
+      image:
+        repository: myorg/worker
+        tag: v1.0.0
+      rabbitmq:
+        enabled: true
+        service:
+          amqpPort: 5672
+      autoscaling:
+        minReplicas: 1
+        maxReplicas: 20
+        keda:
+          triggers:
+            - type: rabbitmq
+              metadata:
+                host: rabbitmq:5672
+                queueName: tasks
+                queueLength: "5"
+    asserts:
+      # Deployment should have RabbitMQ env vars
+      - template: deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RABBITMQ_HOST
+            value: RELEASE-NAME-rabbitmq
+      - template: deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RABBITMQ_PORT
+            value: "5672"
+      # ScaledObject should have RabbitMQ trigger
+      - template: scaledobject.yaml
+        equal:
+          path: spec.minReplicaCount
+          value: 1
+      - template: scaledobject.yaml
+        equal:
+          path: spec.triggers[0].type
+          value: rabbitmq
+
+  - it: "scenario: API with Valkey cache"
+    templates:
+      - deployment.yaml
+    set:
+      fullnameOverride: api
+      valkey:
+        enabled: true
+      infisicalSecret:
+        enabled: true
+        secretName: api-secrets
+        projectSlug: my-project
+        envSlug: prod
+    asserts:
+      # Deployment should have Redis env vars
+      - template: deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REDIS_HOST
+            value: RELEASE-NAME-valkey
+      - template: deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REDIS_PORT
+            value: "6379"
+      # Deployment should have infisical secret in envFrom
+      - template: deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            secretRef:
+              name: api-secrets
+
+  - it: "scenario: app with multiple cronjobs"
+    templates:
+      - cronjob.yaml
+    set:
+      image:
+        repository: myorg/app
+        tag: v1.0.0
+      infisicalSecret:
+        enabled: true
+        secretName: app-secrets
+        projectSlug: my-project
+        envSlug: prod
+      cronjobs:
+        cleanup:
+          enabled: true
+          schedule: "0 2 * * *"
+          command: ["python", "manage.py", "cleanup"]
+        backup:
+          enabled: true
+          schedule: "0 5 * * *"
+          command: ["python", "manage.py", "backup"]
+          resources:
+            limits:
+              memory: 2Gi
+        report:
+          enabled: true
+          schedule: "0 8 * * 1"
+          command: ["python", "manage.py", "report"]
+    asserts:
+      - hasDocuments:
+          count: 3
+      # All cronjobs should inherit the image
+      - documentIndex: 0
+        equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].image
+          value: "myorg/app:v1.0.0"
+      - documentIndex: 1
+        equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].image
+          value: "myorg/app:v1.0.0"
+      # All should have the secret
+      - documentIndex: 0
+        contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].envFrom
+          content:
+            secretRef:
+              name: app-secrets
+
+  - it: "scenario: traditional HPA autoscaling"
+    templates:
+      - hpa.yaml
+      - scaledobject.yaml
+    set:
+      autoscaling:
+        enabled: true
+        minReplicas: 2
+        maxReplicas: 20
+        targetCPUUtilizationPercentage: 70
+        targetMemoryUtilizationPercentage: 80
+        keda:
+          enabled: false
+    asserts:
+      # HPA should be created
+      - template: hpa.yaml
+        isKind:
+          of: HorizontalPodAutoscaler
+      - template: hpa.yaml
+        equal:
+          path: spec.minReplicas
+          value: 2
+      - template: hpa.yaml
+        equal:
+          path: spec.maxReplicas
+          value: 20
+      # ScaledObject should NOT be created
+      - template: scaledobject.yaml
+        hasDocuments:
+          count: 0
+
+  - it: "scenario: canary deployment setup"
+    templates:
+      - virtualservice.yaml
+    set:
+      istio:
+        virtualService:
+          hosts:
+            - api.example.com
+          pathBasedRouting:
+            enabled: true
+            servicePath: api
+          canary:
+            enabled: true
+            weight: 10
+    asserts:
+      - equal:
+          path: spec.http[0].route[0].weight
+          value: 90
+      - equal:
+          path: spec.http[0].route[1].weight
+          value: 10
+      - matchRegex:
+          path: spec.http[0].route[1].destination.host
+          pattern: ".*-canary"

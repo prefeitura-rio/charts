@@ -1,0 +1,284 @@
+suite: test init containers
+templates:
+  - deployment.yaml
+tests:
+  - it: should not render initContainers when empty
+    asserts:
+      - notExists:
+          path: spec.template.spec.initContainers
+
+  - it: should render initContainers when specified
+    set:
+      initContainers:
+        - name: wait-for-db
+          command: ["sh", "-c", "echo waiting"]
+    asserts:
+      - exists:
+          path: spec.template.spec.initContainers
+      - lengthEqual:
+          path: spec.template.spec.initContainers
+          count: 1
+
+  - it: should render multiple init containers
+    set:
+      initContainers:
+        - name: init-one
+          command: ["echo", "one"]
+        - name: init-two
+          command: ["echo", "two"]
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.initContainers
+          count: 2
+
+  - it: should inherit image from deployment when not specified
+    set:
+      image:
+        repository: myorg/myapp
+        tag: v1.0.0
+      initContainers:
+        - name: migrations
+          command: ["python", "manage.py", "migrate"]
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].image
+          value: "myorg/myapp:v1.0.0"
+
+  - it: should use custom image when specified
+    set:
+      image:
+        repository: myorg/myapp
+        tag: v1.0.0
+      initContainers:
+        - name: wait-for-db
+          image: postgres:15
+          command: ["pg_isready"]
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].image
+          value: "postgres:15"
+
+  - it: should inherit imagePullPolicy from deployment
+    set:
+      image:
+        pullPolicy: Always
+      initContainers:
+        - name: init
+          command: ["echo"]
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].imagePullPolicy
+          value: Always
+
+  - it: should use custom imagePullPolicy when specified
+    set:
+      image:
+        pullPolicy: Always
+      initContainers:
+        - name: init
+          imagePullPolicy: IfNotPresent
+          command: ["echo"]
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].imagePullPolicy
+          value: IfNotPresent
+
+  - it: should render command correctly
+    set:
+      initContainers:
+        - name: init
+          command: ["sh", "-c", "echo hello"]
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].command
+          value: ["sh", "-c", "echo hello"]
+
+  - it: should render args when specified
+    set:
+      initContainers:
+        - name: init
+          command: ["my-script"]
+          args: ["--flag", "value"]
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].args
+          value: ["--flag", "value"]
+
+  - it: should inherit Infisical secret when enabled
+    set:
+      infisicalSecret:
+        enabled: true
+        secretName: app-secrets
+      initContainers:
+        - name: migrations
+          command: ["python", "manage.py", "migrate"]
+    asserts:
+      - contains:
+          path: spec.template.spec.initContainers[0].envFrom
+          content:
+            secretRef:
+              name: app-secrets
+
+  - it: should use custom envFrom when specified
+    set:
+      infisicalSecret:
+        enabled: true
+        secretName: app-secrets
+      initContainers:
+        - name: init
+          command: ["echo"]
+          envFrom:
+            - configMapRef:
+                name: init-config
+    asserts:
+      - contains:
+          path: spec.template.spec.initContainers[0].envFrom
+          content:
+            configMapRef:
+              name: init-config
+      - notContains:
+          path: spec.template.spec.initContainers[0].envFrom
+          content:
+            secretRef:
+              name: app-secrets
+
+  - it: should render env vars when specified
+    set:
+      initContainers:
+        - name: init
+          command: ["echo"]
+          env:
+            - name: DB_HOST
+              value: postgres
+            - name: DB_PORT
+              value: "5432"
+    asserts:
+      - contains:
+          path: spec.template.spec.initContainers[0].env
+          content:
+            name: DB_HOST
+            value: postgres
+
+  - it: should inherit volumeMounts from deployment when not specified
+    set:
+      volumeMounts:
+        - name: data
+          mountPath: /data
+      initContainers:
+        - name: init
+          command: ["echo"]
+    asserts:
+      - contains:
+          path: spec.template.spec.initContainers[0].volumeMounts
+          content:
+            name: data
+            mountPath: /data
+
+  - it: should use custom volumeMounts when specified
+    set:
+      volumeMounts:
+        - name: data
+          mountPath: /data
+      initContainers:
+        - name: init
+          command: ["echo"]
+          volumeMounts:
+            - name: init-data
+              mountPath: /init
+    asserts:
+      - contains:
+          path: spec.template.spec.initContainers[0].volumeMounts
+          content:
+            name: init-data
+            mountPath: /init
+      - notContains:
+          path: spec.template.spec.initContainers[0].volumeMounts
+          content:
+            name: data
+            mountPath: /data
+
+  - it: should render resources when specified
+    set:
+      initContainers:
+        - name: init
+          command: ["echo"]
+          resources:
+            limits:
+              cpu: 100m
+              memory: 128Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].resources.limits.cpu
+          value: 100m
+      - equal:
+          path: spec.template.spec.initContainers[0].resources.requests.memory
+          value: 64Mi
+
+  - it: should render securityContext when specified
+    set:
+      initContainers:
+        - name: init
+          command: ["echo"]
+          securityContext:
+            runAsUser: 1000
+            runAsNonRoot: true
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.runAsUser
+          value: 1000
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.runAsNonRoot
+          value: true
+
+  - it: "scenario: database migration init container"
+    set:
+      image:
+        repository: myorg/api
+        tag: v2.0.0
+      infisicalSecret:
+        enabled: true
+        secretName: api-secrets
+      initContainers:
+        - name: run-migrations
+          command: ["python", "manage.py", "migrate", "--no-input"]
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: run-migrations
+      - equal:
+          path: spec.template.spec.initContainers[0].image
+          value: "myorg/api:v2.0.0"
+      - contains:
+          path: spec.template.spec.initContainers[0].envFrom
+          content:
+            secretRef:
+              name: api-secrets
+
+  - it: "scenario: wait for dependencies"
+    set:
+      initContainers:
+        - name: wait-for-postgres
+          image: postgres:15-alpine
+          command: ["sh", "-c", "until pg_isready -h $DB_HOST; do sleep 2; done"]
+          env:
+            - name: DB_HOST
+              value: postgres.database.svc.cluster.local
+        - name: wait-for-redis
+          image: redis:7-alpine
+          command: ["sh", "-c", "until redis-cli -h $REDIS_HOST ping; do sleep 2; done"]
+          env:
+            - name: REDIS_HOST
+              value: redis.cache.svc.cluster.local
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.initContainers
+          count: 2
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: wait-for-postgres
+      - equal:
+          path: spec.template.spec.initContainers[1].name
+          value: wait-for-redis

@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "base-chart.fullname" . }}-test-connection"
+  labels:
+    {{- include "base-chart.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-weight": "1"
+spec:
+  containers:
+    - name: wget
+      image: busybox:1.36
+      command: ['sh']
+      args:
+        - -c
+        - |
+          echo "Testing connection to {{ include "base-chart.fullname" . }}:{{ .Values.service.port }}"
+          wget --no-check-certificate -T 30 -qO- {{ include "base-chart.fullname" . }}:{{ .Values.service.port }} || exit 1
+          echo "✅ Connection test passed"
+  restartPolicy: Never

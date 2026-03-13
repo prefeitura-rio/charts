@@ -1,0 +1,127 @@
+{{- range $name, $job := .Values.cronjobs }}
+{{- if $job.enabled }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "base-chart.fullname" $ }}-{{ $name }}
+  labels:
+    {{- include "base-chart.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: cronjob
+    app.kubernetes.io/cronjob-name: {{ $name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  schedule: {{ $job.schedule | quote }}
+  concurrencyPolicy: {{ $job.concurrencyPolicy | default "Forbid" }}
+  successfulJobsHistoryLimit: {{ $job.successfulJobsHistoryLimit | default 3 }}
+  failedJobsHistoryLimit: {{ $job.failedJobsHistoryLimit | default 1 }}
+  {{- if $job.startingDeadlineSeconds }}
+  startingDeadlineSeconds: {{ $job.startingDeadlineSeconds }}
+  {{- end }}
+  {{- if $job.suspend }}
+  suspend: {{ $job.suspend }}
+  {{- end }}
+  jobTemplate:
+    spec:
+      {{- if $job.ttlSecondsAfterFinished }}
+      ttlSecondsAfterFinished: {{ $job.ttlSecondsAfterFinished }}
+      {{- end }}
+      {{- if $job.backoffLimit }}
+      backoffLimit: {{ $job.backoffLimit }}
+      {{- end }}
+      {{- if $job.activeDeadlineSeconds }}
+      activeDeadlineSeconds: {{ $job.activeDeadlineSeconds }}
+      {{- end }}
+      template:
+        metadata:
+          labels:
+            {{- include "base-chart.selectorLabels" $ | nindent 12 }}
+            app.kubernetes.io/component: cronjob
+            app.kubernetes.io/cronjob-name: {{ $name }}
+          {{- with $job.podAnnotations }}
+          annotations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+        spec:
+          {{- with $.Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          serviceAccountName: {{ include "base-chart.serviceAccountName" $ }}
+          restartPolicy: {{ $job.restartPolicy | default "OnFailure" }}
+          {{- with $job.podSecurityContext | default $.Values.podSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+            - name: {{ $name }}
+              {{- $imageRepo := $.Values.image.repository }}
+              {{- $imageTag := $.Values.image.tag | default $.Chart.AppVersion }}
+              {{- $imagePullPolicy := $.Values.image.pullPolicy }}
+              {{- if $job.image }}
+              {{- $imageRepo = $job.image.repository | default $imageRepo }}
+              {{- $imageTag = $job.image.tag | default $imageTag }}
+              {{- $imagePullPolicy = $job.image.pullPolicy | default $imagePullPolicy }}
+              {{- end }}
+              image: "{{ $imageRepo }}:{{ $imageTag }}"
+              imagePullPolicy: {{ $imagePullPolicy }}
+              {{- with $job.command }}
+              command:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+              {{- with $job.args }}
+              args:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+              {{- if or $job.envFrom $.Values.envFrom $.Values.infisicalSecret.enabled }}
+              envFrom:
+                {{- if $.Values.infisicalSecret.enabled }}
+                - secretRef:
+                    name: {{ $.Values.infisicalSecret.secretName }}
+                {{- end }}
+                {{- with $job.envFrom }}
+                {{- toYaml . | nindent 16 }}
+                {{- end }}
+                {{- with $.Values.envFrom }}
+                {{- toYaml . | nindent 16 }}
+                {{- end }}
+              {{- end }}
+              {{- if or $job.env $.Values.valkey.enabled $.Values.rabbitmq.enabled }}
+              env:
+                {{- with $job.env }}
+                {{- toYaml . | nindent 16 }}
+                {{- end }}
+                {{- if $.Values.valkey.enabled }}
+                - name: REDIS_HOST
+                  value: {{ $.Release.Name }}-valkey
+                - name: REDIS_PORT
+                  value: "6379"
+                {{- end }}
+                {{- if $.Values.rabbitmq.enabled }}
+                - name: RABBITMQ_HOST
+                  value: {{ $.Release.Name }}-rabbitmq
+                - name: RABBITMQ_PORT
+                  value: {{ $.Values.rabbitmq.service.amqpPort | quote }}
+                - name: RABBITMQ_USER
+                  value: {{ $.Release.Name }}
+                {{- end }}
+              {{- end }}
+              {{- with $job.resources | default $.Values.resources }}
+              resources:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+              {{- with $job.securityContext | default $.Values.securityContext }}
+              securityContext:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+              {{- with $job.volumeMounts | default $.Values.volumeMounts }}
+              volumeMounts:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+          {{- with $job.volumes | default $.Values.volumes }}
+          volumes:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}
+{{- end }}

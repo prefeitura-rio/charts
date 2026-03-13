@@ -1,0 +1,146 @@
+suite: test service
+templates:
+  - service.yaml
+tests:
+  # =============================================================================
+  # Basic Rendering Tests
+  # =============================================================================
+  - it: should render service with default values
+    asserts:
+      - isKind:
+          of: Service
+      - isAPIVersion:
+          of: v1
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+      - equal:
+          path: spec.type
+          value: ClusterIP
+      - equal:
+          path: spec.ports[0].port
+          value: 80
+      - equal:
+          path: spec.ports[0].targetPort
+          value: 8080
+      - equal:
+          path: spec.ports[0].protocol
+          value: TCP
+      - equal:
+          path: spec.ports[0].name
+          value: http
+
+  # =============================================================================
+  # Service Type Tests
+  # =============================================================================
+  - it: should use ClusterIP type by default
+    asserts:
+      - equal:
+          path: spec.type
+          value: ClusterIP
+
+  - it: should use LoadBalancer type when specified
+    set:
+      service.type: LoadBalancer
+    asserts:
+      - equal:
+          path: spec.type
+          value: LoadBalancer
+
+  - it: should use NodePort type when specified
+    set:
+      service.type: NodePort
+    asserts:
+      - equal:
+          path: spec.type
+          value: NodePort
+
+  # =============================================================================
+  # Port Configuration Tests
+  # =============================================================================
+  - it: should use custom service port when specified
+    set:
+      service.port: 8080
+    asserts:
+      - equal:
+          path: spec.ports[0].port
+          value: 8080
+
+  - it: should use custom container port as targetPort
+    set:
+      service.containerPort: 3000
+    asserts:
+      - equal:
+          path: spec.ports[0].targetPort
+          value: 3000
+
+  - it: should handle different port and containerPort
+    set:
+      service.port: 80
+      service.containerPort: 8000
+    asserts:
+      - equal:
+          path: spec.ports[0].port
+          value: 80
+      - equal:
+          path: spec.ports[0].targetPort
+          value: 8000
+
+  # =============================================================================
+  # Labels and Selectors Tests
+  # =============================================================================
+  - it: should have standard labels
+    asserts:
+      - exists:
+          path: metadata.labels["helm.sh/chart"]
+      - exists:
+          path: metadata.labels["app.kubernetes.io/name"]
+      - exists:
+          path: metadata.labels["app.kubernetes.io/instance"]
+      - exists:
+          path: metadata.labels["app.kubernetes.io/managed-by"]
+
+  - it: should have correct selector labels
+    asserts:
+      - equal:
+          path: spec.selector["app.kubernetes.io/name"]
+          value: base-chart
+      - equal:
+          path: spec.selector["app.kubernetes.io/instance"]
+          value: RELEASE-NAME
+
+  - it: should use nameOverride in selector
+    set:
+      nameOverride: myapp
+    asserts:
+      - equal:
+          path: spec.selector["app.kubernetes.io/name"]
+          value: myapp
+
+  # =============================================================================
+  # Naming Tests
+  # =============================================================================
+  - it: should use fullnameOverride when specified
+    set:
+      fullnameOverride: custom-service
+    asserts:
+      - equal:
+          path: metadata.name
+          value: custom-service
+
+  - it: should use nameOverride with release name
+    set:
+      nameOverride: myapp
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-myapp
+
+  # =============================================================================
+  # Sync Wave Tests
+  # =============================================================================
+  - it: should have sync-wave 1 annotation
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "1"

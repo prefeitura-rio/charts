@@ -1,0 +1,19 @@
+{{- if and .Values.istio.enabled .Values.istio.requestAuthentication.enabled -}}
+{{- $fullName := include "base-chart.fullname" . -}}
+apiVersion: security.istio.io/v1beta1
+kind: RequestAuthentication
+metadata:
+  name: {{ $fullName }}
+  labels:
+    {{- include "base-chart.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  selector:
+    matchLabels:
+      {{- include "base-chart.selectorLabels" . | nindent 6 }}
+  {{- with .Values.istio.requestAuthentication.jwtRules }}
+  jwtRules:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}

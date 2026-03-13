@@ -1,0 +1,63 @@
+suite: test pod disruption budget
+templates:
+  - poddisruptionbudget.yaml
+tests:
+  - it: should render when enabled
+    set:
+      podDisruptionBudget.enabled: true
+    asserts:
+      - isKind:
+          of: PodDisruptionBudget
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+
+  - it: should not render when disabled
+    set:
+      podDisruptionBudget.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should have sync-wave 2 annotation
+    set:
+      podDisruptionBudget.enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "2"
+
+  - it: should set minAvailable by default
+    set:
+      podDisruptionBudget.enabled: true
+      podDisruptionBudget.minAvailable: 1
+    asserts:
+      - equal:
+          path: spec.minAvailable
+          value: 1
+
+  - it: should set maxUnavailable when specified
+    set:
+      podDisruptionBudget.enabled: true
+      podDisruptionBudget.minAvailable: null
+      podDisruptionBudget.maxUnavailable: 1
+    asserts:
+      - equal:
+          path: spec.maxUnavailable
+          value: 1
+
+  - it: should support percentage values
+    set:
+      podDisruptionBudget.enabled: true
+      podDisruptionBudget.minAvailable: "50%"
+    asserts:
+      - equal:
+          path: spec.minAvailable
+          value: "50%"
+
+  - it: should have correct selector labels
+    set:
+      podDisruptionBudget.enabled: true
+    asserts:
+      - exists:
+          path: spec.selector.matchLabels

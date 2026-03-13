@@ -1,0 +1,23 @@
+{{- if and .Values.autoscaling.enabled .Values.autoscaling.keda.enabled }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "base-chart.fullname" . }}-test-autoscaling"
+  labels:
+    {{- include "base-chart.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-weight": "3"
+spec:
+  containers:
+    - name: kubectl
+      image: bitnami/kubectl:1.28
+      command: ['sh']
+      args:
+        - -c
+        - |
+          echo "Testing autoscaling resources..."
+          kubectl get scaledobject {{ include "base-chart.fullname" . }} -n {{ .Release.Namespace }} || exit 1
+          echo "✅ Autoscaling resources test passed"
+  restartPolicy: Never
+{{- end }}

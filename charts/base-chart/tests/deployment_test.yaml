@@ -1,0 +1,316 @@
+suite: test deployment
+templates:
+  - deployment.yaml
+tests:
+  - it: should render deployment with default values
+    set:
+      autoscaling.enabled: false
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "nginx:1.25"
+
+  - it: should use custom image when specified
+    set:
+      image.repository: custom-app
+      image.tag: "v2.0.0"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "custom-app:v2.0.0"
+
+  - it: should not set replicas when autoscaling is enabled
+    set:
+      autoscaling.enabled: true
+    asserts:
+      - notExists:
+          path: spec.replicas
+
+  - it: should add Istio sidecar annotations when enabled
+    set:
+      istio.enabled: true
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["sidecar.istio.io/rewriteAppHTTPProbers"]
+          value: "false"
+      - equal:
+          path: spec.template.metadata.annotations["sidecar.istio.io/proxyCPU"]
+          value: "100m"
+
+  - it: should include Infisical auto-reload annotation
+    asserts:
+      - equal:
+          path: metadata.annotations["secrets.infisical.com/auto-reload"]
+          value: "true"
+
+  - it: should add security context when specified
+    set:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsNonRoot
+          value: true
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsUser
+          value: 1000
+
+  - it: should add resource limits when specified
+    set:
+      resources:
+        limits:
+          cpu: 500m
+          memory: 512Mi
+        requests:
+          cpu: 250m
+          memory: 256Mi
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: 500m
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: 256Mi
+
+  - it: should add environment variables from envFrom
+    set:
+      envFrom:
+        - secretRef:
+            name: app-secrets
+        - configMapRef:
+            name: app-config
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            secretRef:
+              name: app-secrets
+      - contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            configMapRef:
+              name: app-config
+
+  - it: should have sync-wave 1 annotation
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "1"
+
+  - it: should inject REDIS_HOST and REDIS_PORT when valkey is enabled
+    set:
+      valkey:
+        enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REDIS_HOST
+            value: RELEASE-NAME-valkey
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REDIS_PORT
+            value: "6379"
+
+  - it: should inject RABBITMQ_HOST, RABBITMQ_PORT and RABBITMQ_USER when rabbitmq is enabled
+    set:
+      rabbitmq:
+        enabled: true
+        service:
+          amqpPort: 5672
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RABBITMQ_HOST
+            value: RELEASE-NAME-rabbitmq
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RABBITMQ_PORT
+            value: "5672"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RABBITMQ_USER
+            value: RELEASE-NAME
+
+  - it: should use infisicalSecret.secretName in envFrom when infisicalSecret is enabled
+    set:
+      infisicalSecret:
+        enabled: true
+        secretName: my-app-secrets
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            secretRef:
+              name: my-app-secrets
+
+  - it: should use infisicalSecret.secretName in envFrom when infisicalSecret is enabled
+    set:
+      infisicalSecret:
+        enabled: true
+        secretName: "my-app-secrets"
+        projectSlug: "my-project"
+        envSlug: "prod"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            secretRef:
+              name: my-app-secrets
+
+  - it: should use serviceAccountName from helper when serviceAccount is created
+    set:
+      serviceAccount:
+        create: true
+        name: custom-sa
+    asserts:
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: custom-sa
+
+  - it: should use default serviceAccountName when serviceAccount is not created
+    set:
+      serviceAccount:
+        create: false
+    asserts:
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: default
+
+  - it: should use healthCheck.path for both probes when set
+    set:
+      healthCheck:
+        path: /health
+      service:
+        containerPort: 8000
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.path
+          value: /health
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.port
+          value: 8000
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.path
+          value: /health
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.port
+          value: 8000
+
+  - it: should use healthCheck.port when specified
+    set:
+      healthCheck:
+        path: /healthz
+        port: 9090
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.port
+          value: 9090
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.port
+          value: 9090
+
+  - it: should use separate probes when healthCheck.path is not set
+    set:
+      healthCheck:
+        path: ""
+      livenessProbe:
+        httpGet:
+          path: /alive
+      readinessProbe:
+        httpGet:
+          path: /ready
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.path
+          value: /alive
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.path
+          value: /ready
+
+  - it: should use default probes when healthCheck.path is empty
+    set:
+      healthCheck:
+        path: ""
+      livenessProbe:
+        httpGet:
+          path: /
+      readinessProbe:
+        httpGet:
+          path: /
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.path
+          value: /
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.path
+          value: /
+
+  - it: should have production security defaults for pod
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.runAsNonRoot
+          value: true
+      - equal:
+          path: spec.template.spec.securityContext.seccompProfile.type
+          value: RuntimeDefault
+
+  - it: should have production security defaults for container
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation
+          value: false
+      - contains:
+          path: spec.template.spec.containers[0].securityContext.capabilities.drop
+          content: ALL
+
+  - it: should have soft pod anti-affinity by default
+    asserts:
+      - exists:
+          path: spec.template.spec.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution
+
+  - it: should use hostname topology key by default
+    asserts:
+      - equal:
+          path: spec.template.spec.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].podAffinityTerm.topologyKey
+          value: kubernetes.io/hostname
+
+  - it: should use hard anti-affinity when type is hard
+    set:
+      podAntiAffinity:
+        enabled: true
+        type: hard
+    asserts:
+      - exists:
+          path: spec.template.spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution
+
+  - it: should use zone topology when specified
+    set:
+      podAntiAffinity:
+        enabled: true
+        topologyKey: topology.kubernetes.io/zone
+    asserts:
+      - equal:
+          path: spec.template.spec.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].podAffinityTerm.topologyKey
+          value: topology.kubernetes.io/zone
+
+  - it: should not have affinity when podAntiAffinity is disabled
+    set:
+      podAntiAffinity:
+        enabled: false
+    asserts:
+      - notExists:
+          path: spec.template.spec.affinity
