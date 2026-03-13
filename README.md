@@ -45,6 +45,6 @@ Follow [Helm best practices](https://helm.sh/docs/chart_best_practices/) and [Se
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file.
+GPL License - see [LICENSE](LICENSE) file.
 
 Maintained by Prefeitura do Rio de Janeiro.
