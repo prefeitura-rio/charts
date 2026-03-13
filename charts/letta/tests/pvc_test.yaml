@@ -1,0 +1,77 @@
+suite: test letta persistent volume claim
+templates:
+  - pvc.yaml
+tests:
+  - it: should render PVC when persistence enabled and create is true
+    set:
+      persistence.enabled: true
+      persistence.create: true
+    asserts:
+      - isKind:
+          of: PersistentVolumeClaim
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-letta-pvc
+
+  - it: should not render when persistence disabled
+    set:
+      persistence.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should not render when create is false
+    set:
+      persistence.enabled: true
+      persistence.create: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should use default size of 10Gi
+    set:
+      persistence.enabled: true
+      persistence.create: true
+    asserts:
+      - equal:
+          path: spec.resources.requests.storage
+          value: "10Gi"
+
+  - it: should use custom size when specified
+    set:
+      persistence.enabled: true
+      persistence.create: true
+      persistence.size: 50Gi
+    asserts:
+      - equal:
+          path: spec.resources.requests.storage
+          value: "50Gi"
+
+  - it: should use custom storage class when specified
+    set:
+      persistence.enabled: true
+      persistence.create: true
+      persistence.storageClassName: fast-ssd
+    asserts:
+      - equal:
+          path: spec.storageClassName
+          value: fast-ssd
+
+  - it: should use empty storage class by default
+    set:
+      persistence.enabled: true
+      persistence.create: true
+    asserts:
+      - equal:
+          path: spec.storageClassName
+          value: ""
+
+  - it: should have argocd skip annotation when argocd enabled
+    set:
+      persistence.enabled: true
+      persistence.create: true
+      argocd.enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-options"]
+          value: Skip

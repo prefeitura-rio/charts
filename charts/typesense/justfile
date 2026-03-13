@@ -1,0 +1,24 @@
+# Run lint and template tests by default
+default: lint test
+
+# Validate chart structure and best practices
+@lint:
+    echo "*** Running Helm lint... ***"
+    helm lint .
+    echo "*** Lint completed ***"
+
+# Test chart template rendering with all features enabled
+@test:
+    echo "*** Testing chart with all features enabled... ***"
+    helm template test . \
+        --set persistence.enabled=true \
+        --set ingress.enabled=true \
+        --set pdb.enabled=true \
+        --dry-run=client
+    echo "*** Chart test completed successfully! ***"
+
+# Create a .tgz package of the chart
+@package:
+    echo "*** Packaging chart... ***"
+    helm package .
+    echo "*** Chart packaged successfully ***"

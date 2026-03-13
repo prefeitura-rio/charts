@@ -42,13 +42,39 @@ helm install my-app prefeitura-rio/base-chart \
 
 [📖 View Documentation](./charts/base-chart/)
 
-### 🔗 External Charts (Git Submodules)
+### 🤖 letta
 
-The following charts are maintained externally and included as git submodules:
+Helm chart for deploying Letta - an open-source framework for building stateful LLM applications with long-term memory.
 
-- **[letta](https://github.com/cpacker/letta)** - Letta deployment chart
-- **[sequin](https://github.com/sequinstream/helm-chart-sequin)** - Sequin stream processing
-- **[typesense](https://github.com/Marta-Barea/typesense-helm)** - Typesense search engine
+**Features:**
+- Stateful LLM applications
+- Long-term memory management
+- Docker-based deployment
+- PostgreSQL integration
+
+**Installation:**
+```bash
+helm install letta prefeitura-rio/letta
+```
+
+[📖 View Documentation](./charts/letta/)
+
+### 🔍 typesense
+
+Fast, typo-tolerant search engine optimized for instant search experiences.
+
+**Features:**
+- Lightning-fast search
+- Typo tolerance
+- Faceting and filtering
+- Geo-search support
+
+**Installation:**
+```bash
+helm install typesense prefeitura-rio/typesense
+```
+
+[📖 View Documentation](./charts/typesense/)
 
 ## Development
 
@@ -90,18 +116,7 @@ just
 just package
 ```
 
-#### Updating Git Submodules
 
-```bash
-# Initialize submodules (first time)
-git submodule update --init --recursive
-
-# Update all submodules to latest
-git submodule update --remote
-
-# Update specific submodule
-git submodule update --remote charts/sequin
-```
 
 ### Running Tests
 

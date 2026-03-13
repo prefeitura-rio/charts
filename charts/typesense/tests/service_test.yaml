@@ -1,0 +1,49 @@
+suite: test typesense services
+templates:
+  - service.yaml
+  - service-cluster.yaml
+tests:
+  - it: should render main service
+    template: service.yaml
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-typesense
+
+  - it: should use ClusterIP type by default
+    template: service.yaml
+    asserts:
+      - equal:
+          path: spec.type
+          value: ClusterIP
+
+  - it: should expose correct ports
+    template: service.yaml
+    asserts:
+      - equal:
+          path: spec.ports[0].port
+          value: 80
+      - equal:
+          path: spec.ports[0].targetPort
+          value: http
+
+  - it: should render cluster service for StatefulSet
+    template: service-cluster.yaml
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-typesense-cluster
+      - equal:
+          path: spec.clusterIP
+          value: "None"
+
+  - it: should have publishNotReadyAddresses in cluster service
+    template: service-cluster.yaml
+    asserts:
+      - equal:
+          path: spec.publishNotReadyAddresses
+          value: true

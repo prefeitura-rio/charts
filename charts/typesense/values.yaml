@@ -1,0 +1,55 @@
+image:
+  registry: docker.io
+  repository: typesense/typesense
+  tag: 30.1
+  pullPolicy: IfNotPresent
+
+replicas: 3
+applicationPort: 8108
+peeringPort: 8107
+extraEnv: []
+envFrom: {}
+affinity: {}
+nodeSelector: {}
+tolerations: []
+
+# Security context for the pod
+podSecurityContext:
+  fsGroup: 1001
+
+# Security context for the container
+securityContext:
+  runAsUser: 1001
+  runAsNonRoot: true
+
+resources:
+  limits: {}
+  requests: {}
+
+persistence:
+  enabled: true
+  path: /data
+  accessMode: ReadWriteOnce
+  size: 25Gi
+  storageClass: ""
+
+service:
+  type: ClusterIP
+  port: 80
+  annotations: {}
+  peeringPort: 8108
+
+ingress:
+  enabled: false
+  hosts:
+    - name: typesense.local
+      tls: false
+      certManager: false
+      tlsSecret: typesense.local-tls
+      annotations: {}
+
+apiKey: "xyz"
+
+pdb:
+  enabled: true
+  minAvailable: 1

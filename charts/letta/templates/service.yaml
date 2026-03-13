@@ -1,12 +1,15 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Release.Name }}
+  name: {{ include "letta.fullname" . }}
   labels:
-    app: {{ .Release.Name }}
+    {{- include "letta.labels" . | nindent 4 }}
 spec:
+  type: ClusterIP
   selector:
-    app: {{ .Release.Name }}
+    {{- include "letta.selectorLabels" . | nindent 4 }}
   ports:
     - port: 8283
-      targetPort: 8283
+      targetPort: http
+      protocol: TCP
+      name: http

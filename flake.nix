@@ -15,13 +15,20 @@
           inherit system;
           config.allowUnfree = true;
         };
+        helm =
+          with pkgs;
+          wrapHelm kubernetes-helm {
+            plugins = with kubernetes-helmPlugins; [
+              helm-unittest
+            ];
+          };
       in
       {
         devShells.default =
           with pkgs;
           mkShell {
             packages = [
-              kubernetes-helm
+              helm
               just
             ];
           };

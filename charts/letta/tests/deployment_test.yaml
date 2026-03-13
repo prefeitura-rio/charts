@@ -1,0 +1,92 @@
+suite: test letta deployment
+templates:
+  - deployment.yaml
+tests:
+  - it: should render deployment with default values
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-letta
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "letta/letta:latest"
+
+  - it: should use custom image when specified
+    set:
+      deployment.image: letta/letta:0.16.6
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "letta/letta:0.16.6"
+
+  - it: should mount persistent volume when enabled
+    set:
+      persistence.enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: letta-storage
+            persistentVolumeClaim:
+              claimName: RELEASE-NAME-letta-pvc
+
+  - it: should add env from secret when specified
+    set:
+      deployment.envFromSecret: my-secret
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            secretRef:
+              name: my-secret
+
+  - it: should add custom env variables
+    set:
+      deployment.env:
+        CUSTOM_VAR: custom-value
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: "CUSTOM_VAR"
+            value: "custom-value"
+
+  - it: should set resources when specified
+    set:
+      deployment.resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: 100m
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: 512Mi
+
+  - it: should add annotations when specified
+    set:
+      deployment.annotations:
+        custom.annotation: value
+    asserts:
+      - equal:
+          path: metadata.annotations["custom.annotation"]
+          value: value
+
+  - it: should add annotations to deployment metadata
+    set:
+      deployment.annotations:
+        test.annotation: value
+    asserts:
+      - equal:
+          path: metadata.annotations["test.annotation"]
+          value: value

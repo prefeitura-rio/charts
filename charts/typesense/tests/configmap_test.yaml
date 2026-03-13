@@ -1,0 +1,16 @@
+suite: test typesense configmap
+templates:
+  - configmap.yml
+tests:
+  - it: should render configmap
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-typesense
+
+  - it: should have nodes configuration
+    asserts:
+      - isNotEmpty:
+          path: data.nodes

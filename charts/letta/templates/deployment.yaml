@@ -1,33 +1,51 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Release.Name }}
+  name: {{ include "letta.fullname" . }}
   labels:
-    app: {{ .Release.Name }}
+    {{- include "letta.labels" . | nindent 4 }}
   {{- with .Values.deployment.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.deployment.replicas | default 1 }}
   selector:
     matchLabels:
-      app: {{ .Release.Name }}
+      {{- include "letta.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        app: {{ .Release.Name }}
+        {{- include "letta.selectorLabels" . | nindent 8 }}
+      {{- with .Values.deployment.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
     spec:
-      terminationGracePeriodSeconds: 10
+      {{- with .Values.deployment.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.deployment.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.deployment.terminationGracePeriodSeconds | default 30 }}
       containers:
-        - name: {{ .Release.Name }}
+        - name: letta
           image: {{ .Values.deployment.image | quote }}
-          imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
+          imagePullPolicy: {{ .Values.deployment.imagePullPolicy | default "IfNotPresent" }}
+          {{- with .Values.deployment.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           ports:
-            - containerPort: 8283
+            - name: http
+              containerPort: {{ .Values.deployment.containerPort | default 8283 }}
+              protocol: TCP
           env:
             - name: PGDATA
-              value: '/var/lib/postgresql/data/pgdata'
+              value: {{ .Values.deployment.pgDataPath | default "/var/lib/postgresql/data/pgdata" | quote }}
           {{- range $key, $value := .Values.deployment.env }}
             - name: {{ $key | quote }}
               value: {{ $value | quote }}
@@ -37,19 +55,38 @@ spec:
             - secretRef:
                 name: {{ .Values.deployment.envFromSecret | quote }}
           {{- end }}
-          {{ with .Values.deployment.resources }}
+          {{- with .Values.deployment.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.deployment.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.deployment.resources }}
           resources:
-            {{ toYaml . | nindent 12 }}
-          {{ end }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           {{- if .Values.persistence.enabled }}
           volumeMounts:
             - name: letta-storage
-              mountPath: /var/lib/postgresql/data
+              mountPath: {{ .Values.persistence.mountPath | default "/var/lib/postgresql/data" }}
           {{- end }}
       {{- if .Values.persistence.enabled }}
       volumes:
         - name: letta-storage
           persistentVolumeClaim:
-            claimName: letta-pvc
+            claimName: {{ include "letta.fullname" . }}-pvc
       {{- end }}
-      restartPolicy: Always
+      {{- with .Values.deployment.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.deployment.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.deployment.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: StatefulSet 
+metadata:
+  name: {{ template "typesense.fullname" . }}
+  labels: {{- include "typesense.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels: {{- include "typesense.matchLabels" . | nindent 6 }}
+  replicas: {{ .Values.replicas }}
+  podManagementPolicy: Parallel
+  serviceName: {{ template "typesense.fullname" . }}-cluster
+  template:
+    metadata:
+      labels: {{- include "typesense.labels" . | nindent 8 }}
+    spec:
+      volumes:
+        - name: config-nodes
+          configMap:
+            name: {{ template "typesense.fullname" . }}
+            items:
+              - key: nodes
+                path: nodes
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      affinity: {{- toYaml .Values.affinity | nindent 8 }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: typesense
+          image: {{ template "typesense.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          env:
+            - name: TYPESENSE_DATA_DIR
+              value: {{ .Values.persistence.path }}
+            - name: TYPESENSE_API_KEY
+              value: {{ .Values.apiKey }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.applicationPort }}
+            - name: peering
+              containerPort: {{ .Values.peeringPort }}
+          args:
+            - --data-dir
+            - /data
+            - --api-key
+            - {{ .Values.apiKey }}
+            - --listen-port
+            - "{{ .Values.applicationPort }}"
+            {{- if ne (toString .Values.replicas) "1" }}
+            - --nodes
+            - /etc/typesense/nodes/nodes
+            - --reset-peers-on-error
+            - --healthy-read-lag
+            - '3600'
+            {{- end }}
+          startupProbe:
+              httpGet:
+                path: /health
+                port: http
+              initialDelaySeconds: 10
+              periodSeconds: 10
+              timeoutSeconds: 5
+              failureThreshold: 30
+          livenessProbe:
+              httpGet:
+                path: /health
+                port: http
+              initialDelaySeconds: 120 
+              timeoutSeconds: 5
+              failureThreshold: 6
+          readinessProbe:
+              httpGet:
+                path: /health
+                port: http
+              initialDelaySeconds: 30
+              timeoutSeconds: 5
+              failureThreshold: 6
+          volumeMounts:
+            - name: data  
+              mountPath: {{ .Values.persistence.path }}
+            - name: config-nodes
+              mountPath: /etc/typesense/nodes
+  volumeClaimTemplates:  
+    - metadata:
+        name: data  
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        {{- if .Values.persistence.storageClass }}
+        storageClassName: {{ .Values.persistence.storageClass | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size | quote }}

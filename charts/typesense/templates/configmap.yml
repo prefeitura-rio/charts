@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "typesense.fullname" . }}
+  labels: {{- include "typesense.labels" . | nindent 4 }}
+data:
+  nodes: "{{ include "typesense.replicaString" . }}"

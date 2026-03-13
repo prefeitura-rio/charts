@@ -1,0 +1,29 @@
+suite: test letta service
+templates:
+  - service.yaml
+tests:
+  - it: should render service with default values
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-letta
+
+  - it: should expose port 8283
+    asserts:
+      - equal:
+          path: spec.ports[0].port
+          value: 8283
+      - equal:
+          path: spec.ports[0].targetPort
+          value: http
+
+  - it: should have correct selector
+    asserts:
+      - equal:
+          path: spec.selector["app.kubernetes.io/name"]
+          value: letta
+      - equal:
+          path: spec.selector["app.kubernetes.io/instance"]
+          value: RELEASE-NAME

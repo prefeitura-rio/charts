@@ -3,7 +3,9 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ .Release.Name }}-pvc
+  name: {{ include "letta.fullname" . }}-pvc
+  labels:
+    {{- include "letta.labels" . | nindent 4 }}
   {{- if .Values.argocd.enabled }}
   annotations:
     argocd.argoproj.io/sync-options: Skip
