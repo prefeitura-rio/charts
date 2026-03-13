@@ -6,7 +6,8 @@ on:
       - main
     paths:
       - "charts/**"
-      - "scripts/generate-index-html.sh"
+      - "scripts/generate-index-html.py"
+      - "scripts/index.html.j2"
   workflow_dispatch:
 
 jobs:
@@ -37,6 +38,9 @@ jobs:
           skip_existing: true
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
 
       - name: Generate and update index.html
         run: |
