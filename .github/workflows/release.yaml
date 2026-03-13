@@ -46,11 +46,12 @@ jobs:
           git checkout gh-pages
           # Copy the saved file
           cp /tmp/index.html .
-          # Commit and push if there are changes
-          if git diff --quiet index.html; then
+          # Add the file
+          git add index.html
+          # Commit and push if there are changes (staged or new file)
+          if git diff --staged --quiet; then
             echo "No changes to index.html"
           else
-            git add index.html
             git commit -m "Update index.html from main"
             git push origin gh-pages
           fi
