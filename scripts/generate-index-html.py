@@ -35,7 +35,6 @@ class HelmIndex(TypedDict):
     entries: dict[str, list[ChartVersion]]
 
 
-DEPRECATED_CHARTS: set[str] = {"id-server", "k8s-f5-service", "letta-bot", "sequin"}
 FEATURED_CHARTS: set[str] = {"base-chart"}
 
 
@@ -60,13 +59,14 @@ def parse_charts(index_data: HelmIndex) -> list[ChartData]:
     charts = []
 
     for chart_name, versions in index_data.get("entries", {}).items():
-        if not versions or chart_name in DEPRECATED_CHARTS:
+        if not versions:
             continue
 
         chart_data = extract_chart_data(chart_name, versions)
         charts.append(chart_data)
 
     charts.sort(key=lambda chart: (not chart["featured"], chart["name"]))
+
     return charts
 
 
@@ -82,7 +82,7 @@ def generate_html(charts: list[ChartData], template_dir: Path) -> str:
 
 
 def write_html(html_content: str, output_path: Path) -> None:
-    output_path.write_text(html_content)
+    _ = output_path.write_text(html_content)
 
 
 def main() -> None:
