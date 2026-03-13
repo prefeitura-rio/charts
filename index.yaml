@@ -81,6 +81,16 @@ entries:
     version: 0.1.0
   letta:
   - apiVersion: v2
+    appVersion: 0.16.6
+    created: "2026-03-13T17:16:41.185345514Z"
+    description: Deploys Letta based on the documentation at https://docs.letta.com/quickstart/docker
+    digest: ed40b731779e93b52047dabf9cba869aab0ce5a2fd0621e374ec1ddafe5f474e
+    name: letta
+    type: application
+    urls:
+    - https://github.com/prefeitura-rio/charts/releases/download/letta-0.1.5/letta-0.1.5.tgz
+    version: 0.1.5
+  - apiVersion: v2
     appVersion: 0.7.8
     created: "2025-08-04T16:29:21.701019378Z"
     description: Deploys Letta based on the documentation at https://docs.letta.com/quickstart/docker
@@ -351,6 +361,25 @@ entries:
     urls:
     - https://github.com/prefeitura-rio/charts/releases/download/prefect-server-2022.09.23/prefect-server-2022.09.23.tgz
     version: 2022.09.23
+  typesense:
+  - apiVersion: v2
+    appVersion: "30.1"
+    created: "2026-03-13T17:16:41.331533918Z"
+    description: Typesense is an open-source search engine optimized for speed and
+      typo-tolerance, delivering fast and relevant search results.
+    digest: 9e4c2f159fb052d5194504cd1826cbf0d307867a4a8ed7f5b31ae27eee230271
+    home: https://typesense.org/
+    icon: https://typesense.org/assets/images/typesense_medium.png
+    keywords:
+    - search
+    - typesense
+    name: typesense
+    sources:
+    - https://github.com/typesense/typesense
+    type: application
+    urls:
+    - https://github.com/prefeitura-rio/charts/releases/download/typesense-1.1.0/typesense-1.1.0.tgz
+    version: 1.1.0
   whatsapp-bot:
   - apiVersion: v2
     appVersion: 0.1.0
@@ -362,4 +391,4 @@ entries:
     urls:
     - https://github.com/prefeitura-rio/charts/releases/download/whatsapp-bot-0.1.0/whatsapp-bot-0.1.0.tgz
     version: 0.1.0
-generated: "2021-12-21T14:25:13.41844377Z"
+generated: "2026-03-13T17:16:41.331616483Z"
