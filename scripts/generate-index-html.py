@@ -9,10 +9,17 @@
 
 import sys
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import TypedDict
 
 import yaml
 from jinja2 import Environment, FileSystemLoader
+
+
+class ChartVersion(TypedDict, total=False):
+    version: str
+    appVersion: str
+    description: str
+    keywords: list[str]
 
 
 class ChartData(TypedDict):
@@ -24,15 +31,19 @@ class ChartData(TypedDict):
     keywords: list[str]
 
 
+class HelmIndex(TypedDict):
+    entries: dict[str, list[ChartVersion]]
+
+
 DEPRECATED_CHARTS: set[str] = {"id-server", "k8s-f5-service", "letta-bot", "sequin"}
 FEATURED_CHARTS: set[str] = {"base-chart"}
 
 
-def load_index_yaml(yaml_path: Path) -> dict[str, Any]:
+def load_index_yaml(yaml_path: Path) -> HelmIndex:
     return yaml.safe_load(yaml_path.read_text())
 
 
-def extract_chart_data(chart_name: str, versions: list[dict[str, Any]]) -> ChartData:
+def extract_chart_data(chart_name: str, versions: list[ChartVersion]) -> ChartData:
     latest_version = versions[0]
 
     return {
@@ -45,7 +56,7 @@ def extract_chart_data(chart_name: str, versions: list[dict[str, Any]]) -> Chart
     }
 
 
-def parse_charts(index_data: dict[str, Any]) -> list[ChartData]:
+def parse_charts(index_data: HelmIndex) -> list[ChartData]:
     charts = []
 
     for chart_name, versions in index_data.get("entries", {}).items():
