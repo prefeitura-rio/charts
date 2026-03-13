@@ -44,10 +44,12 @@ jobs:
           git checkout gh-pages
           cp /tmp/index.html .
           git add index.html
+
           if git diff --staged --quiet; then
             echo "No changes to index.html"
-          else
-            git commit -m "Update index.html from main"
-            git push origin gh-pages
+            exit 0
           fi
+
+          git commit -m "Update index.html from main"
+          git push origin gh-pages
         continue-on-error: true
