@@ -1,72 +1,48 @@
 # Chart Publishing Scripts
 
-## Automatic Publishing (Recommended)
+## Automatic Publishing
 
 The repository uses GitHub Actions to automatically publish charts when changes are pushed to the `main` branch.
 
 The workflow (`.github/workflows/release.yaml`) will:
 1. Package all charts in the `charts/` directory
 2. Create GitHub releases for new chart versions
-3. Update the `index.yaml` in the `gh-pages` branch
-4. Copy `index.html` to the `gh-pages` branch
+3. Generate `index.yaml` in the `gh-pages` branch
+4. Generate `index.html` from `index.yaml` in the `gh-pages` branch
 
-No manual intervention is needed!
+No manual intervention needed!
 
 ## Manual Publishing
 
-If you need to manually publish charts:
-
-### Option 1: Using the script
+To manually trigger the workflow:
 
 ```bash
-# From the repository root
-./scripts/update-index.sh
+gh workflow run release.yaml
 ```
 
-This will:
-- Package all charts to `packages/` directory
-- Generate `index.yaml`
+Or from GitHub UI:
+1. Go to Actions tab
+2. Select "Release Charts" workflow
+3. Click "Run workflow"
 
-Then manually copy to gh-pages:
-```bash
-git checkout gh-pages
-cp packages/*.tgz .
-cp index.yaml .
-cp index.html .
-git add *.tgz index.yaml index.html
-git commit -m "Release charts"
-git push origin gh-pages
-git checkout main
-```
+## Generating index.html Locally
 
-### Option 2: Using Helm directly
+The `index.html` landing page is generated from `index.yaml` using `generate-index-html.py`:
 
 ```bash
-# Package charts
-cd charts
-helm package base-chart letta typesense -d ../packages
-
-# Generate index
-cd ../packages
-helm repo index . --url https://prefeitura-rio.github.io/charts
-
-# Move to gh-pages branch and commit
-# (same as above)
+cd scripts
+./generate-index-html.py <path-to-index.yaml> <output-index.html>
 ```
 
-## Updating index.html
+Requirements:
+- Python 3.11+
+- uv (will auto-install dependencies: PyYAML, Jinja2)
 
-The `index.html` is the front page of https://prefeitura-rio.github.io/charts
-
-After updating chart versions in `index.html`, commit to main branch. The GitHub Actions workflow will automatically copy it to gh-pages.
-
-Or manually:
-```bash
-git checkout gh-pages
-git checkout main -- index.html
-git commit -m "Update index.html"
-git push origin gh-pages
-```
+The script:
+- Parses `index.yaml` to extract chart information
+- Filters deprecated charts
+- Applies badges and featured status
+- Renders `index.html.j2` template
 
 ## Verifying the Release
 
@@ -79,3 +55,9 @@ helm search repo prefeitura-rio
 ```
 
 You should see all charts with their latest versions.
+
+## Files
+
+- `generate-index-html.py` - Python script to generate HTML from YAML
+- `index.html.j2` - Jinja2 template for the landing page
+- `README.md` - This file
