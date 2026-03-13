@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - "charts/**"
-      - "index.html"
+      - "scripts/generate-index-html.sh"
   workflow_dispatch:
 
 jobs:
@@ -38,18 +38,19 @@ jobs:
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
-      - name: Copy index.html to gh-pages
+      - name: Generate and update index.html
         run: |
-          git show main:index.html > /tmp/index.html
           git checkout gh-pages
-          cp /tmp/index.html .
+          git show main:scripts/generate-index-html.py > /tmp/generate-index-html.py
+          git show main:scripts/index.html.j2 > /tmp/index.html.j2
+          chmod +x /tmp/generate-index-html.py
+          cd /tmp && ./generate-index-html.py $GITHUB_WORKSPACE/index.yaml $GITHUB_WORKSPACE/index.html
+          cd $GITHUB_WORKSPACE
           git add index.html
-
           if git diff --staged --quiet; then
             echo "No changes to index.html"
             exit 0
           fi
-
-          git commit -m "Update index.html from main"
+          git commit -m "Update index.html from index.yaml"
           git push origin gh-pages
         continue-on-error: true
