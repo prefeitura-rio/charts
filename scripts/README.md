@@ -27,11 +27,11 @@ Or from GitHub UI:
 
 ## Generating index.html Locally
 
-The `index.html` landing page is generated from `index.yaml` using `generate-index-html.py`:
+The `index.html` landing page is generated from `index.yaml` using `index.py`:
 
 ```bash
 cd scripts
-./generate-index-html.py <path-to-index.yaml> <output-index.html>
+./index.py <path-to-index.yaml> <output-index.html>
 ```
 
 Requirements:
@@ -40,8 +40,7 @@ Requirements:
 
 The script:
 - Parses `index.yaml` to extract chart information
-- Filters deprecated charts
-- Applies badges and featured status
+- Extracts keywords from Chart.yaml metadata
 - Renders `index.html.j2` template
 
 ## Verifying the Release
@@ -58,6 +57,6 @@ You should see all charts with their latest versions.
 
 ## Files
 
-- `generate-index-html.py` - Python script to generate HTML from YAML
+- `index.py` - Python script to generate HTML from YAML
 - `index.html.j2` - Jinja2 template for the landing page
 - `README.md` - This file

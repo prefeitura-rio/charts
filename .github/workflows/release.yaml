@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - "charts/**"
-      - "scripts/generate-index-html.py"
+      - "scripts/index.py"
       - "scripts/index.html.j2"
   workflow_dispatch:
 
@@ -45,10 +45,10 @@ jobs:
       - name: Generate and update index.html
         run: |
           git checkout gh-pages
-          git show main:scripts/generate-index-html.py > /tmp/generate-index-html.py
+          git show main:scripts/index.py > /tmp/index.py
           git show main:scripts/index.html.j2 > /tmp/index.html.j2
-          chmod +x /tmp/generate-index-html.py
-          cd /tmp && ./generate-index-html.py $GITHUB_WORKSPACE/index.yaml $GITHUB_WORKSPACE/index.html
+          chmod +x /tmp/index.py
+          cd /tmp && ./index.py $GITHUB_WORKSPACE/index.yaml $GITHUB_WORKSPACE/index.html
           cd $GITHUB_WORKSPACE
           git add index.html
           if git diff --staged --quiet; then
