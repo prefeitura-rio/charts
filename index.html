@@ -162,7 +162,7 @@
 <body>
     <header>
         <div class="container">
-            <h1>⎈ Prefeitura Rio - Helm Charts</h1>
+            <h1>Prefeitura Rio - Helm Charts</h1>
             <p>Production-ready Helm charts for Kubernetes deployments</p>
         </div>
     </header>
@@ -185,7 +185,7 @@ helm repo update</code></pre>
             <div class="chart-card">
                 <h3>base-chart</h3>
                 <span class="chart-version">v2.2.3</span>
-                <span class="badge badge-featured">⭐ Featured</span>
+                <span class="badge badge-featured">Featured</span>
                 <p class="chart-description">
                     A comprehensive, production-ready Helm chart for deploying applications on Kubernetes with Istio service mesh, KEDA autoscaling, Infisical secrets, and more.
                 </p>
@@ -198,25 +198,45 @@ helm repo update</code></pre>
                 </div>
                 <div class="chart-meta">
                     <strong>App Version:</strong> 1.25<br>
-                    <a href="https://github.com/prefeitura-rio/charts/tree/main/charts/base-chart" target="_blank">📖 Documentation</a>
+                    <a href="https://github.com/prefeitura-rio/charts/tree/main/charts/base-chart" target="_blank">Documentation</a>
                 </div>
             </div>
 
             <!-- letta -->
             <div class="chart-card">
                 <h3>letta</h3>
-                <span class="chart-version">v0.1.4</span>
-                <span class="badge external-badge">External</span>
+                <span class="chart-version">v0.1.5</span>
                 <p class="chart-description">
                     Deploys Letta - an open-source framework for building stateful LLM applications with long-term memory.
                 </p>
+                <div>
+                    <span class="badge badge-primary">LLM</span>
+                    <span class="badge badge-primary">PostgreSQL</span>
+                    <span class="badge badge-primary">Memory</span>
+                </div>
                 <div class="chart-meta">
-                    <strong>App Version:</strong> 0.7.8<br>
-                    <a href="https://github.com/cpacker/letta" target="_blank">📖 Upstream Repository</a>
+                    <strong>App Version:</strong> 0.16.6<br>
+                    <a href="https://github.com/prefeitura-rio/charts/tree/main/charts/letta" target="_blank">Documentation</a>
                 </div>
             </div>
 
-
+            <!-- typesense -->
+            <div class="chart-card">
+                <h3>typesense</h3>
+                <span class="chart-version">v1.1.0</span>
+                <p class="chart-description">
+                    Fast, typo-tolerant search engine optimized for instant search experiences. Supports clustering and high availability.
+                </p>
+                <div>
+                    <span class="badge badge-primary">Search</span>
+                    <span class="badge badge-primary">Clustering</span>
+                    <span class="badge badge-primary">HA</span>
+                </div>
+                <div class="chart-meta">
+                    <strong>App Version:</strong> 30.1<br>
+                    <a href="https://github.com/prefeitura-rio/charts/tree/main/charts/typesense" target="_blank">Documentation</a>
+                </div>
+            </div>
         </div>
     </div>
 
