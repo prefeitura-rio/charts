@@ -5,8 +5,8 @@ on:
     branches:
       - main
     paths:
-      - 'charts/**'
-      - 'index.html'
+      - "charts/**"
+      - "index.html"
 
 jobs:
   release:
@@ -33,9 +33,10 @@ jobs:
         uses: helm/chart-releaser-action@v1.6.0
         with:
           charts_dir: charts
+          skip_existing: true
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-      
+
       - name: Copy index.html to gh-pages
         run: |
           git checkout gh-pages
