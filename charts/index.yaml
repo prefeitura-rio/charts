@@ -1,0 +1,56 @@
+apiVersion: v1
+entries:
+  base-chart:
+  - apiVersion: v2
+    appVersion: '1.25'
+    created: '2026-03-13T16:01:35.647222982Z'
+    dependencies:
+    - alias: valkey
+      condition: valkey.enabled
+      name: valkey
+      repository: oci://registry-1.docker.io/cloudpirates
+      version: 0.17.0
+    - alias: rabbitmq
+      condition: rabbitmq.enabled
+      name: rabbitmq
+      repository: oci://registry-1.docker.io/cloudpirates
+      version: 0.17.0
+    description: A Helm chart for basic deployments in Kubernetes
+    digest: dc9919ee8eaaa6b4200af612140f53e19b83042d79188f5ccf7ad15ddc501455
+    icon: https://helm.sh/img/helm.svg
+    name: base-chart
+    type: application
+    urls:
+    - https://github.com/prefeitura-rio/charts/releases/download/base-chart-2.2.3/base-chart-2.2.3.tgz
+    version: 2.2.3
+  letta:
+  - apiVersion: v2
+    appVersion: 0.16.6
+    created: '2026-03-13T17:16:41.185345514Z'
+    description: Deploys Letta based on the documentation at https://docs.letta.com/quickstart/docker
+    digest: ed40b731779e93b52047dabf9cba869aab0ce5a2fd0621e374ec1ddafe5f474e
+    name: letta
+    type: application
+    urls:
+    - https://github.com/prefeitura-rio/charts/releases/download/letta-0.1.5/letta-0.1.5.tgz
+    version: 0.1.5
+  typesense:
+  - apiVersion: v2
+    appVersion: '30.1'
+    created: '2026-03-13T17:16:41.331533918Z'
+    description: Typesense is an open-source search engine optimized for speed and
+      typo-tolerance, delivering fast and relevant search results.
+    digest: 9e4c2f159fb052d5194504cd1826cbf0d307867a4a8ed7f5b31ae27eee230271
+    home: https://typesense.org/
+    icon: https://typesense.org/assets/images/typesense_medium.png
+    keywords:
+    - search
+    - typesense
+    name: typesense
+    sources:
+    - https://github.com/typesense/typesense
+    type: application
+    urls:
+    - https://github.com/prefeitura-rio/charts/releases/download/typesense-1.1.0/typesense-1.1.0.tgz
+    version: 1.1.0
+generated: '2026-03-13T17:16:41.331616483Z'
