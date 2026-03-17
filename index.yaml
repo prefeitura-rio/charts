@@ -26,6 +26,27 @@ entries:
   cloudsql-proxy:
   - apiVersion: v2
     appVersion: 2.21.1
+    created: "2026-03-17T18:38:45.009078254Z"
+    description: Cloud SQL Auth Proxy for secure connections to Google Cloud SQL instances
+    digest: 7115160d9cffa83a5ed7f2570c2bfb4cf85e7c1424e74ed3e7297ad729205244
+    home: https://cloud.google.com/sql/docs/postgres/sql-proxy
+    icon: https://www.gstatic.com/devrel-devsite/prod/v0d244f667a3683225cca86e0ee31200226d59b37e5f61942956a27d18b9b3736/cloud/images/favicons/onecloud/super_cloud.png
+    keywords:
+    - cloudsql
+    - proxy
+    - gcp
+    - database
+    - postgresql
+    - mysql
+    name: cloudsql-proxy
+    sources:
+    - https://github.com/GoogleCloudPlatform/cloud-sql-proxy
+    type: application
+    urls:
+    - https://github.com/prefeitura-rio/charts/releases/download/cloudsql-proxy-1.0.1/cloudsql-proxy-1.0.1.tgz
+    version: 1.0.1
+  - apiVersion: v2
+    appVersion: 2.21.1
     created: "2026-03-17T18:12:58.749274278Z"
     description: Cloud SQL Auth Proxy for secure connections to Google Cloud SQL instances
     digest: 3e353d3ea063badc4884a733324b21cf278beeaf6eccfcd035ddbd2a5ddcb44e
@@ -75,4 +96,4 @@ entries:
     urls:
     - https://github.com/prefeitura-rio/charts/releases/download/typesense-1.1.0/typesense-1.1.0.tgz
     version: 1.1.0
-generated: "2026-03-17T18:12:58.749281642Z"
+generated: "2026-03-17T18:38:45.009093473Z"
