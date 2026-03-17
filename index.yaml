@@ -2,8 +2,8 @@ apiVersion: v1
 entries:
   base-chart:
   - apiVersion: v2
-    appVersion: '1.25'
-    created: '2026-03-13T16:01:35.647222982Z'
+    appVersion: "1.25"
+    created: "2026-03-13T16:01:35.647222982Z"
     dependencies:
     - alias: valkey
       condition: valkey.enabled
@@ -23,10 +23,32 @@ entries:
     urls:
     - https://github.com/prefeitura-rio/charts/releases/download/base-chart-2.2.3/base-chart-2.2.3.tgz
     version: 2.2.3
+  cloudsql-proxy:
+  - apiVersion: v2
+    appVersion: 2.21.1
+    created: "2026-03-17T18:12:58.749274278Z"
+    description: Cloud SQL Auth Proxy for secure connections to Google Cloud SQL instances
+    digest: 3e353d3ea063badc4884a733324b21cf278beeaf6eccfcd035ddbd2a5ddcb44e
+    home: https://cloud.google.com/sql/docs/postgres/sql-proxy
+    icon: https://www.gstatic.com/devrel-devsite/prod/v0d244f667a3683225cca86e0ee31200226d59b37e5f61942956a27d18b9b3736/cloud/images/favicons/onecloud/super_cloud.png
+    keywords:
+    - cloudsql
+    - proxy
+    - gcp
+    - database
+    - postgresql
+    - mysql
+    name: cloudsql-proxy
+    sources:
+    - https://github.com/GoogleCloudPlatform/cloud-sql-proxy
+    type: application
+    urls:
+    - https://github.com/prefeitura-rio/charts/releases/download/cloudsql-proxy-1.0.0/cloudsql-proxy-1.0.0.tgz
+    version: 1.0.0
   letta:
   - apiVersion: v2
     appVersion: 0.16.6
-    created: '2026-03-13T17:16:41.185345514Z'
+    created: "2026-03-13T17:16:41.185345514Z"
     description: Deploys Letta based on the documentation at https://docs.letta.com/quickstart/docker
     digest: ed40b731779e93b52047dabf9cba869aab0ce5a2fd0621e374ec1ddafe5f474e
     name: letta
@@ -36,8 +58,8 @@ entries:
     version: 0.1.5
   typesense:
   - apiVersion: v2
-    appVersion: '30.1'
-    created: '2026-03-13T17:16:41.331533918Z'
+    appVersion: "30.1"
+    created: "2026-03-13T17:16:41.331533918Z"
     description: Typesense is an open-source search engine optimized for speed and
       typo-tolerance, delivering fast and relevant search results.
     digest: 9e4c2f159fb052d5194504cd1826cbf0d307867a4a8ed7f5b31ae27eee230271
@@ -53,4 +75,4 @@ entries:
     urls:
     - https://github.com/prefeitura-rio/charts/releases/download/typesense-1.1.0/typesense-1.1.0.tgz
     version: 1.1.0
-generated: '2026-03-13T17:16:41.331616483Z'
+generated: "2026-03-17T18:12:58.749281642Z"
