@@ -1,0 +1,80 @@
+# Run lint and template tests by default
+default: lint test
+
+# Validate chart structure and best practices
+@lint:
+    echo "*** Running Helm lint... ***"
+    helm lint .
+    echo "*** Lint completed ***"
+
+# Test chart template rendering with various configurations
+@test:
+    echo "*** Testing chart templates... ***"
+    echo "*** Testing with Workload Identity (GKE)... ***"
+    helm template test . \
+        --set instance.projectId=my-project \
+        --set instance.region=us-central1 \
+        --set instance.name=my-instance \
+        --set serviceAccount.annotations."iam\.gke\.io/gcp-service-account"=sa@project.iam.gserviceaccount.com \
+        --dry-run=client > /dev/null
+    echo "*** Testing with SA key (non-GKE)... ***"
+    helm template test . \
+        --set instance.projectId=my-project \
+        --set instance.region=us-central1 \
+        --set instance.name=my-instance \
+        --set auth.credentialsSecret=cloudsql-sa-key \
+        --dry-run=client > /dev/null
+    echo "*** Testing MySQL configuration... ***"
+    helm template test . \
+        --set instance.projectId=my-project \
+        --set instance.region=us-central1 \
+        --set instance.name=my-mysql \
+        --set proxy.port=3306 \
+        --set proxy.healthCheckPort=9091 \
+        --dry-run=client > /dev/null
+    echo "*** Testing with PDB enabled... ***"
+    helm template test . \
+        --set instance.projectId=my-project \
+        --set instance.region=us-central1 \
+        --set instance.name=my-instance \
+        --set podDisruptionBudget.enabled=true \
+        --dry-run=client > /dev/null
+    echo "*** Testing with health checks disabled... ***"
+    helm template test . \
+        --set instance.projectId=my-project \
+        --set instance.region=us-central1 \
+        --set instance.name=my-instance \
+        --set proxy.healthCheckPort=0 \
+        --dry-run=client > /dev/null
+    echo "*** All tests passed! ***"
+
+# Generate all rendered templates to debug directory
+@debug:
+    echo "*** Generating templates for debugging... ***"
+    mkdir -p debug
+    helm template debug-release . \
+        --set instance.projectId=my-project \
+        --set instance.region=us-central1 \
+        --set instance.name=my-instance \
+        --output-dir debug/
+    echo "*** Templates saved to debug/ ***"
+
+# Display all rendered resources to stdout
+@show:
+    echo "*** Showing all resources: ***"
+    helm template show-release . \
+        --set instance.projectId=my-project \
+        --set instance.region=us-central1 \
+        --set instance.name=my-instance
+
+# Remove debug files and cleanup artifacts
+@clean:
+    echo "*** Cleaning up... ***"
+    rm -rf debug/
+    echo "*** Cleanup completed ***"
+
+# Create a .tgz package of the chart
+@package:
+    echo "*** Packaging chart... ***"
+    helm package .
+    echo "*** Chart packaged successfully ***"

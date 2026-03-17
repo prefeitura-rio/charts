@@ -1,0 +1,10 @@
+# Test values for extra args
+instance:
+  projectId: test-project
+  region: us-central1
+  name: test-instance
+
+proxy:
+  extraArgs:
+    - "--debug"
+    - "--quota-project=my-project"

@@ -1,0 +1,52 @@
+suite: test cloudsql-proxy pod disruption budget
+templates:
+  - pdb.yaml
+values:
+  - ../values.yaml
+set:
+  instance.projectId: test-project
+  instance.region: us-central1
+  instance.name: test-instance
+tests:
+  - it: should not render PDB by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render PDB when enabled (superapp pattern)
+    set:
+      podDisruptionBudget.enabled: true
+    asserts:
+      - isKind:
+          of: PodDisruptionBudget
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-cloudsql-proxy
+
+  - it: should use minAvailable by default
+    set:
+      podDisruptionBudget.enabled: true
+    asserts:
+      - equal:
+          path: spec.minAvailable
+          value: 1
+
+  - it: should use custom minAvailable when specified
+    set:
+      podDisruptionBudget.enabled: true
+      podDisruptionBudget.minAvailable: 2
+    asserts:
+      - equal:
+          path: spec.minAvailable
+          value: 2
+
+  - it: should have correct selector labels
+    set:
+      podDisruptionBudget.enabled: true
+    asserts:
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/name"]
+          value: cloudsql-proxy
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/instance"]
+          value: RELEASE-NAME

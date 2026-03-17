@@ -1,0 +1,76 @@
+suite: test cloudsql-proxy deployment with ConfigMap
+templates:
+  - deployment.yaml
+values:
+  - ../values.yaml
+tests:
+  # ConfigMap reference tests (Terraform pattern)
+  - it: should use envFrom when ConfigMap is specified
+    set:
+      instance.configMapRef.name: postgres-config
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            configMapRef:
+              name: postgres-config
+
+  - it: should use env var substitution in connection string with ConfigMap
+    set:
+      instance.configMapRef.name: postgres-config
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "$(CLOUD_SQL_PROJECT_ID):$(CLOUD_SQL_INSTANCE_REGION):$(CLOUD_SQL_INSTANCE_NAME)"
+
+  - it: should use custom ConfigMap key names
+    set:
+      instance.configMapRef.name: my-config
+      instance.configMapRef.keys.projectId: PROJECT
+      instance.configMapRef.keys.region: REGION
+      instance.configMapRef.keys.name: INSTANCE
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "$(PROJECT):$(REGION):$(INSTANCE)"
+
+  # Inline values tests (default)
+  - it: should not have envFrom when using inline values
+    set:
+      instance.projectId: my-project
+      instance.region: us-central1
+      instance.name: my-instance
+    asserts:
+      - isNull:
+          path: spec.template.spec.containers[0].envFrom
+
+  - it: should use inline connection string when no ConfigMap
+    set:
+      instance.projectId: my-project
+      instance.region: us-central1
+      instance.name: my-instance
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "my-project:us-central1:my-instance"
+
+  # Combined ConfigMap + Secret (k3s pattern)
+  - it: should support ConfigMap for instance and existing secret for auth
+    set:
+      instance.configMapRef.name: postgres-config
+      secret.existingSecret: cloudsql-sa-key
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            configMapRef:
+              name: postgres-config
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: credentials
+            secret:
+              secretName: cloudsql-sa-key
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "--credentials-file=/var/secrets/google/service-account-key.json"

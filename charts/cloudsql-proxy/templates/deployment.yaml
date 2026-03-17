@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "cloudsql-proxy.fullname" . }}
+  labels:
+    {{- include "cloudsql-proxy.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "cloudsql-proxy.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "cloudsql-proxy.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "cloudsql-proxy.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            {{- include "cloudsql-proxy.args" . | nindent 12 }}
+          {{- if include "cloudsql-proxy.useConfigMap" . }}
+          envFrom:
+            - configMapRef:
+                name: {{ .Values.instance.configMapRef.name }}
+          {{- end }}
+          ports:
+            - name: db
+              containerPort: {{ .Values.proxy.port }}
+              protocol: TCP
+            {{- if and .Values.proxy.healthCheckPort (gt (int .Values.proxy.healthCheckPort) 0) }}
+            - name: http-health
+              containerPort: {{ .Values.proxy.healthCheckPort }}
+              protocol: TCP
+            {{- end }}
+          {{- if and .Values.livenessProbe.enabled .Values.proxy.healthCheckPort (gt (int .Values.proxy.healthCheckPort) 0) }}
+          livenessProbe:
+            httpGet:
+              path: /liveness
+              port: http-health
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+          {{- end }}
+          {{- if and .Values.readinessProbe.enabled .Values.proxy.healthCheckPort (gt (int .Values.proxy.healthCheckPort) 0) }}
+          readinessProbe:
+            httpGet:
+              path: /readiness
+              port: http-health
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- $secretName := include "cloudsql-proxy.secretName" . }}
+          {{- if $secretName }}
+          volumeMounts:
+            - name: credentials
+              mountPath: /var/secrets/google
+              readOnly: true
+          {{- end }}
+      {{- $secretName := include "cloudsql-proxy.secretName" . }}
+      {{- if $secretName }}
+      volumes:
+        - name: credentials
+          secret:
+            secretName: {{ $secretName }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

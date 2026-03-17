@@ -1,0 +1,137 @@
+suite: test cloudsql-proxy deployment authentication
+templates:
+  - deployment.yaml
+values:
+  - ../values.yaml
+set:
+  instance.projectId: test-project
+  instance.region: us-central1
+  instance.name: test-instance
+tests:
+  # Workload Identity tests (GKE pattern - civitas/danfe)
+  - it: should use created service account for Workload Identity
+    set:
+      serviceAccount.gcpServiceAccount: cloudsql-proxy@my-project.iam.gserviceaccount.com
+    asserts:
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: RELEASE-NAME-cloudsql-proxy
+
+  - it: should not mount credentials volume for Workload Identity
+    set:
+      serviceAccount.gcpServiceAccount: cloudsql-proxy@my-project.iam.gserviceaccount.com
+    asserts:
+      - isNull:
+          path: spec.template.spec.containers[0].volumeMounts
+      - isNull:
+          path: spec.template.spec.volumes
+
+  - it: should not have credentials-file arg for Workload Identity
+    set:
+      serviceAccount.gcpServiceAccount: cloudsql-proxy@my-project.iam.gserviceaccount.com
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          content: "--credentials-file=/var/secrets/google/service-account-key.json"
+
+  # SA Key auth - uses "default" service account
+  - it: should use default service account when using SA key
+    set:
+      secret.existingSecret: cloudsql-sa-key
+    asserts:
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: default
+
+  - it: should mount credentials volume when using existing secret
+    set:
+      secret.existingSecret: cloudsql-sa-key
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: credentials
+            mountPath: /var/secrets/google
+            readOnly: true
+
+  - it: should have credentials secret volume when using existing secret
+    set:
+      secret.existingSecret: cloudsql-sa-key
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: credentials
+            secret:
+              secretName: cloudsql-sa-key
+
+  - it: should add credentials-file arg when using existing secret
+    set:
+      secret.existingSecret: cloudsql-sa-key
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "--credentials-file=/var/secrets/google/service-account-key.json"
+
+  - it: should use custom credentials key name with existing secret
+    set:
+      secret.existingSecret: cloudsql-sa-key
+      secret.key: my-key.json
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "--credentials-file=/var/secrets/google/my-key.json"
+
+  # SA Key - Created Secret tests (inline value)
+  - it: should use created secret when create is true
+    set:
+      secret.create: true
+      secret.serviceAccountKey: '{"type": "service_account"}'
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: credentials
+            secret:
+              secretName: RELEASE-NAME-cloudsql-proxy-credentials
+
+  - it: should add credentials-file arg when creating secret
+    set:
+      secret.create: true
+      secret.serviceAccountKey: '{"type": "service_account"}'
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "--credentials-file=/var/secrets/google/service-account-key.json"
+
+  # Existing secret takes precedence over create
+  - it: should prefer existing secret over create
+    set:
+      secret.existingSecret: my-existing-secret
+      secret.create: true
+      secret.serviceAccountKey: '{"type": "service_account"}'
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: credentials
+            secret:
+              secretName: my-existing-secret
+
+  # Existing ServiceAccount tests
+  - it: should use existing service account when specified
+    set:
+      serviceAccount.existingServiceAccount: my-existing-sa
+    asserts:
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: my-existing-sa
+
+  - it: should prefer existing service account over gcpServiceAccount
+    set:
+      serviceAccount.existingServiceAccount: my-existing-sa
+      serviceAccount.gcpServiceAccount: cloudsql-proxy@my-project.iam.gserviceaccount.com
+    asserts:
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: my-existing-sa

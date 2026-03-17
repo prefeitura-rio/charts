@@ -1,0 +1,45 @@
+Cloud SQL Proxy has been deployed!
+
+{{- if include "cloudsql-proxy.useConfigMap" . }}
+Instance: ConfigMap reference ({{ .Values.instance.configMapRef.name }})
+{{- else }}
+Instance: {{ include "cloudsql-proxy.instanceConnectionName" . }}
+{{- end }}
+Port: {{ .Values.proxy.port }}
+
+To connect to the database from within the cluster:
+
+  Host: {{ include "cloudsql-proxy.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
+  Port: {{ include "cloudsql-proxy.servicePort" . }}
+
+Example connection string (PostgreSQL):
+  postgresql://USER:PASSWORD@{{ include "cloudsql-proxy.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ include "cloudsql-proxy.servicePort" . }}/DATABASE
+
+Example connection string (MySQL):
+  mysql://USER:PASSWORD@{{ include "cloudsql-proxy.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ include "cloudsql-proxy.servicePort" . }}/DATABASE
+
+{{- $secretName := include "cloudsql-proxy.secretName" . }}
+{{- if $secretName }}
+
+Authentication: Service Account Key (secret: {{ $secretName }})
+{{- if .Values.secret.create }}
+  Secret created by chart from inline value.
+{{- else }}
+  Using existing secret.
+{{- end }}
+{{- if not .Values.proxy.privateIp }}
+
+NOTE: Private IP is disabled. Ensure the Cloud SQL instance has public IP enabled
+for connections from outside GCP (e.g., on-premises clusters).
+{{- end }}
+{{- else if .Values.serviceAccount.annotations }}
+
+Authentication: Workload Identity
+{{- end }}
+
+{{- if and .Values.proxy.healthCheckPort (gt (int .Values.proxy.healthCheckPort) 0) }}
+
+Health Check Endpoints:
+  - Liveness:  http://{{ include "cloudsql-proxy.fullname" . }}:{{ .Values.proxy.healthCheckPort }}/liveness
+  - Readiness: http://{{ include "cloudsql-proxy.fullname" . }}:{{ .Values.proxy.healthCheckPort }}/readiness
+{{- end }}

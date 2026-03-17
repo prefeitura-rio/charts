@@ -1,0 +1,17 @@
+apiVersion: v2
+name: cloudsql-proxy
+version: 1.0.0
+appVersion: "2.21.1"
+description: Cloud SQL Auth Proxy for secure connections to Google Cloud SQL instances
+type: application
+keywords:
+  - cloudsql
+  - proxy
+  - gcp
+  - database
+  - postgresql
+  - mysql
+home: https://cloud.google.com/sql/docs/postgres/sql-proxy
+sources:
+  - https://github.com/GoogleCloudPlatform/cloud-sql-proxy
+icon: https://www.gstatic.com/devrel-devsite/prod/v0d244f667a3683225cca86e0ee31200226d59b37e5f61942956a27d18b9b3736/cloud/images/favicons/onecloud/super_cloud.png

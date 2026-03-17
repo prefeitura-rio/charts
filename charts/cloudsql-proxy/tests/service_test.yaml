@@ -1,0 +1,80 @@
+suite: test cloudsql-proxy service
+templates:
+  - service.yaml
+values:
+  - ../values.yaml
+set:
+  instance.projectId: test-project
+  instance.region: us-central1
+  instance.name: test-instance
+tests:
+  - it: should render service
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-cloudsql-proxy
+
+  - it: should use ClusterIP type by default
+    asserts:
+      - equal:
+          path: spec.type
+          value: ClusterIP
+
+  - it: should use default PostgreSQL port (5432)
+    asserts:
+      - equal:
+          path: spec.ports[0].port
+          value: 5432
+      - equal:
+          path: spec.ports[0].targetPort
+          value: db
+
+  - it: should use MySQL port when specified (danfe pattern)
+    set:
+      proxy.port: 3306
+    asserts:
+      - equal:
+          path: spec.ports[0].port
+          value: 3306
+
+  - it: should use custom service port when specified
+    set:
+      proxy.port: 5432
+      service.port: 5433
+    asserts:
+      - equal:
+          path: spec.ports[0].port
+          value: 5433
+
+  - it: should have correct selector labels
+    asserts:
+      - equal:
+          path: spec.selector["app.kubernetes.io/name"]
+          value: cloudsql-proxy
+      - equal:
+          path: spec.selector["app.kubernetes.io/instance"]
+          value: RELEASE-NAME
+
+  - it: should support LoadBalancer type (superapp ILB pattern)
+    set:
+      service.type: LoadBalancer
+    asserts:
+      - equal:
+          path: spec.type
+          value: LoadBalancer
+
+  - it: should add service annotations when specified (superapp ILB pattern)
+    set:
+      service.type: LoadBalancer
+      service.annotations:
+        cloud.google.com/load-balancer-type: Internal
+        networking.gke.io/load-balancer-type: Internal
+    asserts:
+      - equal:
+          path: metadata.annotations["cloud.google.com/load-balancer-type"]
+          value: Internal
+      - equal:
+          path: metadata.annotations["networking.gke.io/load-balancer-type"]
+          value: Internal

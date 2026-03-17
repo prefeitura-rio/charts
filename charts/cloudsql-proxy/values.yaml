@@ -1,0 +1,222 @@
+# Cloud SQL Proxy Helm Chart - Default Values
+# Documentation: https://cloud.google.com/sql/docs/postgres/sql-proxy
+
+# Number of replicas for the proxy deployment
+replicaCount: 1
+
+# Container image configuration
+image:
+  repository: gcr.io/cloud-sql-connectors/cloud-sql-proxy
+  tag: ""  # Defaults to appVersion in Chart.yaml
+  pullPolicy: IfNotPresent
+
+# Image pull secrets for private registries
+imagePullSecrets: []
+
+# Override chart name
+nameOverride: ""
+fullnameOverride: ""
+
+# Cloud SQL instance configuration
+# Supports TWO modes:
+#
+# Mode 1: Inline configuration (values used directly in args)
+#   instance:
+#     projectId: "my-project"
+#     region: "us-central1"
+#     name: "my-instance"
+#
+# Mode 2: ConfigMap reference (uses env var substitution like Terraform)
+#   instance:
+#     configMapRef:
+#       name: "postgres-config"
+#       keys:
+#         projectId: "CLOUD_SQL_PROJECT_ID"
+#         region: "CLOUD_SQL_INSTANCE_REGION"
+#         name: "CLOUD_SQL_INSTANCE_NAME"
+#
+instance:
+  # Inline values (used when configMapRef.name is empty)
+  projectId: ""
+  region: ""
+  name: ""
+
+  # ConfigMap reference (takes precedence over inline values)
+  configMapRef:
+    # Name of existing ConfigMap containing instance info
+    name: ""
+    # Key names within the ConfigMap
+    keys:
+      projectId: "CLOUD_SQL_PROJECT_ID"
+      region: "CLOUD_SQL_INSTANCE_REGION"
+      name: "CLOUD_SQL_INSTANCE_NAME"
+
+# Proxy connection settings
+proxy:
+  # Database port (5432 for PostgreSQL, 3306 for MySQL)
+  port: 5432
+
+  # Use private IP for Cloud SQL connection
+  # Requires VPC peering or Private Service Connect
+  #
+  # IMPORTANT: If connecting from outside GCP (e.g., on-premises k3s cluster),
+  # set privateIp: false. The Cloud SQL instance must have public IP enabled
+  # and the proxy will connect through the internet using the SA key for auth.
+  privateIp: true
+
+  # Enable structured JSON logging
+  structuredLogs: true
+
+  # Use lazy refresh for IAM authentication tokens
+  lazyRefresh: true
+
+  # Maximum number of connections
+  maxConnections: 100
+
+  # Enable automatic IAM database authentication
+  # Requires IAM database authentication enabled on Cloud SQL instance
+  autoIamAuthn: false
+
+  # Health check port (0 to disable)
+  # Recommended: 9090 for first instance, 9091 for second, etc.
+  healthCheckPort: 9090
+
+  # Additional proxy arguments
+  extraArgs: []
+  # Example:
+  # extraArgs:
+  #   - "--debug"
+  #   - "--quota-project=my-project"
+
+# Authentication configuration
+# Supports TWO modes:
+#
+# Mode 1: Workload Identity (recommended for GKE)
+#   - Set serviceAccount.annotations with GCP SA
+#   - No secret configuration needed
+#
+# Mode 2: Service Account Key (for non-GKE clusters like k3s)
+#   Option A: Reference existing secret
+#     secret:
+#       existingSecret: "my-cloudsql-sa-key"
+#
+#   Option B: Create secret from inline value
+#     secret:
+#       create: true
+#       serviceAccountKey: |
+#         {"type": "service_account", "project_id": "...", ...}
+#
+secret:
+  # Reference an existing secret (takes precedence over create)
+  existingSecret: ""
+
+  # Create a new secret from inline value
+  create: false
+
+  # Service account key JSON (required if create: true)
+  # Can be raw JSON or base64 encoded
+  serviceAccountKey: ""
+
+  # Key name within the secret
+  key: "service-account-key.json"
+
+# Service Account configuration
+#
+# Workload Identity (GKE):
+#   serviceAccount:
+#     gcpServiceAccount: "cloudsql-proxy@project.iam.gserviceaccount.com"
+#   # Creates K8s ServiceAccount with iam.gke.io/gcp-service-account annotation
+#
+# SA Key authentication (k3s/non-GKE):
+#   secret:
+#     existingSecret: "my-sa-key"
+#   # No K8s ServiceAccount needed - uses "default"
+#
+# Use existing ServiceAccount (created by Terraform):
+#   serviceAccount:
+#     existingServiceAccount: "cloudsql-proxy"
+#
+serviceAccount:
+  # Reference an existing ServiceAccount (takes precedence)
+  existingServiceAccount: ""
+
+  # GCP Service Account email for Workload Identity
+  # When set, creates a K8s ServiceAccount with the annotation
+  # When empty AND no secret configured, uses "default" ServiceAccount
+  gcpServiceAccount: ""
+
+  # Override the ServiceAccount name (defaults to release name)
+  name: ""
+
+# Service configuration
+service:
+  # Service type: ClusterIP, NodePort, LoadBalancer
+  type: ClusterIP
+
+  # Service port (defaults to proxy.port)
+  port: ""
+
+  # Additional service annotations
+  annotations: {}
+
+# Pod security context (applied to the pod)
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  fsGroup: 65532
+
+# Container security context (applied to the container)
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# Resource requests and limits
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 2Gi
+
+# Pod annotations
+podAnnotations: {}
+
+# Pod labels
+podLabels: {}
+
+# Node selector for pod scheduling
+nodeSelector: {}
+
+# Tolerations for pod scheduling
+tolerations: []
+
+# Affinity rules for pod scheduling
+affinity: {}
+
+# Liveness probe configuration
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Readiness probe configuration
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+  # maxUnavailable: 1
