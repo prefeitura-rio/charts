@@ -130,6 +130,9 @@ tests:
           content: "--health-check"
       - contains:
           path: spec.template.spec.containers[0].args
+          content: "--http-address=0.0.0.0"
+      - contains:
+          path: spec.template.spec.containers[0].args
           content: "--http-port=9090"
       - equal:
           path: spec.template.spec.containers[0].ports[1].containerPort

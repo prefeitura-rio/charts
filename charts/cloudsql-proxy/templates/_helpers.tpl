@@ -131,6 +131,7 @@ Build proxy arguments
 {{- end }}
 {{- if and .Values.proxy.healthCheckPort (gt (int .Values.proxy.healthCheckPort) 0) }}
 - "--health-check"
+- "--http-address=0.0.0.0"
 - "--http-port={{ .Values.proxy.healthCheckPort }}"
 {{- end }}
 {{- $secretName := include "cloudsql-proxy.secretName" . }}
