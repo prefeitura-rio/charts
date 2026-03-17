@@ -48,7 +48,9 @@ jobs:
 
       - name: Generate and update index.html
         run: |
+          git fetch origin gh-pages
           git checkout gh-pages
+          git reset --hard origin/gh-pages
           git show main:scripts/index.py > /tmp/index.py
           git show main:scripts/index.html.j2 > /tmp/index.html.j2
           chmod +x /tmp/index.py
