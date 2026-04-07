@@ -2,6 +2,7 @@ suite: test autoscaling
 templates:
   - hpa.yaml
   - scaledobject.yaml
+  - triggerauthentication.yaml
 tests:
   - it: HPA should not render when autoscaling is disabled
     template: hpa.yaml
@@ -299,3 +300,98 @@ tests:
     asserts:
       - isNull:
           path: spec.triggers[0].authenticationRef
+
+  - it: TriggerAuthentication should not render when triggerAuthentication not set
+    template: triggerauthentication.yaml
+    set:
+      autoscaling.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: TriggerAuthentication should not render when autoscaling disabled
+    template: triggerauthentication.yaml
+    set:
+      autoscaling.enabled: false
+      autoscaling.keda.triggerAuthentication:
+        secretTargetRef:
+          - parameter: username
+            name: my-secret
+            key: USER
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: TriggerAuthentication should render with secretTargetRef
+    template: triggerauthentication.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.triggerAuthentication:
+        secretTargetRef:
+          - parameter: username
+            name: my-secrets
+            key: RABBITMQ_USER
+          - parameter: password
+            name: my-secrets
+            key: RABBITMQ_PASSWORD
+    asserts:
+      - isKind:
+          of: TriggerAuthentication
+      - equal:
+          path: spec.secretTargetRef[0].parameter
+          value: username
+      - equal:
+          path: spec.secretTargetRef[0].name
+          value: my-secrets
+      - equal:
+          path: spec.secretTargetRef[0].key
+          value: RABBITMQ_USER
+      - equal:
+          path: spec.secretTargetRef[1].parameter
+          value: password
+      - equal:
+          path: spec.secretTargetRef[1].key
+          value: RABBITMQ_PASSWORD
+
+  - it: TriggerAuthentication should use default name when not provided
+    template: triggerauthentication.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.triggerAuthentication:
+        secretTargetRef:
+          - parameter: password
+            name: my-secret
+            key: PASSWORD
+    asserts:
+      - matchRegex:
+          path: metadata.name
+          pattern: '^.*-trigger-auth$'
+
+  - it: TriggerAuthentication should use custom name when provided
+    template: triggerauthentication.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.triggerAuthentication:
+        name: custom-trigger-auth
+        secretTargetRef:
+          - parameter: password
+            name: my-secret
+            key: PASSWORD
+    asserts:
+      - equal:
+          path: metadata.name
+          value: custom-trigger-auth
+
+  - it: TriggerAuthentication should have sync-wave 1
+    template: triggerauthentication.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.triggerAuthentication:
+        secretTargetRef:
+          - parameter: password
+            name: my-secret
+            key: PASSWORD
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "1"

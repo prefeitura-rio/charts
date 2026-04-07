@@ -279,6 +279,34 @@ autoscaling:
     #   authenticationRef:
     #     name: keda-trigger-auth-rabbitmq
 
+    # TriggerAuthentication - Autenticação para triggers KEDA
+    # Mais informações: https://keda.sh/docs/concepts/authentication/
+    #
+    # Cria um recurso TriggerAuthentication para uso com triggers
+    # que requerem autenticação (RabbitMQ, Redis, Kafka, etc.)
+    #
+    # Exemplo com Infisical secret (secretTargetRef):
+    # triggerAuthentication:
+    #   name: "my-trigger-auth"  # Opcional - usa "<release>-trigger-auth" se omitido
+    #   secretTargetRef:
+    #     - parameter: username
+    #       name: my-app-secrets
+    #       key: RABBITMQ_USER
+    #     - parameter: password
+    #       name: my-app-secrets
+    #       key: RABBITMQ_PASSWORD
+    #
+    # Exemplo com múltiplos parâmetros:
+    # triggerAuthentication:
+    #   secretTargetRef:
+    #     - parameter: host
+    #       name: redis-secrets
+    #       key: REDIS_HOST
+    #     - parameter: password
+    #       name: redis-secrets
+    #       key: REDIS_PASSWORD
+    triggerAuthentication: {}
+
 # Volumes adicionais para serem montados no deployment
 volumes: []
 # Exemplo:
