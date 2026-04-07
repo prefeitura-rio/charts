@@ -267,6 +267,17 @@ autoscaling:
     #     host: rabbitmq.default.svc.cluster.local:5672
     #     queueName: task-queue
     #     queueLength: "10"
+    #
+    # Exemplo com autenticação (authenticationRef):
+    # - type: rabbitmq
+    #   metadata:
+    #     protocol: http
+    #     host: "http://my-rabbitmq.namespace.svc.cluster.local:15672"
+    #     queueName: my-queue
+    #     mode: QueueLength
+    #     value: "100"
+    #   authenticationRef:
+    #     name: keda-trigger-auth-rabbitmq
 
 # Volumes adicionais para serem montados no deployment
 volumes: []

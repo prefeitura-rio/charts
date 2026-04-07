@@ -35,6 +35,10 @@ spec:
         {{- else }}
         {{- toYaml .metadata | nindent 8 }}
         {{- end }}
+      {{- if .authenticationRef }}
+      authenticationRef:
+        {{- toYaml .authenticationRef | nindent 8 }}
+      {{- end }}
     {{- end }}
   {{- end }}
 {{- end }}

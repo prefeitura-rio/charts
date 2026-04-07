@@ -264,3 +264,38 @@ tests:
       - equal:
           path: metadata.annotations["argocd.argoproj.io/sync-wave"]
           value: "2"
+
+  - it: KEDA should support authenticationRef in triggers
+    template: scaledobject.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.triggers:
+        - type: rabbitmq
+          metadata:
+            protocol: http
+            host: "http://rabbitmq:15672"
+            queueName: my-queue
+            mode: QueueLength
+            value: "100"
+          authenticationRef:
+            name: keda-trigger-auth-rabbitmq
+    asserts:
+      - equal:
+          path: spec.triggers[0].type
+          value: rabbitmq
+      - equal:
+          path: spec.triggers[0].authenticationRef.name
+          value: keda-trigger-auth-rabbitmq
+
+  - it: KEDA should not include authenticationRef when not provided
+    template: scaledobject.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.triggers:
+        - type: rabbitmq
+          metadata:
+            host: rabbitmq:5672
+            queueName: tasks
+    asserts:
+      - isNull:
+          path: spec.triggers[0].authenticationRef
