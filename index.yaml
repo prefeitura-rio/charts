@@ -3,6 +3,28 @@ entries:
   base-chart:
   - apiVersion: v2
     appVersion: "1.25"
+    created: "2026-04-07T21:26:20.178385224Z"
+    dependencies:
+    - alias: valkey
+      condition: valkey.enabled
+      name: valkey
+      repository: oci://registry-1.docker.io/cloudpirates
+      version: 0.17.0
+    - alias: rabbitmq
+      condition: rabbitmq.enabled
+      name: rabbitmq
+      repository: oci://registry-1.docker.io/cloudpirates
+      version: 0.17.0
+    description: A Helm chart for basic deployments in Kubernetes
+    digest: 8f2e09a98deff69361727bbd2795058b2f65f5aa3852f6584fe02edf96e2e58e
+    icon: https://helm.sh/img/helm.svg
+    name: base-chart
+    type: application
+    urls:
+    - https://github.com/prefeitura-rio/charts/releases/download/base-chart-2.3.0/base-chart-2.3.0.tgz
+    version: 2.3.0
+  - apiVersion: v2
+    appVersion: "1.25"
     created: "2026-03-13T16:01:35.647222982Z"
     dependencies:
     - alias: valkey
@@ -96,4 +118,4 @@ entries:
     urls:
     - https://github.com/prefeitura-rio/charts/releases/download/typesense-1.1.0/typesense-1.1.0.tgz
     version: 1.1.0
-generated: "2026-03-17T18:38:45.009093473Z"
+generated: "2026-04-07T21:26:20.178403622Z"
