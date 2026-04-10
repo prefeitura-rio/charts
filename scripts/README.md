@@ -5,6 +5,7 @@
 The repository uses GitHub Actions to automatically publish charts when changes are pushed to the `main` branch.
 
 The workflow (`.github/workflows/release.yaml`) will:
+
 1. Package all charts in the `charts/` directory
 2. Create GitHub releases for new chart versions
 3. Generate `index.yaml` in the `gh-pages` branch
@@ -21,6 +22,7 @@ gh workflow run release.yaml
 ```
 
 Or from GitHub UI:
+
 1. Go to Actions tab
 2. Select "Release Charts" workflow
 3. Click "Run workflow"
@@ -35,10 +37,12 @@ cd scripts
 ```
 
 Requirements:
+
 - Python 3.11+
 - uv (will auto-install dependencies: PyYAML, Jinja2)
 
 The script:
+
 - Parses `index.yaml` to extract chart information
 - Extracts keywords from Chart.yaml metadata
 - Renders `index.html.j2` template

@@ -1,0 +1,163 @@
+suite: test subchart persistence configuration
+tests:
+  - it: "valkey: persistence is disabled by default (uses emptyDir)"
+    templates:
+      - charts/valkey/templates/statefulset.yaml
+    set:
+      valkey.enabled: true
+    asserts:
+      - notExists:
+          path: spec.volumeClaimTemplates
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: data
+            emptyDir: {}
+
+  - it: "valkey: persistence enabled creates volumeClaimTemplates with default size"
+    templates:
+      - charts/valkey/templates/statefulset.yaml
+    set:
+      valkey.enabled: true
+      valkey.persistence.enabled: true
+    asserts:
+      - exists:
+          path: spec.volumeClaimTemplates
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.resources.requests.storage
+          value: "8Gi"
+
+  - it: "valkey: persistence storageClass is passed to volumeClaimTemplates"
+    templates:
+      - charts/valkey/templates/statefulset.yaml
+    set:
+      valkey.enabled: true
+      valkey.persistence.enabled: true
+      valkey.persistence.storageClass: premium-rwo
+    asserts:
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.storageClassName
+          value: premium-rwo
+
+  - it: "valkey: persistence size is passed to volumeClaimTemplates"
+    templates:
+      - charts/valkey/templates/statefulset.yaml
+    set:
+      valkey.enabled: true
+      valkey.persistence.enabled: true
+      valkey.persistence.size: 20Gi
+    asserts:
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.resources.requests.storage
+          value: "20Gi"
+
+  - it: "valkey: persistence accessModes are passed to volumeClaimTemplates"
+    templates:
+      - charts/valkey/templates/statefulset.yaml
+    set:
+      valkey.enabled: true
+      valkey.persistence.enabled: true
+      valkey.persistence.accessModes:
+        - ReadWriteMany
+    asserts:
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.accessModes[0]
+          value: ReadWriteMany
+
+  - it: "valkey: existingClaim mounts the pre-existing PVC without creating volumeClaimTemplates"
+    templates:
+      - charts/valkey/templates/statefulset.yaml
+    set:
+      valkey.enabled: true
+      valkey.persistence.enabled: true
+      valkey.persistence.existingClaim: my-valkey-pvc
+    asserts:
+      - notExists:
+          path: spec.volumeClaimTemplates
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: data
+            persistentVolumeClaim:
+              claimName: my-valkey-pvc
+
+  - it: "rabbitmq: persistence is disabled by default (uses emptyDir)"
+    templates:
+      - charts/rabbitmq/templates/statefulset.yaml
+    set:
+      rabbitmq.enabled: true
+    asserts:
+      - notExists:
+          path: spec.volumeClaimTemplates
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: data
+            emptyDir: {}
+
+  - it: "rabbitmq: persistence enabled creates volumeClaimTemplates with default size"
+    templates:
+      - charts/rabbitmq/templates/statefulset.yaml
+    set:
+      rabbitmq.enabled: true
+      rabbitmq.persistence.enabled: true
+    asserts:
+      - exists:
+          path: spec.volumeClaimTemplates
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.resources.requests.storage
+          value: "8Gi"
+
+  - it: "rabbitmq: persistence storageClass is passed to volumeClaimTemplates"
+    templates:
+      - charts/rabbitmq/templates/statefulset.yaml
+    set:
+      rabbitmq.enabled: true
+      rabbitmq.persistence.enabled: true
+      rabbitmq.persistence.storageClass: premium-rwo
+    asserts:
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.storageClassName
+          value: premium-rwo
+
+  - it: "rabbitmq: persistence size is passed to volumeClaimTemplates"
+    templates:
+      - charts/rabbitmq/templates/statefulset.yaml
+    set:
+      rabbitmq.enabled: true
+      rabbitmq.persistence.enabled: true
+      rabbitmq.persistence.size: 20Gi
+    asserts:
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.resources.requests.storage
+          value: "20Gi"
+
+  - it: "rabbitmq: persistence accessModes are passed to volumeClaimTemplates"
+    templates:
+      - charts/rabbitmq/templates/statefulset.yaml
+    set:
+      rabbitmq.enabled: true
+      rabbitmq.persistence.enabled: true
+      rabbitmq.persistence.accessModes:
+        - ReadWriteMany
+    asserts:
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.accessModes[0]
+          value: ReadWriteMany
+
+  - it: "rabbitmq: existingClaim mounts the pre-existing PVC without creating volumeClaimTemplates"
+    templates:
+      - charts/rabbitmq/templates/statefulset.yaml
+    set:
+      rabbitmq.enabled: true
+      rabbitmq.persistence.enabled: true
+      rabbitmq.persistence.existingClaim: my-rabbitmq-pvc
+    asserts:
+      - notExists:
+          path: spec.volumeClaimTemplates
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: data
+            persistentVolumeClaim:
+              claimName: my-rabbitmq-pvc

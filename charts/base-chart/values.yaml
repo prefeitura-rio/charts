@@ -862,8 +862,22 @@ valkey:
   architecture: standalone
   replicaCount: 1
   persistence:
-    enabled: true
+    # Disable persistence by default - enable in production with a suitable size
+    # Example for production:
+    #   valkey:
+    #     persistence:
+    #       enabled: true
+    #       size: 8Gi
+    #       storageClass: "standard-rwo"  # StorageClass name (empty = cluster default)
+    #       accessModes:
+    #         - ReadWriteOnce
+    #       existingClaim: ""  # Use a pre-existing PVC instead of creating one
+    enabled: false
     size: 8Gi
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+    existingClaim: ""
 
 # RabbitMQ (Message Queue)
 # When enabled, the following environment variables are automatically injected:
@@ -893,8 +907,22 @@ rabbitmq:
   enabled: false
   replicaCount: 1
   persistence:
-    enabled: true
+    # Disable persistence by default - enable in production with a suitable size
+    # Example for production:
+    #   rabbitmq:
+    #     persistence:
+    #       enabled: true
+    #       size: 8Gi
+    #       storageClass: "standard-rwo"  # StorageClass name (empty = cluster default)
+    #       accessModes:
+    #         - ReadWriteOnce
+    #       existingClaim: ""  # Use a pre-existing PVC instead of creating one
+    enabled: false
     size: 8Gi
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+    existingClaim: ""
   managementPlugin:
     enabled: true
   metrics:
