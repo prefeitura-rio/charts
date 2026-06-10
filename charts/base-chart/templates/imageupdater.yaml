@@ -11,16 +11,12 @@
 {{- $namePattern := .Values.argoImageUpdater.applicationRef.namePattern | default .Release.Name }}
 {{- $appNamespace := .Values.argoImageUpdater.applicationRef.namespace | default .Release.Namespace }}
 {{- $alias := include "base-chart.fullname" . }}
-{{- $imageTag := .Values.image.tag | default .Chart.AppVersion }}
+{{- $imageTag := .Values.image.tag | default "latest" }}
 {{- $imageName := printf "%s:%s" .Values.image.repository $imageTag }}
 {{- $updateStrategy := .Values.argoImageUpdater.updateStrategy | default "digest" }}
 {{- $semverConstraint := .Values.argoImageUpdater.semverConstraint }}
-{{- $registrySecret := "" }}
-{{- if .Values.argoImageUpdater.registrySecret }}
-{{- $registrySecret = .Values.argoImageUpdater.registrySecret }}
-{{- else if .Values.imagePullSecrets }}
-{{- $registrySecret = (index .Values.imagePullSecrets 0).name }}
-{{- end }}
+{{- $firstPullSecret := .Values.imagePullSecrets | default (list (dict "name" "ghcr-credentials")) }}
+{{- $registrySecret := .Values.argoImageUpdater.registrySecret | default (index $firstPullSecret 0).name }}
 apiVersion: argocd-image-updater.argoproj.io/v1alpha1
 kind: ImageUpdater
 metadata:

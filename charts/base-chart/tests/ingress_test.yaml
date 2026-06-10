@@ -1,0 +1,295 @@
+suite: test ingress
+templates:
+  - ingress.yaml
+tests:
+  - it: should not render when disabled
+    set:
+      ingress.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render when enabled
+    set:
+      ingress.enabled: true
+      ingress.hosts:
+        - host: api.example.com
+          paths:
+            - path: /
+    asserts:
+      - isKind:
+          of: Ingress
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+
+  - it: should have sync-wave 3 annotation
+    set:
+      ingress.enabled: true
+      ingress.hosts:
+        - host: api.example.com
+          paths:
+            - path: /
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "3"
+
+  - it: should set ingressClassName when provided
+    set:
+      ingress.enabled: true
+      ingress.ingressClassName: nginx
+      ingress.hosts:
+        - host: api.example.com
+          paths:
+            - path: /
+    asserts:
+      - equal:
+          path: spec.ingressClassName
+          value: nginx
+
+  - it: should not set ingressClassName when empty
+    set:
+      ingress.enabled: true
+      ingress.hosts:
+        - host: api.example.com
+          paths:
+            - path: /
+    asserts:
+      - notExists:
+          path: spec.ingressClassName
+
+  - it: should pass through annotations
+    set:
+      ingress.enabled: true
+      ingress.annotations:
+        nginx.ingress.kubernetes.io/rewrite-target: /
+        cert-manager.io/cluster-issuer: letsencrypt-prod
+      ingress.hosts:
+        - host: api.example.com
+          paths:
+            - path: /
+    asserts:
+      - equal:
+          path: metadata.annotations["nginx.ingress.kubernetes.io/rewrite-target"]
+          value: /
+      - equal:
+          path: metadata.annotations["cert-manager.io/cluster-issuer"]
+          value: letsencrypt-prod
+
+  - it: should render single host with single path
+    set:
+      ingress.enabled: true
+      ingress.hosts:
+        - host: api.example.com
+          paths:
+            - path: /
+              pathType: Prefix
+    asserts:
+      - equal:
+          path: spec.rules[0].host
+          value: api.example.com
+      - equal:
+          path: spec.rules[0].http.paths[0].path
+          value: /
+      - equal:
+          path: spec.rules[0].http.paths[0].pathType
+          value: Prefix
+
+  - it: should default pathType to Prefix
+    set:
+      ingress.enabled: true
+      ingress.hosts:
+        - host: api.example.com
+          paths:
+            - path: /
+    asserts:
+      - equal:
+          path: spec.rules[0].http.paths[0].pathType
+          value: Prefix
+
+  - it: should support Exact pathType
+    set:
+      ingress.enabled: true
+      ingress.hosts:
+        - host: api.example.com
+          paths:
+            - path: /health
+              pathType: Exact
+    asserts:
+      - equal:
+          path: spec.rules[0].http.paths[0].pathType
+          value: Exact
+
+  - it: should render multiple hosts
+    set:
+      ingress.enabled: true
+      ingress.hosts:
+        - host: api.example.com
+          paths:
+            - path: /
+        - host: admin.example.com
+          paths:
+            - path: /admin
+    asserts:
+      - equal:
+          path: spec.rules[0].host
+          value: api.example.com
+      - equal:
+          path: spec.rules[1].host
+          value: admin.example.com
+
+  - it: should render multiple paths on a single host
+    set:
+      ingress.enabled: true
+      ingress.hosts:
+        - host: api.example.com
+          paths:
+            - path: /api
+              pathType: Prefix
+            - path: /health
+              pathType: Exact
+    asserts:
+      - equal:
+          path: spec.rules[0].http.paths[0].path
+          value: /api
+      - equal:
+          path: spec.rules[0].http.paths[1].path
+          value: /health
+
+  - it: should use fullname as backend service name
+    set:
+      fullnameOverride: my-app
+      ingress.enabled: true
+      ingress.hosts:
+        - host: api.example.com
+          paths:
+            - path: /
+    asserts:
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.name
+          value: my-app
+
+  - it: should use service.port as backend port
+    set:
+      ingress.enabled: true
+      service.port: 8080
+      ingress.hosts:
+        - host: api.example.com
+          paths:
+            - path: /
+    asserts:
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.port.number
+          value: 8080
+
+  - it: should render TLS with secretName and hosts
+    set:
+      ingress.enabled: true
+      ingress.hosts:
+        - host: api.example.com
+          paths:
+            - path: /
+      ingress.tls:
+        - secretName: api-tls-secret
+          hosts:
+            - api.example.com
+    asserts:
+      - equal:
+          path: spec.tls[0].secretName
+          value: api-tls-secret
+      - contains:
+          path: spec.tls[0].hosts
+          content: api.example.com
+
+  - it: should render multiple TLS entries
+    set:
+      ingress.enabled: true
+      ingress.hosts:
+        - host: api.example.com
+          paths:
+            - path: /
+        - host: admin.example.com
+          paths:
+            - path: /
+      ingress.tls:
+        - secretName: api-tls
+          hosts:
+            - api.example.com
+        - secretName: admin-tls
+          hosts:
+            - admin.example.com
+    asserts:
+      - equal:
+          path: spec.tls[0].secretName
+          value: api-tls
+      - equal:
+          path: spec.tls[1].secretName
+          value: admin-tls
+
+  - it: should not render tls block when tls is empty
+    set:
+      ingress.enabled: true
+      ingress.hosts:
+        - host: api.example.com
+          paths:
+            - path: /
+      ingress.tls: []
+    asserts:
+      - notExists:
+          path: spec.tls
+
+  - it: should render defaultBackend when set
+    set:
+      ingress.enabled: true
+      ingress.defaultBackend:
+        service:
+          name: my-service
+          port: 80
+    asserts:
+      - equal:
+          path: spec.defaultBackend.service.name
+          value: my-service
+      - equal:
+          path: spec.defaultBackend.service.port
+          value: 80
+
+  - it: should render without rules when only defaultBackend is set
+    set:
+      ingress.enabled: true
+      ingress.hosts: []
+      ingress.defaultBackend:
+        service:
+          name: my-service
+          port: 80
+    asserts:
+      - notExists:
+          path: spec.rules
+
+  - it: should not render defaultBackend when not set
+    set:
+      ingress.enabled: true
+      ingress.hosts:
+        - host: api.example.com
+          paths:
+            - path: /
+    asserts:
+      - notExists:
+          path: spec.defaultBackend
+
+  - it: should render both defaultBackend and rules when both are set
+    set:
+      ingress.enabled: true
+      ingress.defaultBackend:
+        service:
+          name: fallback-svc
+          port: 80
+      ingress.hosts:
+        - host: api.example.com
+          paths:
+            - path: /
+    asserts:
+      - exists:
+          path: spec.defaultBackend
+      - exists:
+          path: spec.rules

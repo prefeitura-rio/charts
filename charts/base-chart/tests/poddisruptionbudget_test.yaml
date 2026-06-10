@@ -27,14 +27,15 @@ tests:
           path: metadata.annotations["argocd.argoproj.io/sync-wave"]
           value: "2"
 
-  - it: should set minAvailable by default
+  - it: should set maxUnavailable by default
     set:
       podDisruptionBudget.enabled: true
-      podDisruptionBudget.minAvailable: 1
     asserts:
       - equal:
-          path: spec.minAvailable
+          path: spec.maxUnavailable
           value: 1
+      - notExists:
+          path: spec.minAvailable
 
   - it: should set maxUnavailable when specified
     set:
@@ -46,14 +47,24 @@ tests:
           path: spec.maxUnavailable
           value: 1
 
-  - it: should support percentage values
+  - it: should support percentage values for maxUnavailable
     set:
       podDisruptionBudget.enabled: true
-      podDisruptionBudget.minAvailable: "50%"
+      podDisruptionBudget.maxUnavailable: "30%"
+    asserts:
+      - equal:
+          path: spec.maxUnavailable
+          value: "30%"
+
+  - it: should support minAvailable when explicitly set
+    set:
+      podDisruptionBudget.enabled: true
+      podDisruptionBudget.maxUnavailable: null
+      podDisruptionBudget.minAvailable: 1
     asserts:
       - equal:
           path: spec.minAvailable
-          value: "50%"
+          value: 1
 
   - it: should have correct selector labels
     set:

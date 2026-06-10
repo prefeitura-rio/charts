@@ -335,15 +335,16 @@ tests:
           path: spec.applicationRefs[0].images[0].registrySecret
           value: first-secret
 
-  - it: should not set registrySecret when imagePullSecrets is empty
+  - it: should fall back to ghcr-credentials when imagePullSecrets is empty
     set:
       argoImageUpdater.enabled: true
       imagePullSecrets: []
       image.repository: ghcr.io/myorg/myapp
       image.tag: latest
     asserts:
-      - notExists:
+      - equal:
           path: spec.applicationRefs[0].images[0].registrySecret
+          value: ghcr-credentials
 
   - it: should allow explicit registrySecret override
     set:

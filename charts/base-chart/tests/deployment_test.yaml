@@ -5,6 +5,7 @@ tests:
   - it: should render deployment with default values
     set:
       autoscaling.enabled: false
+      image.tag: "1.25"
     asserts:
       - isKind:
           of: Deployment
@@ -314,3 +315,210 @@ tests:
     asserts:
       - notExists:
           path: spec.template.spec.affinity
+  - it: should use ghcr-credentials when imagePullSecrets is empty
+    set:
+      imagePullSecrets: []
+    asserts:
+      - contains:
+          path: spec.template.spec.imagePullSecrets
+          content:
+            name: ghcr-credentials
+
+  - it: should use provided imagePullSecrets when set
+    set:
+      imagePullSecrets:
+        - name: my-registry-secret
+    asserts:
+      - contains:
+          path: spec.template.spec.imagePullSecrets
+          content:
+            name: my-registry-secret
+      - notContains:
+          path: spec.template.spec.imagePullSecrets
+          content:
+            name: ghcr-credentials
+
+  - it: should render startupProbe when healthCheck.path is set
+    set:
+      healthCheck:
+        path: /health
+    asserts:
+      - exists:
+          path: spec.template.spec.containers[0].startupProbe
+
+  - it: should render startupProbe when explicitly set
+    set:
+      startupProbe:
+        httpGet:
+          path: /startup
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.httpGet.path
+          value: /startup
+
+  - it: should not render startupProbe when not set
+    set:
+      healthCheck:
+        path: ""
+      startupProbe: {}
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].startupProbe
+
+  - it: should render nodeSelector when set
+    set:
+      nodeSelector:
+        disktype: ssd
+    asserts:
+      - equal:
+          path: spec.template.spec.nodeSelector.disktype
+          value: ssd
+
+  - it: should not render nodeSelector when empty
+    set:
+      nodeSelector: {}
+    asserts:
+      - notExists:
+          path: spec.template.spec.nodeSelector
+
+  - it: should render tolerations when set
+    set:
+      tolerations:
+        - key: "spot"
+          operator: "Exists"
+          effect: "NoSchedule"
+    asserts:
+      - contains:
+          path: spec.template.spec.tolerations
+          content:
+            key: "spot"
+            operator: "Exists"
+            effect: "NoSchedule"
+
+  - it: should not render tolerations when empty
+    set:
+      tolerations: []
+    asserts:
+      - notExists:
+          path: spec.template.spec.tolerations
+
+  - it: should render terminationGracePeriodSeconds when set
+    set:
+      terminationGracePeriodSeconds: 60
+    asserts:
+      - equal:
+          path: spec.template.spec.terminationGracePeriodSeconds
+          value: 60
+
+  - it: should not render terminationGracePeriodSeconds when not set
+    asserts:
+      - notExists:
+          path: spec.template.spec.terminationGracePeriodSeconds
+
+  - it: should render lifecycle preStop when set
+    set:
+      lifecycle:
+        preStop:
+          exec:
+            command: ["/bin/sh", "-c", "sleep 5"]
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].lifecycle.preStop.exec.command[0]
+          value: "/bin/sh"
+
+  - it: should not render lifecycle when not set
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].lifecycle
+
+  - it: should render topologySpreadConstraints when set
+    set:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: myapp
+    asserts:
+      - equal:
+          path: spec.template.spec.topologySpreadConstraints[0].maxSkew
+          value: 1
+      - equal:
+          path: spec.template.spec.topologySpreadConstraints[0].topologyKey
+          value: topology.kubernetes.io/zone
+
+  - it: should not render topologySpreadConstraints when empty
+    set:
+      topologySpreadConstraints: []
+    asserts:
+      - notExists:
+          path: spec.template.spec.topologySpreadConstraints
+
+  - it: should render revisionHistoryLimit when set
+    set:
+      revisionHistoryLimit: 3
+    asserts:
+      - equal:
+          path: spec.revisionHistoryLimit
+          value: 3
+
+  - it: should not render revisionHistoryLimit when not set
+    asserts:
+      - notExists:
+          path: spec.revisionHistoryLimit
+
+  - it: should apply timing fields to all probes when healthCheck.path is set
+    set:
+      healthCheck:
+        path: /health
+        initialDelaySeconds: 10
+        periodSeconds: 30
+        timeoutSeconds: 5
+        failureThreshold: 6
+        successThreshold: 1
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.initialDelaySeconds
+          value: 10
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.periodSeconds
+          value: 30
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.failureThreshold
+          value: 6
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.timeoutSeconds
+          value: 5
+
+  - it: should not add timing fields when not set with healthCheck.path
+    set:
+      healthCheck:
+        path: /health
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].livenessProbe.initialDelaySeconds
+      - notExists:
+          path: spec.template.spec.containers[0].livenessProbe.periodSeconds
+
+  - it: should emit containerPort entries for additional service.ports
+    set:
+      service.ports:
+        - name: metrics
+          port: 9090
+          targetPort: 9090
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            name: metrics
+            containerPort: 9090
+            protocol: TCP
+
+  - it: should only have primary containerPort when service.ports is empty
+    set:
+      service.ports: []
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.containers[0].ports
+          count: 1

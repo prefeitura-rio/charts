@@ -1,4 +1,5 @@
-{{- if and .Values.autoscaling.enabled .Values.autoscaling.keda.enabled -}}
+{{- $httpMode := and .Values.autoscaling.enabled .Values.autoscaling.keda.enabled (not .Values.istio.enabled) (not .Values.autoscaling.keda.triggers) -}}
+{{- if and .Values.autoscaling.enabled .Values.autoscaling.keda.enabled (not $httpMode) -}}
 {{- $fullName := include "base-chart.fullname" . -}}
 {{- $minReplicas := .Values.autoscaling.minReplicas | default 1 -}}
 {{- $maxReplicas := .Values.autoscaling.maxReplicas | default 10 -}}
@@ -18,10 +19,22 @@ spec:
   maxReplicaCount: {{ $maxReplicas }}
   scaleTargetRef:
     name: {{ $fullName }}
+  {{- with $keda.fallback }}
+  fallback:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with $keda.advanced }}
+  advanced:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   {{- if $keda.triggers }}
   triggers:
     {{- range $keda.triggers }}
     - type: {{ .type }}
+      {{- if $keda.triggerAuthentication }}
+      authenticationRef:
+        name: {{ $keda.triggerAuthentication.name | default (printf "%s-trigger-auth" $fullName) }}
+      {{- end }}
       metadata:
         {{- if eq .type "prometheus" }}
         {{- /* Smart defaults for Prometheus triggers */ -}}
@@ -32,13 +45,12 @@ spec:
         metricName: {{ $metadata.metricName | default "istio_requests_total" }}
         threshold: {{ $metadata.threshold | default "100" | quote }}
         query: {{ $query }}
+        {{- if $metadata.activationThreshold }}
+        activationThreshold: {{ $metadata.activationThreshold | quote }}
+        {{- end }}
         {{- else }}
         {{- toYaml .metadata | nindent 8 }}
         {{- end }}
-      {{- if .authenticationRef }}
-      authenticationRef:
-        {{- toYaml .authenticationRef | nindent 8 }}
-      {{- end }}
     {{- end }}
   {{- end }}
 {{- end }}

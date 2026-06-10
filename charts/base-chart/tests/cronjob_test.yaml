@@ -150,3 +150,38 @@ tests:
           content:
             secretRef:
               name: my-secrets
+
+  - it: should inherit configMap envFrom when mountAsEnv is true
+    set:
+      configMap:
+        enabled: true
+        data:
+          LOG_LEVEL: "info"
+      cronjobs:
+        cleanup:
+          enabled: true
+          schedule: "0 2 * * *"
+          command:
+            - echo
+    asserts:
+      - template: cronjob.yaml
+        contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].envFrom
+          content:
+            configMapRef:
+              name: RELEASE-NAME
+
+  - it: should default image tag to latest when not set
+    set:
+      image:
+        repository: myorg/app
+        tag: ""
+      cronjobs:
+        cleanup:
+          enabled: true
+          schedule: "0 2 * * *"
+          command: ["echo"]
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].image
+          value: "myorg/app:latest"

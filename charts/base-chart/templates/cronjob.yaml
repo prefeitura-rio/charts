@@ -44,11 +44,20 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
         spec:
-          {{- with $.Values.imagePullSecrets }}
           imagePullSecrets:
+            {{- include "base-chart.imagePullSecrets" $ | nindent 12 }}
+          serviceAccountName: {{ include "base-chart.serviceAccountName" $ }}
+          {{- if $.Values.terminationGracePeriodSeconds }}
+          terminationGracePeriodSeconds: {{ $.Values.terminationGracePeriodSeconds }}
+          {{- end }}
+          {{- with $.Values.nodeSelector }}
+          nodeSelector:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          serviceAccountName: {{ include "base-chart.serviceAccountName" $ }}
+          {{- with $.Values.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           restartPolicy: {{ $job.restartPolicy | default "OnFailure" }}
           {{- with $job.podSecurityContext | default $.Values.podSecurityContext }}
           securityContext:
@@ -56,15 +65,15 @@ spec:
           {{- end }}
           containers:
             - name: {{ $name }}
-              {{- $imageRepo := $.Values.image.repository }}
-              {{- $imageTag := $.Values.image.tag | default $.Chart.AppVersion }}
+              {{- $image := include "base-chart.image" $ }}
               {{- $imagePullPolicy := $.Values.image.pullPolicy }}
               {{- if $job.image }}
-              {{- $imageRepo = $job.image.repository | default $imageRepo }}
-              {{- $imageTag = $job.image.tag | default $imageTag }}
+              {{- $repo := $job.image.repository | default $.Values.image.repository }}
+              {{- $tag := $job.image.tag | default $.Values.image.tag | default "latest" }}
+              {{- $image = printf "%s:%s" $repo $tag }}
               {{- $imagePullPolicy = $job.image.pullPolicy | default $imagePullPolicy }}
               {{- end }}
-              image: "{{ $imageRepo }}:{{ $imageTag }}"
+              image: {{ $image | quote }}
               imagePullPolicy: {{ $imagePullPolicy }}
               {{- with $job.command }}
               command:
@@ -74,11 +83,17 @@ spec:
               args:
                 {{- toYaml . | nindent 16 }}
               {{- end }}
-              {{- if or $job.envFrom $.Values.envFrom $.Values.infisicalSecret.enabled }}
+              {{- $mountAsEnv := ternary $.Values.configMap.mountAsEnv true (hasKey $.Values.configMap "mountAsEnv") }}
+              {{- $configMapEnv := and $.Values.configMap.enabled $mountAsEnv }}
+              {{- if or $job.envFrom $.Values.envFrom $.Values.infisicalSecret.enabled $configMapEnv }}
               envFrom:
                 {{- if $.Values.infisicalSecret.enabled }}
                 - secretRef:
                     name: {{ $.Values.infisicalSecret.secretName }}
+                {{- end }}
+                {{- if $configMapEnv }}
+                - configMapRef:
+                    name: {{ include "base-chart.fullname" $ }}
                 {{- end }}
                 {{- with $job.envFrom }}
                 {{- toYaml . | nindent 16 }}

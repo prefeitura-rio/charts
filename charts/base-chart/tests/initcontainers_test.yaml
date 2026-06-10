@@ -104,6 +104,23 @@ tests:
           path: spec.template.spec.initContainers[0].args
           value: ["--flag", "value"]
 
+  - it: should render custom envFrom when infisicalSecret is disabled
+    set:
+      infisicalSecret:
+        enabled: false
+      initContainers:
+        - name: init
+          command: ["echo"]
+          envFrom:
+            - configMapRef:
+                name: init-config
+    asserts:
+      - contains:
+          path: spec.template.spec.initContainers[0].envFrom
+          content:
+            configMapRef:
+              name: init-config
+
   - it: should inherit Infisical secret when enabled
     set:
       infisicalSecret:

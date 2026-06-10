@@ -22,6 +22,10 @@ global: {}
 # Mais informações: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
 replicaCount: 1
 
+# Número de ReplicaSets antigos a manter para rollback
+# Mais informações: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#revision-history-limit
+revisionHistoryLimit: null
+
 # Configuração da imagem do container
 # Mais informações: https://kubernetes.io/docs/concepts/containers/images/
 image:
@@ -34,15 +38,13 @@ image:
   # Never: nunca baixa, usa apenas imagem local
   pullPolicy: IfNotPresent
 
-  # Tag da imagem (sobrescreve o appVersion do Chart.yaml se definido)
-  # Deixe vazio para usar o appVersion do Chart.yaml
+  # Tag da imagem. Deixe vazio para usar "latest" como padrão
   tag: ""
 
 # Secrets para autenticação em repositórios privados de imagens
 # Mais informações: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
-imagePullSecrets:
-  # Nome do secret que contém as credenciais do registry
-  - name: ghcr-credentials
+# Exemplo: - name: ghcr-credentials
+imagePullSecrets: []
 
 # Sobrescrita do nome do chart (afeta labels e seletores)
 nameOverride: ""
@@ -90,6 +92,50 @@ podLabels: {}
 
 # Pod Anti-Affinity - distribui réplicas em diferentes nodes para HA
 # Mais informações: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
+# Seletor de nós para agendamento em nodes específicos
+# Mais informações: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector
+# Tempo de espera antes de forçar o encerramento do pod (segundos)
+# Importante para shutdown gracioso, especialmente com Istio
+# Recomendado: valor maior que o timeout do probe de liveness
+# Mais informações: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-termination
+terminationGracePeriodSeconds: null
+
+# Hooks de ciclo de vida do container
+# Mais informações: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/
+lifecycle: {}
+# Exemplo com Istio (aguarda sidecar drenar conexões):
+# lifecycle:
+#   preStop:
+#     exec:
+#       command: ["/bin/sh", "-c", "sleep 5"]
+
+nodeSelector: {}
+# Exemplo:
+# nodeSelector:
+#   disktype: ssd
+#   cloud.google.com/gke-nodepool: my-pool
+
+# Tolerâncias para agendamento em nodes com taints
+# Mais informações: https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/
+tolerations: []
+
+# Distribuição de pods entre zonas/nodes (alternativa moderna ao podAntiAffinity)
+# Mais informações: https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/
+topologySpreadConstraints: []
+# Exemplo - distribui entre zonas:
+# topologySpreadConstraints:
+#   - maxSkew: 1
+#     topologyKey: topology.kubernetes.io/zone
+#     whenUnsatisfiable: DoNotSchedule
+#     labelSelector:
+#       matchLabels:
+#         app.kubernetes.io/name: my-app
+# Exemplo:
+# tolerations:
+#   - key: "spot"
+#     operator: "Exists"
+#     effect: "NoSchedule"
+
 podAntiAffinity:
   # Habilita anti-affinity (habilitado por padrão para HA)
   enabled: true
@@ -143,6 +189,19 @@ service:
   # Esta porta deve corresponder à porta que sua aplicação usa internamente
   containerPort: 8080
 
+  # Portas adicionais expostas pelo Service (além da porta principal)
+  # Exemplo: métricas, AMQP, gRPC, etc.
+  ports: []
+  # Exemplo:
+  # ports:
+  #   - name: metrics
+  #     port: 9090
+  #     targetPort: 9090
+  #     protocol: TCP
+  #   - name: amqp
+  #     port: 5672
+  #     targetPort: 5672
+
 # Limites e requests de recursos para o container
 # É recomendado definir estes valores para ambientes de produção
 resources: {}
@@ -165,24 +224,30 @@ resources: {}
 # O path é usado automaticamente para livenessProbe e readinessProbe.
 # A porta é derivada de service.containerPort.
 healthCheck:
-  # Path para health check (usado por liveness e readiness)
-  # Se definido, sobrescreve livenessProbe e readinessProbe
+  # Path para health check (usado por liveness, readiness e startup)
+  # Se definido, sobrescreve livenessProbe, readinessProbe e startupProbe
   path: ""
 
   # Porta opcional (padrão: service.containerPort)
   # port: 8080
 
+  # Campos de timing aplicados a todos os probes quando path estiver definido
+  initialDelaySeconds: null
+  periodSeconds: null
+  timeoutSeconds: null
+  failureThreshold: null
+  successThreshold: null
+
 # Probes avançados - use se precisar de configurações diferentes para cada probe
 # Se healthCheck.path estiver definido, estas configurações são ignoradas
-livenessProbe:
-  httpGet:
-    path: /
-    # port: 8080  # Opcional - usa service.containerPort se omitida
+livenessProbe: {}
 
-readinessProbe:
-  httpGet:
-    path: /
-    # port: 8080  # Opcional - usa service.containerPort se omitida
+readinessProbe: {}
+
+# Startup probe - use para apps com inicialização lenta (JVM, migrações, etc.)
+# Quando healthCheck.path estiver definido, é preenchido automaticamente
+# Mais informações: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+startupProbe: {}
 
 # Exemplos avançados:
 # 1. Paths diferentes para cada probe:
@@ -243,6 +308,78 @@ autoscaling:
     # Tempo de espera após última métrica antes de scale down (segundos)
     cooldownPeriod: 300
 
+    # HTTP scaling (usado automaticamente quando istio.enabled=false e triggers=[]
+    # Requer KEDA HTTP Add-on instalado no cluster
+    # Mais informações: https://github.com/kedacore/http-add-on
+    http:
+      # Hosts interceptados pelo KEDA HTTP Add-on
+      hosts: []
+      # Exemplo: ["my-app.example.com"]
+
+      # Prefixos de path interceptados
+      pathPrefixes: []
+      # Exemplo: ["/api", "/health"]
+
+      # Número de requisições pendentes alvo (métrica padrão)
+      targetPendingRequests: 100
+
+      # Período de espera antes de scale down (segundos)
+      scaledownPeriod: null
+
+      # Métrica de escalonamento customizada (substitui targetPendingRequests)
+      # Mais informações: https://github.com/kedacore/http-add-on/blob/main/docs/scaling.md
+      scalingMetric: {}
+      # Exemplo:
+      # scalingMetric:
+      #   requestRate:
+      #     granularity: 1s
+      #     targetValue: 100
+      #     window: 1m
+
+      # Sobrescreve campos do scaleTargetRef (opcional)
+      scaleTargetRef: {}
+      # Exemplo:
+      # scaleTargetRef:
+      #   apiVersion: apps/v1
+      #   kind: Deployment
+      #   service: my-svc
+      #   port: 8080
+
+    # TriggerAuthentication - credenciais para triggers autenticados
+    # Mais informações: https://keda.sh/docs/concepts/authentication/
+    triggerAuthentication: {}
+    # Exemplo com secret:
+    # triggerAuthentication:
+    #   name: my-trigger-auth  # opcional, default: <fullname>-trigger-auth
+    #   secretTargetRef:
+    #     - parameter: password
+    #       name: my-secret
+    #       key: RABBITMQ_PASSWORD
+
+    # Comportamento quando métricas estão indisponíveis
+    # Mais informações: https://keda.sh/docs/concepts/scaling-deployments/#fallback
+    fallback: {}
+    # Exemplo:
+    # fallback:
+    #   failureThreshold: 3
+    #   replicas: 3
+
+    # Configurações avançadas do HPA (scale up/down behavior)
+    # Mais informações: https://keda.sh/docs/concepts/scaling-deployments/#advanced
+    advanced: {}
+    # Exemplo:
+    # advanced:
+    #   horizontalPodAutoscalerConfig:
+    #     behavior:
+    #       scaleUp:
+    #         stabilizationWindowSeconds: 0
+    #         policies:
+    #           - type: Percent
+    #             value: 100
+    #             periodSeconds: 10
+    #       scaleDown:
+    #         stabilizationWindowSeconds: 300
+
     # Triggers para autoscaling
     # Smart defaults para Prometheus:
     #   - serverAddress: http://prometheus-server.istio-system.svc.cluster.local:9090
@@ -267,45 +404,6 @@ autoscaling:
     #     host: rabbitmq.default.svc.cluster.local:5672
     #     queueName: task-queue
     #     queueLength: "10"
-    #
-    # Exemplo com autenticação (authenticationRef):
-    # - type: rabbitmq
-    #   metadata:
-    #     protocol: http
-    #     host: "http://my-rabbitmq.namespace.svc.cluster.local:15672"
-    #     queueName: my-queue
-    #     mode: QueueLength
-    #     value: "100"
-    #   authenticationRef:
-    #     name: keda-trigger-auth-rabbitmq
-
-    # TriggerAuthentication - Autenticação para triggers KEDA
-    # Mais informações: https://keda.sh/docs/concepts/authentication/
-    #
-    # Cria um recurso TriggerAuthentication para uso com triggers
-    # que requerem autenticação (RabbitMQ, Redis, Kafka, etc.)
-    #
-    # Exemplo com Infisical secret (secretTargetRef):
-    # triggerAuthentication:
-    #   name: "my-trigger-auth"  # Opcional - usa "<release>-trigger-auth" se omitido
-    #   secretTargetRef:
-    #     - parameter: username
-    #       name: my-app-secrets
-    #       key: RABBITMQ_USER
-    #     - parameter: password
-    #       name: my-app-secrets
-    #       key: RABBITMQ_PASSWORD
-    #
-    # Exemplo com múltiplos parâmetros:
-    # triggerAuthentication:
-    #   secretTargetRef:
-    #     - parameter: host
-    #       name: redis-secrets
-    #       key: REDIS_HOST
-    #     - parameter: password
-    #       name: redis-secrets
-    #       key: REDIS_PASSWORD
-    triggerAuthentication: {}
 
 # Volumes adicionais para serem montados no deployment
 volumes: []
@@ -431,6 +529,69 @@ configMap:
 
   # Permissões dos arquivos quando montado como volume (padrão: 0644)
   defaultMode: 0644
+
+# Ingress - exposição HTTP/HTTPS via qualquer ingress controller
+# Mais informações: https://kubernetes.io/docs/concepts/services-networking/ingress/
+#
+# Use quando não estiver usando Istio, ou quando precisar de suporte
+# a controllers como nginx, traefik, aws-alb, etc.
+#
+# Exemplo mínimo:
+#   ingress:
+#     enabled: true
+#     ingressClassName: nginx
+#     hosts:
+#       - host: api.example.com
+#         paths:
+#           - path: /
+#             pathType: Prefix
+ingress:
+  enabled: false
+
+  # Nome da IngressClass (ex: nginx, traefik, alb)
+  ingressClassName: ""
+
+  # Backend padrão (catch-all) quando nenhuma regra corresponde
+  # Quando definido sem hosts, funciona como único backend
+  defaultBackend: {}
+  # Exemplo (Tailscale):
+  # defaultBackend:
+  #   service:
+  #     name: my-service
+  #     port: 80
+
+  # Anotações adicionais para o Ingress
+  annotations: {}
+  # Exemplos:
+  # annotations:
+  #   nginx.ingress.kubernetes.io/rewrite-target: /
+  #   cert-manager.io/cluster-issuer: letsencrypt-prod
+
+  # Regras de roteamento (hosts e paths)
+  hosts: []
+  # Exemplo:
+  # hosts:
+  #   - host: api.example.com
+  #     paths:
+  #       - path: /
+  #         pathType: Prefix
+  #   - host: admin.example.com
+  #     paths:
+  #       - path: /admin
+  #         pathType: Prefix
+  #       - path: /api
+  #         pathType: Exact
+
+  # Configuração TLS
+  tls: []
+  # Exemplo:
+  # tls:
+  #   - secretName: api-tls-secret
+  #     hosts:
+  #       - api.example.com
+  #   - secretName: admin-tls-secret
+  #     hosts:
+  #       - admin.example.com
 
 # Configuração completa do Istio para service mesh
 # Mais informações: https://istio.io/latest/docs/
@@ -666,12 +827,14 @@ podDisruptionBudget:
   # Habilita PodDisruptionBudget (habilitado por padrão)
   enabled: true
 
-  # Número mínimo de pods que devem estar disponíveis
-  # Use um dos dois: minAvailable OU maxUnavailable (não ambos)
-  minAvailable: 1
+  # Número máximo de pods que podem estar indisponíveis durante disrupções voluntárias
+  # Use um dos dois: maxUnavailable OU minAvailable (não ambos)
+  # maxUnavailable: 1 é seguro com qualquer replicaCount (inclusive 1)
+  # minAvailable: 1 com replicaCount: 1 bloqueia node drains!
+  maxUnavailable: 1
 
-  # Número máximo de pods que podem estar indisponíveis (alternativa ao minAvailable)
-  # maxUnavailable: 1
+  # Alternativa: número mínimo de pods disponíveis
+  # minAvailable: 1
 
   # Também aceita porcentagens:
   # minAvailable: "50%"
@@ -704,6 +867,20 @@ infisicalSecret:
   # Orphan: mantém o secret mesmo se o InfisicalSecret for deletado
   # Owner: deleta o secret quando o InfisicalSecret for deletado
   creationPolicy: "Orphan"
+
+  managedSecretNamespace: ""
+
+  kubernetesAuth:
+    enabled: false
+    identityId: ""
+    serviceAccountRef:
+      name: ""
+      namespace: "default"
+
+  universalAuth:
+    credentialsRef:
+      secretName: "infisical-universal-auth"
+      secretNamespace: "infisical"
 
 # Argo Image Updater - atualização automática de imagens Docker
 # Mais informações: https://argocd-image-updater.readthedocs.io/
@@ -862,22 +1039,8 @@ valkey:
   architecture: standalone
   replicaCount: 1
   persistence:
-    # Disable persistence by default - enable in production with a suitable size
-    # Example for production:
-    #   valkey:
-    #     persistence:
-    #       enabled: true
-    #       size: 8Gi
-    #       storageClass: "standard-rwo"  # StorageClass name (empty = cluster default)
-    #       accessModes:
-    #         - ReadWriteOnce
-    #       existingClaim: ""  # Use a pre-existing PVC instead of creating one
-    enabled: false
+    enabled: true
     size: 8Gi
-    storageClass: ""
-    accessModes:
-      - ReadWriteOnce
-    existingClaim: ""
 
 # RabbitMQ (Message Queue)
 # When enabled, the following environment variables are automatically injected:
@@ -907,22 +1070,8 @@ rabbitmq:
   enabled: false
   replicaCount: 1
   persistence:
-    # Disable persistence by default - enable in production with a suitable size
-    # Example for production:
-    #   rabbitmq:
-    #     persistence:
-    #       enabled: true
-    #       size: 8Gi
-    #       storageClass: "standard-rwo"  # StorageClass name (empty = cluster default)
-    #       accessModes:
-    #         - ReadWriteOnce
-    #       existingClaim: ""  # Use a pre-existing PVC instead of creating one
-    enabled: false
+    enabled: true
     size: 8Gi
-    storageClass: ""
-    accessModes:
-      - ReadWriteOnce
-    existingClaim: ""
   managementPlugin:
     enabled: true
   metrics:

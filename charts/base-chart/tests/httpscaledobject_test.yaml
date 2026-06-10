@@ -1,0 +1,219 @@
+suite: test httpscaledobject
+templates:
+  - httpscaledobject.yaml
+  - scaledobject.yaml
+tests:
+  - it: should render HTTPScaledObject when istio disabled and no triggers
+    template: httpscaledobject.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.enabled: true
+      autoscaling.keda.triggers: []
+      istio.enabled: false
+    asserts:
+      - isKind:
+          of: HTTPScaledObject
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+
+  - it: should not render HTTPScaledObject when istio enabled
+    template: httpscaledobject.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.enabled: true
+      autoscaling.keda.triggers: []
+      istio.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should not render HTTPScaledObject when triggers are defined
+    template: httpscaledobject.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.enabled: true
+      istio.enabled: false
+      autoscaling.keda.triggers:
+        - type: prometheus
+          metadata:
+            threshold: "100"
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should not render HTTPScaledObject when autoscaling disabled
+    template: httpscaledobject.yaml
+    set:
+      autoscaling.enabled: false
+      istio.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should not render ScaledObject when HTTPScaledObject is active
+    template: scaledobject.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.enabled: true
+      autoscaling.keda.triggers: []
+      istio.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should use default targetPendingRequests
+    template: httpscaledobject.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.enabled: true
+      autoscaling.keda.triggers: []
+      istio.enabled: false
+    asserts:
+      - equal:
+          path: spec.targetPendingRequests
+          value: 100
+
+  - it: should use custom targetPendingRequests
+    template: httpscaledobject.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.enabled: true
+      autoscaling.keda.triggers: []
+      istio.enabled: false
+      autoscaling.keda.http.targetPendingRequests: 50
+    asserts:
+      - equal:
+          path: spec.targetPendingRequests
+          value: 50
+
+  - it: should set correct scaleTargetRef
+    template: httpscaledobject.yaml
+    set:
+      fullnameOverride: my-app
+      autoscaling.enabled: true
+      autoscaling.keda.enabled: true
+      autoscaling.keda.triggers: []
+      istio.enabled: false
+      service.port: 80
+    asserts:
+      - equal:
+          path: spec.scaleTargetRef.name
+          value: my-app
+      - equal:
+          path: spec.scaleTargetRef.port
+          value: 80
+
+  - it: should set min and max replicas
+    template: httpscaledobject.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.enabled: true
+      autoscaling.keda.triggers: []
+      istio.enabled: false
+      autoscaling.minReplicas: 2
+      autoscaling.maxReplicas: 20
+    asserts:
+      - equal:
+          path: spec.replicas.min
+          value: 2
+      - equal:
+          path: spec.replicas.max
+          value: 20
+
+  - it: should have sync-wave 2
+    template: httpscaledobject.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.enabled: true
+      autoscaling.keda.triggers: []
+      istio.enabled: false
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "2"
+
+  - it: should render hosts when set
+    template: httpscaledobject.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.enabled: true
+      autoscaling.keda.triggers: []
+      istio.enabled: false
+      autoscaling.keda.http.hosts:
+        - my-app.example.com
+    asserts:
+      - contains:
+          path: spec.hosts
+          content: my-app.example.com
+
+  - it: should render pathPrefixes when set
+    template: httpscaledobject.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.enabled: true
+      autoscaling.keda.triggers: []
+      istio.enabled: false
+      autoscaling.keda.http.pathPrefixes:
+        - /api
+        - /health
+    asserts:
+      - contains:
+          path: spec.pathPrefixes
+          content: /api
+
+  - it: should render scaledownPeriod when set
+    template: httpscaledobject.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.enabled: true
+      autoscaling.keda.triggers: []
+      istio.enabled: false
+      autoscaling.keda.http.scaledownPeriod: 300
+    asserts:
+      - equal:
+          path: spec.scaledownPeriod
+          value: 300
+
+  - it: should render scalingMetric when set
+    template: httpscaledobject.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.enabled: true
+      autoscaling.keda.triggers: []
+      istio.enabled: false
+      autoscaling.keda.http.scalingMetric:
+        requestRate:
+          granularity: 1s
+          targetValue: 100
+          window: 1m
+    asserts:
+      - equal:
+          path: spec.scalingMetric.requestRate.targetValue
+          value: 100
+      - equal:
+          path: spec.scalingMetric.requestRate.window
+          value: 1m
+
+  - it: should render custom scaleTargetRef service and apiVersion
+    template: httpscaledobject.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.enabled: true
+      autoscaling.keda.triggers: []
+      istio.enabled: false
+      autoscaling.keda.http.scaleTargetRef:
+        apiVersion: apps/v1
+        kind: Deployment
+        service: my-svc
+        port: 8080
+    asserts:
+      - equal:
+          path: spec.scaleTargetRef.apiVersion
+          value: apps/v1
+      - equal:
+          path: spec.scaleTargetRef.service
+          value: my-svc
+      - equal:
+          path: spec.scaleTargetRef.port
+          value: 8080

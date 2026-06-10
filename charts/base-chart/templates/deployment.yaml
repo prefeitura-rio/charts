@@ -14,6 +14,9 @@ spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
+  {{- if .Values.revisionHistoryLimit }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "base-chart.selectorLabels" . | nindent 6 }}
@@ -41,10 +44,8 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
-      {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- include "base-chart.imagePullSecrets" . | nindent 8 }}
       serviceAccountName: {{ include "base-chart.serviceAccountName" . }}
       {{- with .Values.podSecurityContext }}
       securityContext:
@@ -54,7 +55,7 @@ spec:
       initContainers:
         {{- range .Values.initContainers }}
         - name: {{ .name }}
-          image: {{ .image | default (printf "%s:%s" $.Values.image.repository ($.Values.image.tag | default $.Chart.AppVersion)) | quote }}
+          image: {{ .image | default (include "base-chart.image" $) | quote }}
           imagePullPolicy: {{ .imagePullPolicy | default $.Values.image.pullPolicy }}
           {{- with .command }}
           command:
@@ -71,7 +72,7 @@ spec:
           {{- /* Inherit envFrom from deployment or use custom */ -}}
           {{- $initEnvFrom := .envFrom }}
           {{- $inheritEnvFrom := not (hasKey . "envFrom") }}
-          {{- if or $inheritEnvFrom $.Values.infisicalSecret.enabled }}
+          {{- if or $initEnvFrom (and $inheritEnvFrom $.Values.infisicalSecret.enabled) }}
           envFrom:
             {{- if and $inheritEnvFrom $.Values.infisicalSecret.enabled }}
             - secretRef:
@@ -112,7 +113,7 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          image: {{ include "base-chart.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           {{- $mountAsEnv := ternary .Values.configMap.mountAsEnv true (hasKey .Values.configMap "mountAsEnv") }}
           {{- $configMapEnv := and .Values.configMap.enabled $mountAsEnv }}
@@ -154,39 +155,44 @@ spec:
             - name: http
               containerPort: {{ .Values.service.containerPort }}
               protocol: TCP
+            {{- range .Values.service.ports }}
+            - name: {{ .name }}
+              containerPort: {{ .targetPort }}
+              protocol: {{ .protocol | default "TCP" }}
+            {{- end }}
           {{- /* Health probes - simplified healthCheck.path or advanced livenessProbe/readinessProbe */ -}}
           {{- $healthPath := .Values.healthCheck.path -}}
           {{- $healthPort := .Values.healthCheck.port | default .Values.service.containerPort -}}
           {{- if $healthPath }}
+          {{- $probeBase := dict "httpGet" (dict "path" $healthPath "port" $healthPort) }}
+          {{- if .Values.healthCheck.initialDelaySeconds }}{{- $_ := set $probeBase "initialDelaySeconds" .Values.healthCheck.initialDelaySeconds }}{{- end }}
+          {{- if .Values.healthCheck.periodSeconds }}{{- $_ := set $probeBase "periodSeconds" .Values.healthCheck.periodSeconds }}{{- end }}
+          {{- if .Values.healthCheck.timeoutSeconds }}{{- $_ := set $probeBase "timeoutSeconds" .Values.healthCheck.timeoutSeconds }}{{- end }}
+          {{- if .Values.healthCheck.failureThreshold }}{{- $_ := set $probeBase "failureThreshold" .Values.healthCheck.failureThreshold }}{{- end }}
+          {{- if .Values.healthCheck.successThreshold }}{{- $_ := set $probeBase "successThreshold" .Values.healthCheck.successThreshold }}{{- end }}
           livenessProbe:
-            httpGet:
-              path: {{ $healthPath }}
-              port: {{ $healthPort }}
+            {{- toYaml $probeBase | nindent 12 }}
           readinessProbe:
-            httpGet:
-              path: {{ $healthPath }}
-              port: {{ $healthPort }}
+            {{- toYaml $probeBase | nindent 12 }}
+          startupProbe:
+            {{- toYaml $probeBase | nindent 12 }}
           {{- else }}
           {{- if .Values.livenessProbe }}
           livenessProbe:
-            {{- if .Values.livenessProbe.httpGet }}
-            httpGet:
-              path: {{ .Values.livenessProbe.httpGet.path | default "/" }}
-              port: {{ .Values.livenessProbe.httpGet.port | default .Values.service.containerPort }}
-            {{- else }}
             {{- toYaml .Values.livenessProbe | nindent 12 }}
-            {{- end }}
           {{- end }}
           {{- if .Values.readinessProbe }}
           readinessProbe:
-            {{- if .Values.readinessProbe.httpGet }}
-            httpGet:
-              path: {{ .Values.readinessProbe.httpGet.path | default "/" }}
-              port: {{ .Values.readinessProbe.httpGet.port | default .Values.service.containerPort }}
-            {{- else }}
             {{- toYaml .Values.readinessProbe | nindent 12 }}
-            {{- end }}
           {{- end }}
+          {{- if .Values.startupProbe }}
+          startupProbe:
+            {{- toYaml .Values.startupProbe | nindent 12 }}
+          {{- end }}
+          {{- end }}
+          {{- with .Values.lifecycle }}
+          lifecycle:
+            {{- toYaml . | nindent 12 }}
           {{- end }}
           {{- with .Values.resources }}
           resources:
@@ -216,6 +222,21 @@ spec:
         {{- with .Values.volumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
+      {{- end }}
+      {{- if .Values.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
       {{- end }}
       {{- if .Values.podAntiAffinity.enabled }}
       affinity:

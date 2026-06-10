@@ -86,7 +86,7 @@ spec:
       {{- end }}
       route:
         - destination:
-            host: {{ $fullName }}
+            host: {{ $fullName }}.{{ .Release.Namespace }}.svc.cluster.local
             port:
               number: {{ .Values.service.port }}
           weight: {{ sub 100 ($vs.canary.weight | int) }}
@@ -191,7 +191,7 @@ spec:
   {{- else }}
     - route:
         - destination:
-            host: {{ $fullName }}
+            host: {{ $fullName }}.{{ .Release.Namespace }}.svc.cluster.local
             port:
               number: {{ .Values.service.port }}
       {{- if $vs.timeout }}

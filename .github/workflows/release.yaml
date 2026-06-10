@@ -1,78 +1,171 @@
-name: Release Charts
+name: Release Chart
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - "charts/**"
-      - "scripts/index.py"
-      - "scripts/index.html.j2"
-  workflow_dispatch:
+    branches: [main]
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  REGISTRY_PREFIX: ghcr.io/${{ github.repository_owner }}/charts
+  HELM_UNITTEST_VERSION: "1.1.0"
 
 jobs:
   release:
+    runs-on: ubuntu-latest
     permissions:
       contents: write
-    runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      packages: write
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      - name: Configure Git
+      - name: Parse chart name from commit message
+        id: chart
         run: |
-          git config user.name "$GITHUB_ACTOR"
-          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+          echo "Commit: $COMMIT_MSG"
 
-      - name: Install Helm
-        uses: azure/setup-helm@v4
-        with:
-          version: v3.14.0
-
-      - name: Build chart dependencies
-        run: |
-          for chart in charts/*; do
-            if [ -f "$chart/Chart.yaml" ]; then
-              echo "Checking dependencies for $chart"
-              if grep -q "^dependencies:" "$chart/Chart.yaml"; then
-                echo "Building dependencies for $chart"
-                helm dependency build "$chart"
-              fi
-            fi
-          done
-
-      - name: Run chart-releaser
-        uses: helm/chart-releaser-action@v1.6.0
-        with:
-          charts_dir: charts
-          skip_existing: true
-        env:
-          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: false
-
-      - name: Generate and update index.html
-        run: |
-          git fetch origin gh-pages
-          git checkout gh-pages
-          git reset --hard origin/gh-pages
-          git show main:scripts/index.py > /tmp/index.py
-          git show main:scripts/index.html.j2 > /tmp/index.html.j2
-          chmod +x /tmp/index.py
-          cd /tmp && ./index.py $GITHUB_WORKSPACE/index.yaml $GITHUB_WORKSPACE/index.html
-          cd $GITHUB_WORKSPACE
-          git add index.html
-          if git diff --staged --quiet; then
-            echo "No changes to index.html"
+          # Match "<chart-name>: ..." pattern
+          if [[ "$COMMIT_MSG" =~ ^\[skip\ ci\] ]] || [[ "$COMMIT_MSG" =~ ^chore:\ bump ]]; then
+            echo "Skipping CI commit"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          git commit -m "Update index.html from index.yaml"
-          git push origin gh-pages
-        continue-on-error: true
+
+          CHART_NAME=$(echo "$COMMIT_MSG" | grep -oP '^[a-z0-9_-]+(?=:)' || true)
+
+          if [ -z "$CHART_NAME" ]; then
+            echo "No chart name found in commit message — skipping"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ ! -d "charts/$CHART_NAME" ]; then
+            echo "Chart directory charts/$CHART_NAME not found — skipping"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "chart=$CHART_NAME" >> "$GITHUB_OUTPUT"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Helm
+        if: steps.chart.outputs.skip != 'true'
+        uses: azure/setup-helm@v5
+
+      - name: Cache helm-unittest binary
+        if: steps.chart.outputs.skip != 'true'
+        id: cache-unittest
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/helm/plugins/helm-unittest
+          key: helm-unittest-${{ env.HELM_UNITTEST_VERSION }}-linux-amd64
+
+      - name: Install helm-unittest
+        if: steps.chart.outputs.skip != 'true' && steps.cache-unittest.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p "$(helm env HELM_PLUGINS)/helm-unittest"
+          curl -sSL "https://github.com/helm-unittest/helm-unittest/releases/download/v${{ env.HELM_UNITTEST_VERSION }}/helm-unittest-linux-amd64-${{ env.HELM_UNITTEST_VERSION }}.tgz" \
+            | tar -xz -C "$(helm env HELM_PLUGINS)/helm-unittest"
+
+      - name: Bump patch version
+        if: steps.chart.outputs.skip != 'true'
+        id: version
+        run: |
+          CHART=${{ steps.chart.outputs.chart }}
+          CHART_YAML="charts/$CHART/Chart.yaml"
+
+          CURRENT=$(yq eval '.version' "$CHART_YAML")
+          MAJOR=$(echo "$CURRENT" | cut -d. -f1)
+          MINOR=$(echo "$CURRENT" | cut -d. -f2)
+          PATCH=$(echo "$CURRENT" | cut -d. -f3)
+          NEW_VERSION="$MAJOR.$MINOR.$((PATCH + 1))"
+
+          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$CHART-v$NEW_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Inject version into Chart.yaml
+        if: steps.chart.outputs.skip != 'true'
+        run: |
+          yq e '.version = strenv(VERSION)' -i charts/${{ steps.chart.outputs.chart }}/Chart.yaml
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+
+      - name: Build chart dependencies
+        if: steps.chart.outputs.skip != 'true'
+        run: |
+          CHART=${{ steps.chart.outputs.chart }}
+          if grep -q "^dependencies:" "charts/$CHART/Chart.yaml"; then
+            helm dependency build "charts/$CHART"
+          fi
+
+      - name: Lint
+        if: steps.chart.outputs.skip != 'true'
+        run: helm lint charts/${{ steps.chart.outputs.chart }}
+
+      - name: Test
+        if: steps.chart.outputs.skip != 'true'
+        run: helm unittest charts/${{ steps.chart.outputs.chart }}
+
+      - name: Package
+        if: steps.chart.outputs.skip != 'true'
+        run: helm package charts/${{ steps.chart.outputs.chart }} --destination ./packaged/
+
+      - name: Login to GHCR
+        if: steps.chart.outputs.skip != 'true'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" \
+            | helm registry login ${{ env.REGISTRY }} \
+                -u ${{ github.actor }} \
+                --password-stdin
+
+      - name: Push to GHCR
+        if: steps.chart.outputs.skip != 'true'
+        run: |
+          helm push ./packaged/*.tgz oci://${{ env.REGISTRY_PREFIX }}
+
+      - name: Commit version bump and tag
+        if: steps.chart.outputs.skip != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add charts/${{ steps.chart.outputs.chart }}/Chart.yaml
+          git commit -m "chore: bump ${{ steps.chart.outputs.chart }} to ${{ steps.version.outputs.version }} [skip ci]"
+          git tag ${{ steps.version.outputs.tag }}
+          git push origin HEAD:main
+          git push origin ${{ steps.version.outputs.tag }}
+
+      - name: Create GitHub release
+        if: steps.chart.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHART: ${{ steps.chart.outputs.chart }}
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          PREV_TAG=$(git tag --sort=-v:refname | grep -E "^${CHART}-v" | sed -n '2p' || true)
+
+          gh release create "$TAG" \
+            --title "Release $TAG" \
+            ${PREV_TAG:+--notes-start-tag "$PREV_TAG"} \
+            --generate-notes \
+            --notes "## $CHART $TAG
+
+          ### Installation
+
+          \`\`\`bash
+          helm install my-release oci://${{ env.REGISTRY_PREFIX }}/$CHART --version $VERSION
+          \`\`\`
+
+          ### Pull
+
+          \`\`\`bash
+          helm pull oci://${{ env.REGISTRY_PREFIX }}/$CHART --version $VERSION
+          \`\`\`"

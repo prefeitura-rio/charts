@@ -10,24 +10,24 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "1"
 spec:
-  {{- if $triggerAuth.secretTargetRef }}
+  {{- with $triggerAuth.secretTargetRef }}
   secretTargetRef:
-    {{- toYaml $triggerAuth.secretTargetRef | nindent 4 }}
+    {{- toYaml . | nindent 4 }}
   {{- end }}
-  {{- if $triggerAuth.env }}
+  {{- with $triggerAuth.env }}
   env:
-    {{- toYaml $triggerAuth.env | nindent 4 }}
+    {{- toYaml . | nindent 4 }}
   {{- end }}
-  {{- if $triggerAuth.hashiCorpVault }}
-  hashiCorpVault:
-    {{- toYaml $triggerAuth.hashiCorpVault | nindent 4 }}
-  {{- end }}
-  {{- if $triggerAuth.azureKeyVault }}
-  azureKeyVault:
-    {{- toYaml $triggerAuth.azureKeyVault | nindent 4 }}
-  {{- end }}
-  {{- if $triggerAuth.podIdentity }}
+  {{- with $triggerAuth.podIdentity }}
   podIdentity:
-    {{- toYaml $triggerAuth.podIdentity | nindent 4 }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with $triggerAuth.hashiCorpVault }}
+  hashiCorpVault:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with $triggerAuth.azureKeyVault }}
+  azureKeyVault:
+    {{- toYaml . | nindent 4 }}
   {{- end }}
 {{- end }}

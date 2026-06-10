@@ -13,5 +13,11 @@ spec:
       targetPort: {{ .Values.service.containerPort }}
       protocol: TCP
       name: http
+    {{- range .Values.service.ports }}
+    - name: {{ .name | required "service.ports[].name is required" }}
+      port: {{ .port | required "service.ports[].port is required" }}
+      targetPort: {{ .targetPort | default .port }}
+      protocol: {{ .protocol | default "TCP" }}
+    {{- end }}
   selector:
     {{- include "base-chart.selectorLabels" . | nindent 4 }}

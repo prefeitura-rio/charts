@@ -2,9 +2,6 @@ suite: test service
 templates:
   - service.yaml
 tests:
-  # =============================================================================
-  # Basic Rendering Tests
-  # =============================================================================
   - it: should render service with default values
     asserts:
       - isKind:
@@ -30,9 +27,6 @@ tests:
           path: spec.ports[0].name
           value: http
 
-  # =============================================================================
-  # Service Type Tests
-  # =============================================================================
   - it: should use ClusterIP type by default
     asserts:
       - equal:
@@ -55,9 +49,6 @@ tests:
           path: spec.type
           value: NodePort
 
-  # =============================================================================
-  # Port Configuration Tests
-  # =============================================================================
   - it: should use custom service port when specified
     set:
       service.port: 8080
@@ -86,9 +77,6 @@ tests:
           path: spec.ports[0].targetPort
           value: 8000
 
-  # =============================================================================
-  # Labels and Selectors Tests
-  # =============================================================================
   - it: should have standard labels
     asserts:
       - exists:
@@ -117,9 +105,6 @@ tests:
           path: spec.selector["app.kubernetes.io/name"]
           value: myapp
 
-  # =============================================================================
-  # Naming Tests
-  # =============================================================================
   - it: should use fullnameOverride when specified
     set:
       fullnameOverride: custom-service
@@ -136,11 +121,43 @@ tests:
           path: metadata.name
           value: RELEASE-NAME-myapp
 
-  # =============================================================================
-  # Sync Wave Tests
-  # =============================================================================
   - it: should have sync-wave 1 annotation
     asserts:
       - equal:
           path: metadata.annotations["argocd.argoproj.io/sync-wave"]
           value: "1"
+
+  - it: should render additional ports when service.ports is set
+    set:
+      service.ports:
+        - name: metrics
+          port: 9090
+          targetPort: 9090
+          protocol: TCP
+        - name: amqp
+          port: 5672
+          targetPort: 5672
+    asserts:
+      - equal:
+          path: spec.ports[1].name
+          value: metrics
+      - equal:
+          path: spec.ports[1].port
+          value: 9090
+      - equal:
+          path: spec.ports[2].name
+          value: amqp
+      - equal:
+          path: spec.ports[2].port
+          value: 5672
+
+  - it: should default protocol to TCP for additional ports
+    set:
+      service.ports:
+        - name: metrics
+          port: 9090
+          targetPort: 9090
+    asserts:
+      - equal:
+          path: spec.ports[1].protocol
+          value: TCP

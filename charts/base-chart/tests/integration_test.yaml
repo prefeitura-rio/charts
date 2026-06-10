@@ -38,7 +38,6 @@ tests:
         projectSlug: my-project
         envSlug: prod
     asserts:
-      # Deployment assertions
       - template: deployment.yaml
         equal:
           path: metadata.name
@@ -51,12 +50,10 @@ tests:
         equal:
           path: spec.template.spec.containers[0].livenessProbe.httpGet.path
           value: /health
-      # Service assertions
       - template: service.yaml
         equal:
           path: metadata.name
           value: api
-      # VirtualService assertions
       - template: virtualservice.yaml
         contains:
           path: spec.hosts
@@ -65,7 +62,6 @@ tests:
         contains:
           path: spec.gateways
           content: istio-system/istio-gateway
-      # ScaledObject assertions
       - template: scaledobject.yaml
         equal:
           path: spec.minReplicaCount
@@ -74,7 +70,6 @@ tests:
         equal:
           path: spec.maxReplicaCount
           value: 10
-      # InfisicalSecret assertions
       - template: infisicalsecret.yaml
         equal:
           path: metadata.name
@@ -105,7 +100,6 @@ tests:
           triggers:
             - type: prometheus
     asserts:
-      # Check smart defaults work
       - template: deployment.yaml
         equal:
           path: spec.template.spec.securityContext.runAsNonRoot
@@ -146,7 +140,6 @@ tests:
                 queueName: tasks
                 queueLength: "5"
     asserts:
-      # Deployment should have RabbitMQ env vars
       - template: deployment.yaml
         contains:
           path: spec.template.spec.containers[0].env
@@ -159,7 +152,6 @@ tests:
           content:
             name: RABBITMQ_PORT
             value: "5672"
-      # ScaledObject should have RabbitMQ trigger
       - template: scaledobject.yaml
         equal:
           path: spec.minReplicaCount
@@ -182,7 +174,6 @@ tests:
         projectSlug: my-project
         envSlug: prod
     asserts:
-      # Deployment should have Redis env vars
       - template: deployment.yaml
         contains:
           path: spec.template.spec.containers[0].env
@@ -195,7 +186,6 @@ tests:
           content:
             name: REDIS_PORT
             value: "6379"
-      # Deployment should have infisical secret in envFrom
       - template: deployment.yaml
         contains:
           path: spec.template.spec.containers[0].envFrom
@@ -234,7 +224,6 @@ tests:
     asserts:
       - hasDocuments:
           count: 3
-      # All cronjobs should inherit the image
       - documentIndex: 0
         equal:
           path: spec.jobTemplate.spec.template.spec.containers[0].image
@@ -243,7 +232,6 @@ tests:
         equal:
           path: spec.jobTemplate.spec.template.spec.containers[0].image
           value: "myorg/app:v1.0.0"
-      # All should have the secret
       - documentIndex: 0
         contains:
           path: spec.jobTemplate.spec.template.spec.containers[0].envFrom
@@ -265,7 +253,6 @@ tests:
         keda:
           enabled: false
     asserts:
-      # HPA should be created
       - template: hpa.yaml
         isKind:
           of: HorizontalPodAutoscaler
@@ -277,7 +264,6 @@ tests:
         equal:
           path: spec.maxReplicas
           value: 20
-      # ScaledObject should NOT be created
       - template: scaledobject.yaml
         hasDocuments:
           count: 0

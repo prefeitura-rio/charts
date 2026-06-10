@@ -9,10 +9,6 @@ metadata:
     argocd.argoproj.io/sync-wave: "-1"
 data:
   {{- range $key, $value := .Values.configMap.data }}
-  {{- if kindIs "string" $value }}
-  {{ $key }}: {{ $value | quote }}
-  {{- else }}
-  {{ $key }}: {{ $value | toYaml | quote }}
-  {{- end }}
+  {{ $key }}: {{ $value | toString | quote }}
   {{- end }}
 {{- end }}
