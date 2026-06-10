@@ -40,3 +40,5 @@ Session.vim
 .pages
 bin
 cr
+/.devenv
+/.pre-commit-config.yaml

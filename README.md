@@ -15,11 +15,11 @@ helm install my-release prefeitura-rio/<chart-name>
 
 ## Available Charts
 
-| Chart | Description | Documentation |
-|-------|-------------|---------------|
+| Chart          | Description                                                                  | Documentation                |
+| -------------- | ---------------------------------------------------------------------------- | ---------------------------- |
 | **base-chart** | Production-ready chart with Istio, autoscaling, secrets management, and more | [Docs](./charts/base-chart/) |
-| **letta** | Stateful LLM applications with long-term memory | [Docs](./charts/letta/) |
-| **typesense** | Fast, typo-tolerant search engine | [Docs](./charts/typesense/) |
+| **letta**      | Stateful LLM applications with long-term memory                              | [Docs](./charts/letta/)      |
+| **typesense**  | Fast, typo-tolerant search engine                                            | [Docs](./charts/typesense/)  |
 
 ## Development
 

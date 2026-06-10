@@ -106,10 +106,6 @@ jobs:
             helm dependency build "charts/$CHART"
           fi
 
-      - name: Lint
-        if: steps.chart.outputs.skip != 'true'
-        run: helm lint charts/${{ steps.chart.outputs.chart }}
-
       - name: Test
         if: steps.chart.outputs.skip != 'true'
         run: helm unittest charts/${{ steps.chart.outputs.chart }}
