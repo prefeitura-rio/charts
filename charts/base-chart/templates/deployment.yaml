@@ -131,7 +131,7 @@ spec:
             {{- toYaml . | nindent 12 }}
             {{- end }}
           {{- end }}
-          {{- if or .Values.env .Values.valkey.enabled .Values.rabbitmq.enabled }}
+          {{- if or .Values.env .Values.valkey.enabled .Values.rabbitmq.enabled .Values.cloudsql.enabled }}
           env:
             {{- with .Values.env }}
             {{- toYaml . | nindent 12 }}
@@ -149,6 +149,12 @@ spec:
               value: {{ .Values.rabbitmq.service.amqpPort | quote }}
             - name: RABBITMQ_USER
               value: {{ .Release.Name }}
+            {{- end }}
+            {{- if .Values.cloudsql.enabled }}
+            - name: DATABASE_HOST
+              value: {{ .Release.Name }}-cloudsql
+            - name: DATABASE_PORT
+              value: {{ .Values.cloudsql.proxy.port | quote }}
             {{- end }}
           {{- end }}
           ports:

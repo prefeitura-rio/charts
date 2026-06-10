@@ -1,0 +1,53 @@
+suite: test base-chart cloudsql integration
+templates:
+  - deployment.yaml
+values:
+  - ../values.yaml
+set:
+  image.repository: nginx
+  image.tag: "latest"
+tests:
+  - it: should not inject DATABASE env vars when cloudsql is disabled
+    asserts:
+      - isNull:
+          path: spec.template.spec.containers[0].env
+
+  - it: should inject DATABASE_HOST when cloudsql is enabled
+    set:
+      cloudsql.enabled: true
+      cloudsql.instance.projectId: my-project
+      cloudsql.instance.region: us-central1
+      cloudsql.instance.name: my-instance
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_HOST
+            value: RELEASE-NAME-cloudsql
+
+  - it: should inject DATABASE_PORT defaulting to 5432
+    set:
+      cloudsql.enabled: true
+      cloudsql.instance.projectId: my-project
+      cloudsql.instance.region: us-central1
+      cloudsql.instance.name: my-instance
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_PORT
+            value: "5432"
+
+  - it: should inject DATABASE_PORT from proxy.port when overridden
+    set:
+      cloudsql.enabled: true
+      cloudsql.instance.projectId: my-project
+      cloudsql.instance.region: us-central1
+      cloudsql.instance.name: my-instance
+      cloudsql.proxy.port: 3306
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_PORT
+            value: "3306"

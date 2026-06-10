@@ -1015,12 +1015,12 @@ cronjobs: {}
 #   redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}/0
 #
 # CONFIGURAÇÃO: Use o mesmo valor de infisicalSecret.secretName
-# 
+#
 # Exemplo (RECOMENDADO - centralizado):
 #   infisicalSecret:
 #     enabled: true
 #     secretName: "my-app-secrets"  # ✅ Defina UMA VEZ aqui
-#   
+#
 #   valkey:
 #     enabled: true
 #     auth:
@@ -1081,3 +1081,62 @@ rabbitmq:
     type: ClusterIP
     amqpPort: 5672
     managementPort: 15672
+
+# Cloud SQL Proxy - Secure connections to Google Cloud SQL
+# When enabled, the following environment variables are automatically injected:
+#   - DATABASE_HOST: <release>-cloudsql (service hostname)
+#   - DATABASE_PORT: <proxy.port> (default: 5432)
+#
+# Authentication modes:
+#   Mode 1: Workload Identity (GKE)
+#     cloudsql:
+#       enabled: true
+#       instance:
+#         projectId: my-project
+#         region: us-central1
+#         name: my-instance
+#       serviceAccount:
+#         gcpServiceAccount: cloudsql-proxy@my-project.iam.gserviceaccount.com
+#
+#   Mode 2: Service Account Key
+#     cloudsql:
+#       enabled: true
+#       instance:
+#         projectId: my-project
+#         region: us-central1
+#         name: my-instance
+#       secret:
+#         existingSecret: my-cloudsql-sa-key
+cloudsql:
+  enabled: false
+
+  instance:
+    projectId: ""
+    region: ""
+    name: ""
+    configMapRef:
+      name: ""
+      keys:
+        projectId: CLOUD_SQL_PROJECT_ID
+        region: CLOUD_SQL_INSTANCE_REGION
+        name: CLOUD_SQL_INSTANCE_NAME
+
+  proxy:
+    port: 5432
+    privateIp: true
+    structuredLogs: true
+    lazyRefresh: true
+    maxConnections: 100
+    autoIamAuthn: false
+    healthCheckPort: 9090
+
+  serviceAccount:
+    existingServiceAccount: ""
+    gcpServiceAccount: ""
+    name: ""
+
+  secret:
+    existingSecret: ""
+    create: false
+    serviceAccountKey: ""
+    key: service-account-key.json
