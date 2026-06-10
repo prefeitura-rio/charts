@@ -40,6 +40,30 @@ tests:
           path: spec.minAvailable
           value: 2
 
+  - it: should use maxUnavailable when minAvailable is not set
+    set:
+      podDisruptionBudget.enabled: true
+      podDisruptionBudget.minAvailable: 0
+      podDisruptionBudget.maxUnavailable: 1
+    asserts:
+      - equal:
+          path: spec.maxUnavailable
+          value: 1
+      - isNull:
+          path: spec.minAvailable
+
+  - it: should prefer minAvailable over maxUnavailable when both are set
+    set:
+      podDisruptionBudget.enabled: true
+      podDisruptionBudget.minAvailable: 1
+      podDisruptionBudget.maxUnavailable: 1
+    asserts:
+      - equal:
+          path: spec.minAvailable
+          value: 1
+      - isNull:
+          path: spec.maxUnavailable
+
   - it: should have correct selector labels
     set:
       podDisruptionBudget.enabled: true

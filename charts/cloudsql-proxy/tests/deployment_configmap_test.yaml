@@ -5,15 +5,34 @@ values:
   - ../values.yaml
 tests:
   # ConfigMap reference tests (Terraform pattern)
-  - it: should use envFrom when ConfigMap is specified
+  - it: should use explicit env entries when ConfigMap is specified
     set:
       instance.configMapRef.name: postgres-config
     asserts:
       - contains:
-          path: spec.template.spec.containers[0].envFrom
+          path: spec.template.spec.containers[0].env
           content:
-            configMapRef:
-              name: postgres-config
+            name: CLOUD_SQL_PROJECT_ID
+            valueFrom:
+              configMapKeyRef:
+                name: postgres-config
+                key: CLOUD_SQL_PROJECT_ID
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: CLOUD_SQL_INSTANCE_REGION
+            valueFrom:
+              configMapKeyRef:
+                name: postgres-config
+                key: CLOUD_SQL_INSTANCE_REGION
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: CLOUD_SQL_INSTANCE_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: postgres-config
+                key: CLOUD_SQL_INSTANCE_NAME
 
   - it: should use env var substitution in connection string with ConfigMap
     set:
@@ -31,18 +50,33 @@ tests:
       instance.configMapRef.keys.name: INSTANCE
     asserts:
       - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PROJECT
+            valueFrom:
+              configMapKeyRef:
+                name: my-config
+                key: PROJECT
+      - contains:
           path: spec.template.spec.containers[0].args
           content: "$(PROJECT):$(REGION):$(INSTANCE)"
 
+  - it: should not have envFrom when using ConfigMap
+    set:
+      instance.configMapRef.name: postgres-config
+    asserts:
+      - isNull:
+          path: spec.template.spec.containers[0].envFrom
+
   # Inline values tests (default)
-  - it: should not have envFrom when using inline values
+  - it: should not have env entries when using inline values
     set:
       instance.projectId: my-project
       instance.region: us-central1
       instance.name: my-instance
     asserts:
       - isNull:
-          path: spec.template.spec.containers[0].envFrom
+          path: spec.template.spec.containers[0].env
 
   - it: should use inline connection string when no ConfigMap
     set:
@@ -61,10 +95,13 @@ tests:
       secret.existingSecret: cloudsql-sa-key
     asserts:
       - contains:
-          path: spec.template.spec.containers[0].envFrom
+          path: spec.template.spec.containers[0].env
           content:
-            configMapRef:
-              name: postgres-config
+            name: CLOUD_SQL_PROJECT_ID
+            valueFrom:
+              configMapKeyRef:
+                name: postgres-config
+                key: CLOUD_SQL_PROJECT_ID
       - contains:
           path: spec.template.spec.volumes
           content:

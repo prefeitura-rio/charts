@@ -101,14 +101,6 @@ Build the Cloud SQL instance connection string (inline mode)
 {{- end }}
 
 {{/*
-Build the Cloud SQL instance connection string (ConfigMap mode with env vars)
-*/}}
-{{- define "cloudsql-proxy.instanceConnectionNameEnv" -}}
-{{- $keys := .Values.instance.configMapRef.keys }}
-{{- printf "$(%s):$(%s):$(%s)" $keys.projectId $keys.region $keys.name }}
-{{- end }}
-
-{{/*
 Build proxy arguments
 */}}
 {{- define "cloudsql-proxy.args" -}}
@@ -142,7 +134,8 @@ Build proxy arguments
 - {{ . | quote }}
 {{- end }}
 {{- if include "cloudsql-proxy.useConfigMap" . }}
-- "{{ include "cloudsql-proxy.instanceConnectionNameEnv" . }}"
+{{- $keys := .Values.instance.configMapRef.keys }}
+- "$({{ $keys.projectId }}):$({{ $keys.region }}):$({{ $keys.name }})"
 {{- else }}
 - "{{ include "cloudsql-proxy.instanceConnectionName" . }}"
 {{- end }}

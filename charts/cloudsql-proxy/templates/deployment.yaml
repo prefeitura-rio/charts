@@ -35,9 +35,24 @@ spec:
           args:
             {{- include "cloudsql-proxy.args" . | nindent 12 }}
           {{- if include "cloudsql-proxy.useConfigMap" . }}
-          envFrom:
-            - configMapRef:
-                name: {{ .Values.instance.configMapRef.name }}
+          {{- $cmName := .Values.instance.configMapRef.name }}
+          {{- $keys := .Values.instance.configMapRef.keys }}
+          env:
+            - name: {{ $keys.projectId }}
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $cmName }}
+                  key: {{ $keys.projectId }}
+            - name: {{ $keys.region }}
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $cmName }}
+                  key: {{ $keys.region }}
+            - name: {{ $keys.name }}
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $cmName }}
+                  key: {{ $keys.name }}
           {{- end }}
           ports:
             - name: db
