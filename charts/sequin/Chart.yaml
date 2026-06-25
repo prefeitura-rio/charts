@@ -1,9 +1,8 @@
 apiVersion: v2
 name: sequin
 description: Helm chart for Sequin with external PostgreSQL (Cloud SQL) and Valkey cache
-version: 0.2.2
+version: 0.2.3
 type: application
-
 maintainers:
   - name: Carter Pedersen
     email: carter.e.pedersen@gmail.com
@@ -11,7 +10,6 @@ maintainers:
   - name: Alexey Zhokhov
     email: alexey@zhokhov.com
     url: https://github.com/donbeave
-
 dependencies:
   # bitnami/common is a template-only helper library (no runtime pods or containers).
   # It provides Go template functions used throughout this chart (common.names.fullname,
@@ -23,7 +21,6 @@ dependencies:
     tags:
       - bitnami-common
     version: 2.x.x
-
   # Valkey sub-chart — same source used by base-chart (oci://registry-1.docker.io/cloudpirates).
   # Deployed in standalone mode. Creates service "sequin-valkey" in the sequin namespace.
   # Sequin connects via externalRedis.host="sequin-valkey" (redis.enabled=false path).
@@ -32,6 +29,5 @@ dependencies:
     repository: "oci://registry-1.docker.io/cloudpirates"
     condition: valkey.enabled
     alias: valkey
-
 sources:
   - https://github.com/sequinstream/helm-chart-sequin
