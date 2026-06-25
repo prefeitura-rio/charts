@@ -1,0 +1,9 @@
+dependencies:
+- name: common
+  repository: oci://registry-1.docker.io/bitnamicharts
+  version: 2.40.0
+- name: valkey
+  repository: oci://registry-1.docker.io/cloudpirates
+  version: 0.17.0
+digest: sha256:fcc3c9089a7676461942b3bf282962764a356dd6cd430db39be63fc574a03e08
+generated: "2026-06-25T12:00:20.299720458-03:00"
