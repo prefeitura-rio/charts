@@ -3,6 +3,28 @@ entries:
   base-chart:
   - apiVersion: v2
     appVersion: "1.25"
+    created: "2026-06-25T15:23:44.828488-03:00"
+    dependencies:
+    - alias: valkey
+      condition: valkey.enabled
+      name: valkey
+      repository: oci://registry-1.docker.io/cloudpirates
+      version: 0.17.0
+    - alias: rabbitmq
+      condition: rabbitmq.enabled
+      name: rabbitmq
+      repository: oci://registry-1.docker.io/cloudpirates
+      version: 0.17.0
+    description: A Helm chart for basic deployments in Kubernetes
+    digest: 94b9adea36fe55238322b2ef962a837ddbd108557c853e2e64e1e2aca441408a
+    icon: https://helm.sh/img/helm.svg
+    name: base-chart
+    type: application
+    urls:
+    - https://github.com/prefeitura-rio/charts/releases/download/cloudsql-proxy-v1.0.2/base-chart-2.4.2.tgz
+    version: 2.4.2
+  - apiVersion: v2
+    appVersion: "1.25"
     created: "2026-04-07T21:26:20.178385224Z"
     dependencies:
     - alias: valkey
@@ -46,6 +68,27 @@ entries:
     - https://github.com/prefeitura-rio/charts/releases/download/base-chart-2.2.3/base-chart-2.2.3.tgz
     version: 2.2.3
   cloudsql-proxy:
+  - apiVersion: v2
+    appVersion: 2.21.1
+    created: "2026-06-25T15:23:44.829047-03:00"
+    description: Cloud SQL Auth Proxy for secure connections to Google Cloud SQL instances
+    digest: f33e98f4e5069b66b66d4b7b4eff209f42b0cc51bc7b94fc1603c54b7a94ceaa
+    home: https://cloud.google.com/sql/docs/postgres/sql-proxy
+    icon: https://www.gstatic.com/devrel-devsite/prod/v0d244f667a3683225cca86e0ee31200226d59b37e5f61942956a27d18b9b3736/cloud/images/favicons/onecloud/super_cloud.png
+    keywords:
+    - cloudsql
+    - proxy
+    - gcp
+    - database
+    - postgresql
+    - mysql
+    name: cloudsql-proxy
+    sources:
+    - https://github.com/GoogleCloudPlatform/cloud-sql-proxy
+    type: application
+    urls:
+    - https://github.com/prefeitura-rio/charts/releases/download/cloudsql-proxy-v1.0.2/cloudsql-proxy-1.0.2.tgz
+    version: 1.0.2
   - apiVersion: v2
     appVersion: 2.21.1
     created: "2026-03-17T18:38:45.009078254Z"
@@ -99,6 +142,37 @@ entries:
     urls:
     - https://github.com/prefeitura-rio/charts/releases/download/letta-0.1.5/letta-0.1.5.tgz
     version: 0.1.5
+  sequin:
+  - apiVersion: v2
+    created: "2026-06-25T15:23:44.833326-03:00"
+    dependencies:
+    - name: common
+      repository: oci://registry-1.docker.io/bitnamicharts
+      tags:
+      - bitnami-common
+      version: 2.x.x
+    - alias: valkey
+      condition: valkey.enabled
+      name: valkey
+      repository: oci://registry-1.docker.io/cloudpirates
+      version: 0.17.0
+    description: Helm chart for Sequin with external PostgreSQL (Cloud SQL) and Valkey
+      cache
+    digest: 8247e62708cf99c6e3fd161b34d5aa71a5a2663be1d667444705b2027c6766f5
+    maintainers:
+    - email: carter.e.pedersen@gmail.com
+      name: Carter Pedersen
+      url: https://github.com/RTLS
+    - email: alexey@zhokhov.com
+      name: Alexey Zhokhov
+      url: https://github.com/donbeave
+    name: sequin
+    sources:
+    - https://github.com/sequinstream/helm-chart-sequin
+    type: application
+    urls:
+    - https://github.com/prefeitura-rio/charts/releases/download/cloudsql-proxy-v1.0.2/sequin-0.2.3.tgz
+    version: 0.2.3
   typesense:
   - apiVersion: v2
     appVersion: "30.1"
@@ -118,4 +192,4 @@ entries:
     urls:
     - https://github.com/prefeitura-rio/charts/releases/download/typesense-1.1.0/typesense-1.1.0.tgz
     version: 1.1.0
-generated: "2026-04-07T21:26:20.178403622Z"
+generated: "2026-06-25T15:23:44.822456-03:00"
