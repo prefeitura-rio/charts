@@ -21,7 +21,7 @@ entries:
     name: base-chart
     type: application
     urls:
-    - https://github.com/prefeitura-rio/charts/releases/download/cloudsql-proxy-v1.0.2/base-chart-2.4.2.tgz
+    - https://github.com/prefeitura-rio/charts/releases/download/base-chart-v2.4.2/base-chart-2.4.2.tgz
     version: 2.4.2
   - apiVersion: v2
     appVersion: "1.25"
@@ -171,7 +171,7 @@ entries:
     - https://github.com/sequinstream/helm-chart-sequin
     type: application
     urls:
-    - https://github.com/prefeitura-rio/charts/releases/download/cloudsql-proxy-v1.0.2/sequin-0.2.3.tgz
+    - https://github.com/prefeitura-rio/charts/releases/download/sequin-v0.2.3/sequin-0.2.3.tgz
     version: 0.2.3
   typesense:
   - apiVersion: v2
