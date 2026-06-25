@@ -1,6 +1,6 @@
 <!--- app-name: Sequin -->
 
-> Originally forked from https://github.com/sequinstream/helm-chart-sequin at d1a590b516dfec72810e5b546afcc172e3e939ec. Adapted for our purposes
+> Originally forked from https://github.com/sequinstream/helm-chart-sequin at d1a590b516dfec72810e5b546afcc172e3e939ec. Adapted for our purposes.
 
 # Sequin Helm Chart
 
