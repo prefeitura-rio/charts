@@ -1,14 +1,14 @@
 {{- if .Values.ingress.enabled }}
-apiVersion: {{ include "common.capabilities.ingress.apiVersion" . }}
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "common.names.fullname" . }}
-  namespace: {{ include "common.names.namespace" . | quote }}
-  {{- $labels := include "common.tplvalues.merge" ( dict "values" ( list .Values.ingress.labels .Values.commonLabels ) "context" . ) }}
-  labels: {{- include "common.labels.standard" ( dict "customLabels" $labels "context" $ ) | nindent 4 }}
+  name: {{ include "sequin.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  {{- $labels := include "sequin.mergeValues" ( dict "values" ( list .Values.ingress.labels .Values.commonLabels ) "context" . ) }}
+  labels: {{- include "sequin.labels" ( dict "customLabels" $labels "context" $ ) | nindent 4 }}
   {{- if or .Values.ingress.annotations .Values.commonAnnotations }}
-  {{- $annotations := include "common.tplvalues.merge" ( dict "values" ( list .Values.ingress.annotations .Values.commonAnnotations ) "context" . ) }}
-  annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $) | nindent 4 }}
+  {{- $annotations := include "sequin.mergeValues" ( dict "values" ( list .Values.ingress.annotations .Values.commonAnnotations ) "context" . ) }}
+  annotations: {{- include "sequin.tplrender" ( dict "value" $annotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
   {{- if .Values.ingress.ingressClassName }}
@@ -16,7 +16,7 @@ spec:
   {{- end }}
   rules:
     {{- if .Values.ingress.hostname }}
-    - host: {{ include "common.tplvalues.render" ( dict "value" .Values.ingress.hostname "context" $ ) }}
+    - host: {{ include "sequin.tplrender" ( dict "value" .Values.ingress.hostname "context" $ ) }}
       http:
         paths:
           {{- if .Values.ingress.extraPaths }}
@@ -24,28 +24,36 @@ spec:
           {{- end }}
           - path: {{ .Values.ingress.path }}
             pathType: {{ .Values.ingress.pathType }}
-            backend: {{- include "common.ingress.backend" (dict "serviceName" (include "common.names.fullname" .) "servicePort" "http" "context" $)  | nindent 14 }}
+            backend:
+              service:
+                name: {{ include "sequin.fullname" . }}
+                port:
+                  name: http
     {{- end }}
     {{- range .Values.ingress.extraHosts }}
-    - host: {{ include "common.tplvalues.render" ( dict "value" .name "context" $ ) }}
+    - host: {{ include "sequin.tplrender" ( dict "value" .name "context" $ ) }}
       http:
         paths:
           - path: {{ default "/" .path }}
             pathType: {{ default "ImplementationSpecific" .pathType }}
-            backend: {{- include "common.ingress.backend" (dict "serviceName" (include "common.names.fullname" $) "servicePort" "http" "context" $) | nindent 14 }}
+            backend:
+              service:
+                name: {{ include "sequin.fullname" $ }}
+                port:
+                  name: http
     {{- end }}
     {{- if .Values.ingress.extraRules }}
-    {{- include "common.tplvalues.render" (dict "value" .Values.ingress.extraRules "context" $) | nindent 4 }}
+    {{- include "sequin.tplrender" (dict "value" .Values.ingress.extraRules "context" $) | nindent 4 }}
     {{- end }}
-  {{- if or (and .Values.ingress.tls (or (include "common.ingress.certManagerRequest" ( dict "annotations" .Values.ingress.annotations )) .Values.ingress.selfSigned)) .Values.ingress.extraTls }}
+  {{- if or (and .Values.ingress.tls (or (hasKey (.Values.ingress.annotations | default dict) "cert-manager.io/cluster-issuer") (hasKey (.Values.ingress.annotations | default dict) "cert-manager.io/issuer") .Values.ingress.selfSigned)) .Values.ingress.extraTls }}
   tls:
-    {{- if and .Values.ingress.tls (or (include "common.ingress.certManagerRequest" ( dict "annotations" .Values.ingress.annotations )) .Values.ingress.selfSigned) }}
+    {{- if and .Values.ingress.tls (or (hasKey (.Values.ingress.annotations | default dict) "cert-manager.io/cluster-issuer") (hasKey (.Values.ingress.annotations | default dict) "cert-manager.io/issuer") .Values.ingress.selfSigned) }}
     - hosts:
         - {{ .Values.ingress.hostname | quote }}
       secretName: {{ printf "%s-tls" .Values.ingress.hostname }}
     {{- end }}
     {{- if .Values.ingress.extraTls }}
-    {{- include "common.tplvalues.render" (dict "value" .Values.ingress.extraTls "context" $) | nindent 4 }}
+    {{- include "sequin.tplrender" (dict "value" .Values.ingress.extraTls "context" $) | nindent 4 }}
     {{- end }}
   {{- end }}
 {{- end }}
