@@ -1,7 +1,7 @@
 apiVersion: v2
 name: sequin
 description: Helm chart for Sequin with external PostgreSQL (Cloud SQL) and Valkey cache
-version: 0.3.0
+version: 0.3.1
 type: application
 maintainers:
   - name: Carter Pedersen
