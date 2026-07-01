@@ -14,12 +14,12 @@ helm pull oci://ghcr.io/prefeitura-rio/charts/<chart-name> --version <version>
 
 ## Available Charts
 
-| Chart             | Description                                                                  | Documentation                   |
-| ----------------- | ---------------------------------------------------------------------------- | ------------------------------- |
-| **base-chart**    | Production-ready chart with Istio, autoscaling, secrets management, and more | [Docs](./charts/base-chart/)    |
-| **cloudsql-proxy** | Sidecar proxy for connecting to Google Cloud SQL instances                  | [Docs](./charts/cloudsql-proxy/) |
-| **sequin**        | Stream changes from Postgres databases                                       | [Docs](./charts/sequin/)        |
-| **typesense**     | Fast, typo-tolerant search engine                                            | [Docs](./charts/typesense/)     |
+| Chart              | Description                                                                  | Documentation                    |
+| ------------------ | ---------------------------------------------------------------------------- | -------------------------------- |
+| **base-chart**     | Production-ready chart with Istio, autoscaling, secrets management, and more | [Docs](./charts/base-chart/)     |
+| **cloudsql-proxy** | Sidecar proxy for connecting to Google Cloud SQL instances                   | [Docs](./charts/cloudsql-proxy/) |
+| **sequin**         | Stream changes from Postgres databases                                       | [Docs](./charts/sequin/)         |
+| **typesense**      | Fast, typo-tolerant search engine                                            | [Docs](./charts/typesense/)      |
 
 ## Development
 
