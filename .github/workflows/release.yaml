@@ -172,33 +172,3 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.version.outputs.tag }}
         run: gh release upload "$TAG" ./packaged/*.tgz
-
-      - name: Update gh-pages Helm index
-        if: steps.chart.outputs.skip != 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CHART: ${{ steps.chart.outputs.chart }}
-          VERSION: ${{ steps.version.outputs.version }}
-          TAG: ${{ steps.version.outputs.tag }}
-          PAGES_URL: https://github.com/${{ github.repository }}/releases/download
-        run: |
-          REPO_ROOT=$(pwd)
-          git fetch origin gh-pages
-          git worktree add /tmp/gh-pages gh-pages
-
-          TGZ_FILE=$(ls "$REPO_ROOT/packaged/"*.tgz)
-          TGZ_NAME=$(basename "$TGZ_FILE")
-          cp "$TGZ_FILE" /tmp/gh-pages/
-
-          cd /tmp/gh-pages
-          helm repo index . \
-            --url "$PAGES_URL/$TAG" \
-            --merge index.yaml
-
-          rm -f "$TGZ_NAME"
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add index.yaml
-          git diff --cached --quiet || git commit -m "chore: update index.yaml for $TAG [skip ci]"
-          git push origin gh-pages
