@@ -1,0 +1,62 @@
+{{- range $name, $spec := .Values.extraDeployments }}
+{{- if $spec.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "base-chart.fullname" $ }}-{{ $name }}
+  labels:
+    {{- include "base-chart.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  replicas: {{ $spec.replicaCount | default 1 }}
+  {{- if $.Values.revisionHistoryLimit }}
+  revisionHistoryLimit: {{ $.Values.revisionHistoryLimit }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "base-chart.selectorLabels" $ | nindent 6 }}
+      app.kubernetes.io/component: {{ $name }}
+  template:
+    metadata:
+      labels:
+        {{- include "base-chart.labels" $ | nindent 8 }}
+        app.kubernetes.io/component: {{ $name }}
+    spec:
+      imagePullSecrets:
+        {{- include "base-chart.imagePullSecrets" $ | nindent 8 }}
+      serviceAccountName: {{ include "base-chart.serviceAccountName" $ }}
+      containers:
+        - name: {{ $name }}
+          image: "{{ $.Values.image.repository }}:{{ $.Values.image.tag }}"
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          command: {{ $spec.command | toYaml | nindent 12 }}
+          {{- with $spec.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- else }}
+          resources:
+            {{- toYaml $.Values.resources | nindent 12 }}
+          {{- end }}
+          env:
+            {{- $spec.env | default list | toYaml | nindent 12 }}
+          envFrom:
+            {{- $.Values.envFrom | toYaml | nindent 12 }}
+          {{- with $.Values.healthCheck }}
+          {{- if .path }}
+          livenessProbe:
+            httpGet:
+              path: {{ .path }}
+              port: {{ $.Values.service.containerPort }}
+            initialDelaySeconds: {{ .initialDelaySeconds | default 15 }}
+            periodSeconds: {{ .periodSeconds | default 10 }}
+          readinessProbe:
+            httpGet:
+              path: {{ .path }}
+              port: {{ $.Values.service.containerPort }}
+            initialDelaySeconds: {{ .initialDelaySeconds | default 15 }}
+            periodSeconds: {{ .periodSeconds | default 10 }}
+          {{- end }}
+          {{- end }}
+{{- end }}
+{{- end }}

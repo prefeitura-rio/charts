@@ -1140,3 +1140,24 @@ cloudsql:
     create: false
     serviceAccountKey: ""
     key: service-account-key.json
+
+# extraDeployments — Generic additional deployments (sidecars, workers)
+# Each entry creates a Deployment with the same image, secrets, and envFrom as the main app.
+# Optionally, each can have its own KEDA ScaledObject.
+# Example:
+#   extraDeployments:
+#     sync-consumer:
+#       enabled: true
+#       command:
+#         - faststream
+#         - run
+#         - app.sync.consumer:consumer
+#       keda:
+#         enabled: true
+#         triggers:
+#           - type: rabbitmq
+#             metadata:
+#               queueName: my-queue
+#               mode: QueueLength
+#               value: "1"
+extraDeployments: {}
