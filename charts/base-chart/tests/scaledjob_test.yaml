@@ -9,30 +9,34 @@ tests:
 
   - it: should render nothing when entry is disabled
     set:
-      scaledJobs:
-        sync-consumer:
-          enabled: false
-          command: ["echo"]
-          triggers: []
+      autoscaling:
+        keda:
+          scaledJobs:
+            sync-consumer:
+              enabled: false
+              command: ["echo"]
+              triggers: []
     asserts:
       - hasDocuments:
           count: 0
 
   - it: should render ScaledJob for enabled entry
     set:
-      scaledJobs:
-        sync-consumer:
-          enabled: true
-          command:
-            - faststream
-            - run
-            - app.sync.consumer:consumer
-          triggers:
-            - type: rabbitmq
-              metadata:
-                queueName: sync:cnpj:shards
-                mode: QueueLength
-                value: "1"
+      autoscaling:
+        keda:
+          scaledJobs:
+            sync-consumer:
+              enabled: true
+              command:
+                - faststream
+                - run
+                - app.sync.consumer:consumer
+              triggers:
+                - type: rabbitmq
+                  metadata:
+                    queueName: sync:cnpj:shards
+                    mode: QueueLength
+                    value: "1"
     asserts:
       - isKind:
           of: ScaledJob
@@ -45,11 +49,13 @@ tests:
 
   - it: should set component label to job name
     set:
-      scaledJobs:
-        worker:
-          enabled: true
-          command: ["echo"]
-          triggers: []
+      autoscaling:
+        keda:
+          scaledJobs:
+            worker:
+              enabled: true
+              command: ["echo"]
+              triggers: []
     asserts:
       - equal:
           path: metadata.labels["app.kubernetes.io/component"]
@@ -60,11 +66,13 @@ tests:
 
   - it: should always have parallelism and completions of 1
     set:
-      scaledJobs:
-        worker:
-          enabled: true
-          command: ["echo"]
-          triggers: []
+      autoscaling:
+        keda:
+          scaledJobs:
+            worker:
+              enabled: true
+              command: ["echo"]
+              triggers: []
     asserts:
       - equal:
           path: spec.jobTargetRef.parallelism
@@ -75,11 +83,13 @@ tests:
 
   - it: should default activeDeadlineSeconds to 3600
     set:
-      scaledJobs:
-        worker:
-          enabled: true
-          command: ["echo"]
-          triggers: []
+      autoscaling:
+        keda:
+          scaledJobs:
+            worker:
+              enabled: true
+              command: ["echo"]
+              triggers: []
     asserts:
       - equal:
           path: spec.jobTargetRef.activeDeadlineSeconds
@@ -87,11 +97,13 @@ tests:
 
   - it: should default backoffLimit to 3
     set:
-      scaledJobs:
-        worker:
-          enabled: true
-          command: ["echo"]
-          triggers: []
+      autoscaling:
+        keda:
+          scaledJobs:
+            worker:
+              enabled: true
+              command: ["echo"]
+              triggers: []
     asserts:
       - equal:
           path: spec.jobTargetRef.backoffLimit
@@ -99,13 +111,15 @@ tests:
 
   - it: should use custom activeDeadlineSeconds and backoffLimit
     set:
-      scaledJobs:
-        worker:
-          enabled: true
-          command: ["echo"]
-          triggers: []
-          activeDeadlineSeconds: 600
-          backoffLimit: 1
+      autoscaling:
+        keda:
+          scaledJobs:
+            worker:
+              enabled: true
+              command: ["echo"]
+              triggers: []
+              activeDeadlineSeconds: 600
+              backoffLimit: 1
     asserts:
       - equal:
           path: spec.jobTargetRef.activeDeadlineSeconds
@@ -116,11 +130,13 @@ tests:
 
   - it: should always have restartPolicy Never
     set:
-      scaledJobs:
-        worker:
-          enabled: true
-          command: ["echo"]
-          triggers: []
+      autoscaling:
+        keda:
+          scaledJobs:
+            worker:
+              enabled: true
+              command: ["echo"]
+              triggers: []
     asserts:
       - equal:
           path: spec.jobTargetRef.template.spec.restartPolicy
@@ -131,11 +147,13 @@ tests:
       image:
         repository: my-app
         tag: "3.0.0"
-      scaledJobs:
-        worker:
-          enabled: true
-          command: ["echo"]
-          triggers: []
+      autoscaling:
+        keda:
+          scaledJobs:
+            worker:
+              enabled: true
+              command: ["echo"]
+              triggers: []
     asserts:
       - equal:
           path: spec.jobTargetRef.template.spec.containers[0].image
@@ -146,11 +164,13 @@ tests:
       envFrom:
         - secretRef:
             name: my-secrets
-      scaledJobs:
-        worker:
-          enabled: true
-          command: ["echo"]
-          triggers: []
+      autoscaling:
+        keda:
+          scaledJobs:
+            worker:
+              enabled: true
+              command: ["echo"]
+              triggers: []
     asserts:
       - contains:
           path: spec.jobTargetRef.template.spec.containers[0].envFrom
@@ -160,11 +180,13 @@ tests:
 
   - it: should default minReplicaCount to 0 and maxReplicaCount to 10
     set:
-      scaledJobs:
-        worker:
-          enabled: true
-          command: ["echo"]
-          triggers: []
+      autoscaling:
+        keda:
+          scaledJobs:
+            worker:
+              enabled: true
+              command: ["echo"]
+              triggers: []
     asserts:
       - equal:
           path: spec.minReplicaCount
@@ -175,12 +197,14 @@ tests:
 
   - it: should use custom maxReplicaCount
     set:
-      scaledJobs:
-        worker:
-          enabled: true
-          command: ["echo"]
-          triggers: []
-          maxReplicaCount: 20
+      autoscaling:
+        keda:
+          scaledJobs:
+            worker:
+              enabled: true
+              command: ["echo"]
+              triggers: []
+              maxReplicaCount: 20
     asserts:
       - equal:
           path: spec.maxReplicaCount
@@ -188,11 +212,13 @@ tests:
 
   - it: should default pollingInterval to 30
     set:
-      scaledJobs:
-        worker:
-          enabled: true
-          command: ["echo"]
-          triggers: []
+      autoscaling:
+        keda:
+          scaledJobs:
+            worker:
+              enabled: true
+              command: ["echo"]
+              triggers: []
     asserts:
       - equal:
           path: spec.pollingInterval
@@ -200,11 +226,13 @@ tests:
 
   - it: should always use accurate scalingStrategy
     set:
-      scaledJobs:
-        worker:
-          enabled: true
-          command: ["echo"]
-          triggers: []
+      autoscaling:
+        keda:
+          scaledJobs:
+            worker:
+              enabled: true
+              command: ["echo"]
+              triggers: []
     asserts:
       - equal:
           path: spec.scalingStrategy.strategy
@@ -212,21 +240,23 @@ tests:
 
   - it: should pass through trigger metadata
     set:
-      scaledJobs:
-        sync-consumer:
-          enabled: true
-          command: ["faststream", "run", "app:consumer"]
-          triggers:
-            - type: rabbitmq
-              metadata:
-                queueName: sync:cnpj:shards
-                mode: QueueLength
-                value: "1"
-            - type: rabbitmq
-              metadata:
-                queueName: sync:cpf:shards
-                mode: QueueLength
-                value: "1"
+      autoscaling:
+        keda:
+          scaledJobs:
+            sync-consumer:
+              enabled: true
+              command: ["faststream", "run", "app:consumer"]
+              triggers:
+                - type: rabbitmq
+                  metadata:
+                    queueName: sync:cnpj:shards
+                    mode: QueueLength
+                    value: "1"
+                - type: rabbitmq
+                  metadata:
+                    queueName: sync:cpf:shards
+                    mode: QueueLength
+                    value: "1"
     asserts:
       - equal:
           path: spec.triggers[0].type
@@ -240,15 +270,17 @@ tests:
 
   - it: should render multiple ScaledJobs for multiple entries
     set:
-      scaledJobs:
-        cnpj-consumer:
-          enabled: true
-          command: ["echo", "cnpj"]
-          triggers: []
-        cpf-consumer:
-          enabled: true
-          command: ["echo", "cpf"]
-          triggers: []
+      autoscaling:
+        keda:
+          scaledJobs:
+            cnpj-consumer:
+              enabled: true
+              command: ["echo", "cnpj"]
+              triggers: []
+            cpf-consumer:
+              enabled: true
+              command: ["echo", "cpf"]
+              triggers: []
     asserts:
       - hasDocuments:
           count: 2

@@ -1,4 +1,4 @@
-{{- range $name, $spec := .Values.scaledJobs }}
+{{- range $name, $spec := .Values.autoscaling.keda.scaledJobs }}
 {{- if $spec.enabled }}
 ---
 apiVersion: keda.sh/v1alpha1
