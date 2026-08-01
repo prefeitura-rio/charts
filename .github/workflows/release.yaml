@@ -103,7 +103,7 @@ jobs:
         run: |
           CHART=${{ steps.chart.outputs.chart }}
           if grep -q "^dependencies:" "charts/$CHART/Chart.yaml"; then
-            helm dependency build "charts/$CHART"
+            helm dependency update "charts/$CHART"
           fi
 
       - name: Test
