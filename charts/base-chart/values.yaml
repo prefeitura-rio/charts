@@ -1161,3 +1161,28 @@ cloudsql:
 #               mode: QueueLength
 #               value: "1"
 extraDeployments: {}
+
+# scaledJobs — KEDA ScaledJobs for ephemeral, queue-driven workloads.
+# Each entry creates a ScaledJob (not a Deployment) with the same image,
+# envFrom, and secrets as the main app. The job pod processes one message
+# and exits. KEDA spins up one pod per pending message (up to maxReplicaCount).
+# No idle pods between runs.
+# Example:
+#   scaledJobs:
+#     sync-consumer:
+#       enabled: true
+#       command:
+#         - faststream
+#         - run
+#         - app.sync.consumer:consumer
+#       maxReplicaCount: 10
+#       activeDeadlineSeconds: 3600
+#       backoffLimit: 3
+#       pollingInterval: 30
+#       triggers:
+#         - type: rabbitmq
+#           metadata:
+#             queueName: my-queue
+#             mode: QueueLength
+#             value: "1"
+scaledJobs: {}

@@ -1,0 +1,50 @@
+{{- range $name, $spec := .Values.scaledJobs }}
+{{- if $spec.enabled }}
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledJob
+metadata:
+  name: {{ include "base-chart.fullname" $ }}-{{ $name }}
+  labels:
+    {{- include "base-chart.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  jobTargetRef:
+    parallelism: 1
+    completions: 1
+    activeDeadlineSeconds: {{ $spec.activeDeadlineSeconds | default 3600 }}
+    backoffLimit: {{ $spec.backoffLimit | default 3 }}
+    template:
+      metadata:
+        labels:
+          {{- include "base-chart.selectorLabels" $ | nindent 10 }}
+          app.kubernetes.io/component: {{ $name }}
+      spec:
+        restartPolicy: Never
+        imagePullSecrets:
+          {{- include "base-chart.imagePullSecrets" $ | nindent 10 }}
+        serviceAccountName: {{ include "base-chart.serviceAccountName" $ }}
+        containers:
+          - name: {{ $name }}
+            image: "{{ $.Values.image.repository }}:{{ $.Values.image.tag }}"
+            imagePullPolicy: {{ $.Values.image.pullPolicy }}
+            command: {{ $spec.command | toYaml | nindent 14 }}
+            {{- with $spec.resources | default $.Values.resources }}
+            resources:
+              {{- toYaml . | nindent 14 }}
+            {{- end }}
+            {{- with $spec.env }}
+            env:
+              {{- toYaml . | nindent 14 }}
+            {{- end }}
+            envFrom:
+              {{- $.Values.envFrom | toYaml | nindent 14 }}
+  pollingInterval: {{ $spec.pollingInterval | default 30 }}
+  minReplicaCount: 0
+  maxReplicaCount: {{ $spec.maxReplicaCount | default 10 }}
+  scalingStrategy:
+    strategy: accurate
+  triggers:
+    {{- toYaml $spec.triggers | nindent 4 }}
+{{- end }}
+{{- end }}
