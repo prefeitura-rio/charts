@@ -1066,6 +1066,10 @@ valkey:
   persistence:
     enabled: true
     size: 8Gi
+  sentinel:
+    enabled: false
+    port: 26379
+    masterName: mymaster
 
 # RabbitMQ (Message Queue)
 # When enabled, the following environment variables are automatically injected:

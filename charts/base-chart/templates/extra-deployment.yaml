@@ -38,8 +38,26 @@ spec:
           resources:
             {{- toYaml $.Values.resources | nindent 12 }}
           {{- end }}
+          {{- if or $spec.env $.Values.valkey.enabled }}
           env:
-            {{- $spec.env | default list | toYaml | nindent 12 }}
+            {{- with $spec.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- if $.Values.valkey.enabled }}
+            - name: REDIS_HOST
+              value: {{ $.Release.Name }}-valkey
+            - name: REDIS_PORT
+              value: "6379"
+            {{- if $.Values.valkey.sentinel.enabled }}
+            - name: REDIS_USE_SENTINEL
+              value: "true"
+            - name: REDIS_SENTINEL_PORT
+              value: {{ $.Values.valkey.sentinel.port | default 26379 | quote }}
+            - name: REDIS_SENTINEL_MASTER
+              value: {{ $.Values.valkey.sentinel.masterName | default "mymaster" }}
+            {{- end }}
+            {{- end }}
+          {{- end }}
           envFrom:
             {{- $.Values.envFrom | toYaml | nindent 12 }}
           {{- with $.Values.healthCheck }}
