@@ -63,7 +63,7 @@ spec:
   triggers:
     {{- range $spec.triggers }}
     - type: {{ .type }}
-      {{- if $.Values.autoscaling.keda.triggerAuthentication }}
+      {{- if and $.Values.autoscaling.keda.triggerAuthentication (ne .type "prometheus") }}
       authenticationRef:
         name: {{ $.Values.autoscaling.keda.triggerAuthentication.name | default (printf "%s-trigger-auth" (include "base-chart.fullname" $)) }}
       {{- end }}

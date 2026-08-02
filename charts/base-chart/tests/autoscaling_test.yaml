@@ -334,3 +334,40 @@ tests:
     asserts:
       - notExists:
           path: spec.advanced
+
+  - it: KEDA should not inject authenticationRef for prometheus triggers even when triggerAuthentication is set
+    template: scaledobject.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.triggerAuthentication:
+        secretTargetRef:
+          - parameter: host
+            name: my-secrets
+            key: RABBITMQ_URL
+      autoscaling.keda.triggers:
+        - type: prometheus
+          metadata:
+            threshold: "100"
+    asserts:
+      - isNull:
+          path: spec.triggers[0].authenticationRef
+
+  - it: KEDA should inject authenticationRef for non-prometheus triggers when triggerAuthentication is set
+    template: scaledobject.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.triggerAuthentication:
+        secretTargetRef:
+          - parameter: host
+            name: my-secrets
+            key: RABBITMQ_URL
+      autoscaling.keda.triggers:
+        - type: rabbitmq
+          metadata:
+            queueName: my-queue
+            mode: QueueLength
+            value: "1"
+    asserts:
+      - equal:
+          path: spec.triggers[0].authenticationRef.name
+          value: RELEASE-NAME-trigger-auth
