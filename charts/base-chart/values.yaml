@@ -907,71 +907,69 @@ infisicalSecret:
       secretName: "infisical-universal-auth"
       secretNamespace: "infisical"
 
-# Argo Image Updater - atualização automática de imagens Docker
-# Mais informações: https://argocd-image-updater.readthedocs.io/
+# Flux Image Automation - atualização automática de imagens via GitOps
+# Mais informações: https://fluxcd.io/flux/components/image/
 #
-# Defaults inteligentes (quando enabled=true):
-#   - namespace: "argo-cd"
-#   - applicationRef.namePattern: usa o releaseName do helm
-#   - applicationRef.namespace: usa o namespace do release
-#   - images: usa image.repository e image.tag do deployment com alias do fullnameOverride/nameOverride
-#   - registrySecret: usa o primeiro imagePullSecret (imagePullSecrets[0].name)
+# Comportamentos (quando enabled=true e automated=true):
+#   - namespace: "flux-system" (recomendado para os recursos do Flux)
+#   - Cria automaticamente: ImageRepository, ImagePolicy e ImageUpdateAutomation
+#   - ImageRepository: rastreia a imagem principal usando .Values.image.repository
+#   - ImagePolicy: aplica a regra definida (ex: semver) para aprovar novas tags
+#   - ImageUpdateAutomation: faz o push/commit no Git atualizando a tag validada
 #
-# Exemplo mínimo - apenas habilitar:
-#   argoImageUpdater:
+# Exemplo mínimo - habilitar rastreamento de SemVer:
+#   flux:
 #     enabled: true
+#     automated: true
+#     policy:
+#       semver:
+#         range: '>=1.0.0'
 #
-# Isso criará automaticamente um ImageUpdater que monitora a imagem do deployment
-argoImageUpdater:
-  # Habilita o Argo Image Updater (desabilitado por padrão)
-  enabled: false
+# OBSERVAÇÃO: Para que a automação escreva no arquivo, não esqueça de colocar
+# o marcador no seu HelmRelease/Deployment: # {"$imagepolicy": "namespace:imagepolicy-name"}
+flux:
+  # Habilita a criação de ImageRepository, ImagePolicy e GitRepository
+  enabled: true
+  
+  namespace: "flux-system"
 
-  # Namespace onde o Argo CD está instalado (padrão: "argo-cd")
-  namespace: ""
+  # Intervalo padrão de verificação para o GitRepository e ImageRepository principal
+  interval: "7m0s"
+  
+  # Secret usado para autenticar no registry da imagem (.dockerconfigjson)
+  imagePullSecret: "flux-docker-auth"
 
-  # Anotações adicionais para o recurso ImageUpdater
-  annotations: {}
+  # Política de atualização da imagem principal
+  policy:
+    semver:
+      range: '>=1.0.0'
+  
+  # Filtros opcionais para tags (deixe vazio se não usar)
+  filterTags: {}
 
-  # Labels adicionais para o recurso ImageUpdater
-  labels: {}
+  # Configuração do repositório Git onde o Flux fará os commits
+  gitRepo:
+    url: ""                     # "ssh://git@github.com/<user or org>/<repo>"
+    branch: "main"
+    secretName: "flux-git-auth" # Secret para autenticar no Git (se necessário)
 
-  # Referência à aplicação Argo CD
-  # Se não especificado, usa valores do release:
-  #   - namePattern: .Release.Name
-  #   - namespace: .Release.Namespace
-  applicationRef:
-    # Padrão do nome da aplicação (regex suportado)
-    namePattern: ""
+  # Políticas adicionais caso tenha múltiplos containers
+  extraPolicies: []
 
-    # Namespace da aplicação Argo CD (opcional)
-    namespace: ""
-
-  # Secret do registry para autenticação
-  # Se não especificado, usa automaticamente imagePullSecrets[0].name
-  registrySecret: ""
-
-  # Estratégia de atualização padrão para imagens derivadas automaticamente
-  # Opções: "digest", "semver", "latest"
-  updateStrategy: "digest"
-
-  # Constraint semver (apenas quando updateStrategy="semver")
-  semverConstraint: ""
-
-  # Lista de imagens a serem monitoradas para atualizações
-  # Se vazio, usa automaticamente a imagem do deployment:
-  #   - alias: fullnameOverride ou nameOverride ou Release.Name
-  #   - imageName: image.repository:image.tag
-  #   - registrySecret: imagePullSecrets[0].name (se existir)
-  #   - updateStrategy: argoImageUpdater.updateStrategy
-  images: []
-  # Exemplo para sobrescrever ou adicionar imagens extras:
-  # images:
-  # - alias: "api"
-  #   imageName: "ghcr.io/company/app-api"
-  #   registrySecret: "ghcr-credentials"  # Opcional - usa imagePullSecrets[0].name se omitido
-  #   commonUpdateSettings:
-  #     updateStrategy: "digest"  # ou "semver", "latest"
-  #     semverConstraint: "^1.0.0"  # Apenas para strategy semver
+  # Configuração do ImageUpdateAutomation
+  updateAutomation:
+    enabled: true
+    interval: "7m"
+    sourceRef:
+      name: "flux-system"
+    git:
+      branch: "main"
+      commit:
+        author:
+          name: "fluxcdbot"
+          email: "fluxcdbot@users.noreply.github.com"
+        # O Helm precisa do quote para não interpretar as chaves do Go template do Flux
+        messageTemplate: '{{range .Changed.Changes}}{{print .OldValue}} -> {{println .NewValue}}{{end}}'
 
 # CronJobs - tarefas agendadas
 # Mais informações: https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/

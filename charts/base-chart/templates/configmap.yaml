@@ -5,8 +5,6 @@ metadata:
   name: {{ include "base-chart.fullname" . }}
   labels:
     {{- include "base-chart.labels" . | nindent 4 }}
-  annotations:
-    argocd.argoproj.io/sync-wave: "-1"
 data:
   {{- range $key, $value := .Values.configMap.data }}
   {{ $key }}: {{ $value | toString | quote }}

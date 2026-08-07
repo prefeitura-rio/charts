@@ -7,8 +7,6 @@ metadata:
   name: {{ include "base-chart.fullname" . }}
   labels:
     {{- include "base-chart.labels" . | nindent 4 }}
-  annotations:
-    argocd.argoproj.io/sync-wave: "2"
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
