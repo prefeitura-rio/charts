@@ -3,7 +3,6 @@ kind: Deployment
 metadata:
   name: {{ include "base-chart.fullname" . }}
   annotations:
-    argocd.argoproj.io/sync-wave: "1"
     secrets.infisical.com/auto-reload: "true"
     {{- if .Values.configMap.enabled }}
     checksum/configmap: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}

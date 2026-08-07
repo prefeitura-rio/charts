@@ -8,7 +8,6 @@ metadata:
   labels:
     {{- include "base-chart.labels" . | nindent 4 }}
   annotations:
-    argocd.argoproj.io/sync-wave: "3"
     {{- with .Values.ingress.annotations }}
     {{- toYaml . | nindent 4 }}
     {{- end }}

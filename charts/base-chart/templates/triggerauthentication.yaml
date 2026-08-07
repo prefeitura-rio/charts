@@ -7,8 +7,6 @@ metadata:
   name: {{ $triggerAuth.name | default (printf "%s-trigger-auth" $fullName) }}
   labels:
     {{- include "base-chart.labels" . | nindent 4 }}
-  annotations:
-    argocd.argoproj.io/sync-wave: "1"
 spec:
   {{- with $triggerAuth.secretTargetRef }}
   secretTargetRef:
