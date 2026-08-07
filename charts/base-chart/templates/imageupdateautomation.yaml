@@ -1,0 +1,29 @@
+{{- if and .Values.flux.enabled .Values.flux.updateAutomation.enabled }}
+{{- $fullName := include "base-chart.fullname" . }}
+{{- $labels := include "base-chart.labels" . }}
+{{- $namespace := .Values.flux.namespace | default "flux-system" }}
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageUpdateAutomation
+metadata:
+  name: {{ $fullName }}-image-updater
+  namespace: {{ $namespace }}
+  labels:
+  {{- $labels | nindent 4 }}
+spec:
+  interval: {{ .Values.flux.updateAutomation.interval | default "1m" }}
+  sourceRef:
+    kind: GitRepository
+    name: {{ .Values.flux.updateAutomation.sourceRef.name }}
+  git:
+    checkout:
+      ref:
+        branch: {{ .Values.flux.updateAutomation.git.branch | default "main" }}
+    commit:
+      author:
+        email: {{ .Values.flux.updateAutomation.git.commit.author.email | default "fluxcdbot@users.noreply.github.com" }}
+        name: {{ .Values.flux.updateAutomation.git.commit.author.name | default "fluxcdbot" }}
+      messageTemplate: {{ .Values.flux.updateAutomation.git.commit.messageTemplate | default "chore(image): update to {{range .Updated.Images}}{{println .}}{{end}}" | quote }}
+    push:
+      branch: {{ .Values.flux.updateAutomation.git.branch | default "main" }}
+{{- end }}

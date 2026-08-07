@@ -1,0 +1,37 @@
+{{- if .Values.flux.enabled }}
+{{- $fullName := include "base-chart.fullname" . }}
+{{- $labels := include "base-chart.labels" . }}
+{{- $namespace := .Values.flux.namespace }}
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: {{ $fullName }}-main-image-policy
+  namespace: {{ $namespace }}
+  labels:
+  {{- $labels | nindent 4 }}
+spec:
+  filterTags:
+    {{- toYaml .Values.flux.filterTags | nindent 4}}
+  imageRepositoryRef:
+    name: {{ $fullName }}-main
+  policy:
+    {{- toYaml .Values.flux.policy | nindent 4 }}
+{{- range .Values.flux.extraPolicies }}
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: {{ $fullName }}-{{ .name }}-image-policy
+  namespace: {{ $namespace }}
+  labels:
+  {{- $labels | nindent 4 }}
+spec:
+  filterTags:
+    {{- toYaml .filterTags | nindent 4}}
+  imageRepositoryRef:
+    name: {{ $fullName }}-{{ .name }}
+  policy:
+    {{- toYaml .policy | nindent 4 }}
+{{- end }}
+{{- end }}
