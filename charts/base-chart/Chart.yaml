@@ -2,7 +2,7 @@ apiVersion: v2
 name: base-chart
 description: A Helm chart for basic deployments in Kubernetes
 type: application
-version: 2.4.2
+version: 2.4.8
 appVersion: "1.25"
 icon: https://helm.sh/img/helm.svg
 dependencies:
@@ -21,9 +21,9 @@ dependencies:
     condition: rabbitmq.enabled
     alias: rabbitmq
   # Cloud SQL Proxy - Secure connections to Google Cloud SQL
-  # https://github.com/iplanrio/charts/tree/main/charts/cloudsql-proxy
+  # https://github.com/prefeitura-rio/charts/tree/main/charts/cloudsql-proxy
   - name: cloudsql-proxy
-    version: "1.0.1"
-    repository: "oci://ghcr.io/iplanrio/charts"
+    version: "1.0.2"
+    repository: "oci://ghcr.io/prefeitura-rio/charts"
     condition: cloudsql.enabled
     alias: cloudsql

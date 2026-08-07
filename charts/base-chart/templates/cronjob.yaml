@@ -110,6 +110,14 @@ spec:
                   value: {{ $.Release.Name }}-valkey
                 - name: REDIS_PORT
                   value: "6379"
+                {{- if $.Values.valkey.sentinel.enabled }}
+                - name: REDIS_USE_SENTINEL
+                  value: "true"
+                - name: REDIS_SENTINEL_PORT
+                  value: {{ $.Values.valkey.sentinel.port | default 26379 | quote }}
+                - name: REDIS_SENTINEL_MASTER
+                  value: {{ $.Values.valkey.sentinel.masterName | default "mymaster" }}
+                {{- end }}
                 {{- end }}
                 {{- if $.Values.rabbitmq.enabled }}
                 - name: RABBITMQ_HOST

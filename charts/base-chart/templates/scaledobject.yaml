@@ -29,7 +29,7 @@ spec:
   triggers:
     {{- range $keda.triggers }}
     - type: {{ .type }}
-      {{- if $keda.triggerAuthentication }}
+      {{- if and $keda.triggerAuthentication (ne .type "prometheus") }}
       authenticationRef:
         name: {{ $keda.triggerAuthentication.name | default (printf "%s-trigger-auth" $fullName) }}
       {{- end }}

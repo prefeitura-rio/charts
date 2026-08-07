@@ -1,0 +1,20 @@
+{{- range $name, $spec := .Values.extraDeployments }}
+{{- if and $spec.enabled $spec.keda $spec.keda.enabled }}
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "base-chart.fullname" $ }}-{{ $name }}
+  labels:
+    {{- include "base-chart.labels" $ | nindent 4 }}
+spec:
+  scaleTargetRef:
+    name: {{ include "base-chart.fullname" $ }}-{{ $name }}
+  minReplicaCount: {{ $spec.keda.minReplicaCount | default 0 }}
+  maxReplicaCount: {{ $spec.keda.maxReplicaCount | default 5 }}
+  {{- with $spec.keda.triggers }}
+  triggers:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- end }}

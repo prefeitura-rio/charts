@@ -1,0 +1,191 @@
+suite: test extra deployments
+templates:
+  - extra-deployment.yaml
+tests:
+  - it: should render nothing when extraDeployments is empty
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render deployment for enabled entry
+    set:
+      extraDeployments:
+        sync-consumer:
+          enabled: true
+          command:
+            - faststream
+            - run
+            - app.sync.consumer:consumer
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-sync-consumer
+      - equal:
+          path: spec.template.spec.containers[0].command
+          value:
+            - faststream
+            - run
+            - app.sync.consumer:consumer
+
+  - it: should set component label to deployment name
+    set:
+      extraDeployments:
+        worker:
+          enabled: true
+          command: ["echo", "hello"]
+    asserts:
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/component"]
+          value: worker
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/component"]
+          value: worker
+
+  - it: should default replicaCount to 1
+    set:
+      extraDeployments:
+        worker:
+          enabled: true
+          command: ["echo"]
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 1
+
+  - it: should use custom replicaCount when specified
+    set:
+      extraDeployments:
+        worker:
+          enabled: true
+          command: ["echo"]
+          replicaCount: 3
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 3
+
+  - it: should use main image when no override
+    set:
+      image:
+        repository: my-app
+        tag: "2.0.0"
+      extraDeployments:
+        worker:
+          enabled: true
+          command: ["echo"]
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "my-app:2.0.0"
+
+  - it: should inherit envFrom from main deployment
+    set:
+      envFrom:
+        - secretRef:
+            name: my-secrets
+      extraDeployments:
+        worker:
+          enabled: true
+          command: ["echo"]
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            secretRef:
+              name: my-secrets
+
+  - it: should add custom env vars when specified
+    set:
+      extraDeployments:
+        worker:
+          enabled: true
+          command: ["echo"]
+          env:
+            - name: EXTRA_VAR
+              value: "extra"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: EXTRA_VAR
+            value: "extra"
+
+  - it: should not set health probes when no path configured
+    set:
+      extraDeployments:
+        worker:
+          enabled: true
+          command: ["echo"]
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].livenessProbe
+      - notExists:
+          path: spec.template.spec.containers[0].readinessProbe
+
+  - it: should inject REDIS_HOST and REDIS_PORT when valkey is enabled
+    set:
+      extraDeployments:
+        worker:
+          enabled: true
+          command: ["echo"]
+      valkey:
+        enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REDIS_HOST
+            value: RELEASE-NAME-valkey
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REDIS_PORT
+            value: "6379"
+
+  - it: should not inject sentinel env vars when valkey sentinel is disabled
+    set:
+      extraDeployments:
+        worker:
+          enabled: true
+          command: ["echo"]
+      valkey:
+        enabled: true
+        sentinel:
+          enabled: false
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REDIS_USE_SENTINEL
+            value: "true"
+
+  - it: should inject REDIS_USE_SENTINEL REDIS_SENTINEL_PORT and REDIS_SENTINEL_MASTER when sentinel is enabled
+    set:
+      extraDeployments:
+        worker:
+          enabled: true
+          command: ["echo"]
+      valkey:
+        enabled: true
+        sentinel:
+          enabled: true
+          port: 26379
+          masterName: mymaster
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REDIS_USE_SENTINEL
+            value: "true"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REDIS_SENTINEL_PORT
+            value: "26379"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REDIS_SENTINEL_MASTER
+            value: mymaster

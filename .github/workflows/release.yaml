@@ -98,12 +98,20 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
 
+      - name: Login to GHCR
+        if: steps.chart.outputs.skip != 'true'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" \
+            | helm registry login ${{ env.REGISTRY }} \
+                -u ${{ github.actor }} \
+                --password-stdin
+
       - name: Build chart dependencies
         if: steps.chart.outputs.skip != 'true'
         run: |
           CHART=${{ steps.chart.outputs.chart }}
           if grep -q "^dependencies:" "charts/$CHART/Chart.yaml"; then
-            helm dependency build "charts/$CHART"
+            helm dependency update "charts/$CHART"
           fi
 
       - name: Test
@@ -113,14 +121,6 @@ jobs:
       - name: Package
         if: steps.chart.outputs.skip != 'true'
         run: helm package charts/${{ steps.chart.outputs.chart }} --destination ./packaged/
-
-      - name: Login to GHCR
-        if: steps.chart.outputs.skip != 'true'
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" \
-            | helm registry login ${{ env.REGISTRY }} \
-                -u ${{ github.actor }} \
-                --password-stdin
 
       - name: Push to GHCR
         if: steps.chart.outputs.skip != 'true'
@@ -132,7 +132,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add charts/${{ steps.chart.outputs.chart }}/Chart.yaml
+          git add charts/${{ steps.chart.outputs.chart }}/Chart.yaml \
+                  charts/${{ steps.chart.outputs.chart }}/Chart.lock
           git commit -m "chore: bump ${{ steps.chart.outputs.chart }} to ${{ steps.version.outputs.version }} [skip ci]"
           git tag ${{ steps.version.outputs.tag }}
           git push origin HEAD:main

@@ -405,6 +405,31 @@ autoscaling:
     #     queueName: task-queue
     #     queueLength: "10"
 
+    # scaledJobs — KEDA ScaledJobs for ephemeral, queue-driven workloads.
+    # Each entry creates a ScaledJob (not a Deployment) with the same image,
+    # envFrom, and secrets as the main app. The job pod processes one message
+    # and exits. KEDA spins up one pod per pending message (up to maxReplicaCount).
+    # No idle pods between runs.
+    # Example:
+    #   scaledJobs:
+    #     sync-consumer:
+    #       enabled: true
+    #       command:
+    #         - faststream
+    #         - run
+    #         - app.sync.consumer:consumer
+    #       maxReplicaCount: 10
+    #       activeDeadlineSeconds: 3600
+    #       backoffLimit: 3
+    #       pollingInterval: 30
+    #       triggers:
+    #         - type: rabbitmq
+    #           metadata:
+    #             queueName: my-queue
+    #             mode: QueueLength
+    #             value: "1"
+    scaledJobs: {}
+
 # Volumes adicionais para serem montados no deployment
 volumes: []
 # Exemplo:
@@ -1039,6 +1064,10 @@ valkey:
   persistence:
     enabled: true
     size: 8Gi
+  sentinel:
+    enabled: false
+    port: 26379
+    masterName: mymaster
 
 # RabbitMQ (Message Queue)
 # When enabled, the following environment variables are automatically injected:
@@ -1138,3 +1167,26 @@ cloudsql:
     create: false
     serviceAccountKey: ""
     key: service-account-key.json
+
+# extraDeployments — Generic additional deployments (sidecars, workers)
+# Each entry creates a Deployment with the same image, secrets, and envFrom as the main app.
+# Optionally, each can have its own KEDA ScaledObject.
+# Example:
+#   extraDeployments:
+#     sync-consumer:
+#       enabled: true
+#       command:
+#         - faststream
+#         - run
+#         - app.sync.consumer:consumer
+#       keda:
+#         enabled: true
+#         triggers:
+#           - type: rabbitmq
+#             metadata:
+#               queueName: my-queue
+#               mode: QueueLength
+#               value: "1"
+extraDeployments: {}
+
+

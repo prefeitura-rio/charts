@@ -185,3 +185,72 @@ tests:
       - equal:
           path: spec.jobTemplate.spec.template.spec.containers[0].image
           value: "myorg/app:latest"
+
+  - it: should inject REDIS_HOST and REDIS_PORT when valkey is enabled
+    set:
+      cronjobs:
+        cleanup:
+          enabled: true
+          schedule: "0 2 * * *"
+          command: ["echo"]
+      valkey:
+        enabled: true
+    asserts:
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].env
+          content:
+            name: REDIS_HOST
+            value: RELEASE-NAME-valkey
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].env
+          content:
+            name: REDIS_PORT
+            value: "6379"
+
+  - it: should not inject sentinel env vars when valkey sentinel is disabled
+    set:
+      cronjobs:
+        cleanup:
+          enabled: true
+          schedule: "0 2 * * *"
+          command: ["echo"]
+      valkey:
+        enabled: true
+        sentinel:
+          enabled: false
+    asserts:
+      - notContains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].env
+          content:
+            name: REDIS_USE_SENTINEL
+            value: "true"
+
+  - it: should inject REDIS_USE_SENTINEL REDIS_SENTINEL_PORT and REDIS_SENTINEL_MASTER when sentinel is enabled
+    set:
+      cronjobs:
+        cleanup:
+          enabled: true
+          schedule: "0 2 * * *"
+          command: ["echo"]
+      valkey:
+        enabled: true
+        sentinel:
+          enabled: true
+          port: 26379
+          masterName: mymaster
+    asserts:
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].env
+          content:
+            name: REDIS_USE_SENTINEL
+            value: "true"
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].env
+          content:
+            name: REDIS_SENTINEL_PORT
+            value: "26379"
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].env
+          content:
+            name: REDIS_SENTINEL_MASTER
+            value: mymaster
