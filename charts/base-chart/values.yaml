@@ -940,7 +940,7 @@ flux:
   # Política de atualização da imagem principal
   policy:
     semver:
-      range: ">=1.0.0 <2.0.0"
+      range: ">=1.0.0"
 
   # Filtros opcionais para tags (deixe vazio se não usar)
   filterTags: {}
@@ -954,8 +954,7 @@ flux:
     enabled: true
     interval: "1m"
     git:
-      # branch: "main"
-      branch: feat/testing-fluxcd-flow
+      branch: "main"
       commit:
         author:
           name: "fluxcdbot"

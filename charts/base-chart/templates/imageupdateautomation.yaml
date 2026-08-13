@@ -1,7 +1,8 @@
 {{- if and .Values.flux.enabled .Values.flux.imageUpdateOverwrite.enabled }}
 {{- $fullName := include "base-chart.fullname" . }}
 {{- $labels := include "base-chart.labels" . }}
-{{- $namespace := .Values.flux.namespace | default "flux-system" }}
+{{- $namespace := default .Release.Namespace }}
+{{- $name := default .Release.Name }}
 ---
 apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImageUpdateAutomation
@@ -14,7 +15,8 @@ spec:
   interval: {{ .Values.flux.imageUpdateOverwrite.interval | default "1m" }}
   sourceRef:
     kind: GitRepository
-    name: {{ .Values.flux.imageUpdateOverwrite.sourceRef.name }}
+    name: {{ $name }}
+
   git:
     checkout:
       ref:

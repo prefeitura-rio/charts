@@ -1,12 +1,12 @@
 {{- if .Values.flux.automated }}
 {{- $fullName := include "base-chart.fullname" . }}
 {{- $labels := include "base-chart.labels" . }}
-{{- $namespace := .Values.flux.namespace }}
+{{- $namespace := default .Release.Namespace }}
 ---
 apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImageRepository
 metadata:
-  name: {{ $fullName }}-main-image-repo
+  name: {{ $fullName }}
   namespace: {{ $namespace }}
   labels:
   {{- $labels | nindent 4 }}
@@ -17,21 +17,4 @@ spec:
   secretRef:
     name: {{ .Values.flux.imagePullSecret }}
   {{- end }}
-{{- range .Values.flux.extraPolicies }}
----
-apiVersion: image.toolkit.fluxcd.io/v1
-kind: ImageRepository
-metadata:
-  name: {{ $fullName }}-{{ .name }}-image-repo
-  namespace: {{ $namespace }}
-  labels:
-  {{- $labels | nindent 4 }}
-spec:
-  image: {{ .repository }}
-  interval: {{ .interval }}
-  {{- if .imagePullSecret }}
-  secretRef:
-    name: {{ .imagePullSecret }}
-  {{- end }}
-{{- end }}
 {{- end }}
