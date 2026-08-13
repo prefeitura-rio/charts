@@ -1,4 +1,4 @@
-{{- if and .Values.flux.enabled .Values.flux.updateAutomation.enabled }}
+{{- if and .Values.flux.enabled .Values.flux.imageUpdateOverwrite.enabled }}
 {{- $fullName := include "base-chart.fullname" . }}
 {{- $labels := include "base-chart.labels" . }}
 {{- $namespace := .Values.flux.namespace | default "flux-system" }}
@@ -6,24 +6,24 @@
 apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImageUpdateAutomation
 metadata:
-  name: {{ $fullName }}-image-updater
+  name: {{ $fullName }}
   namespace: {{ $namespace }}
   labels:
   {{- $labels | nindent 4 }}
 spec:
-  interval: {{ .Values.flux.updateAutomation.interval | default "1m" }}
+  interval: {{ .Values.flux.imageUpdateOverwrite.interval | default "1m" }}
   sourceRef:
     kind: GitRepository
-    name: {{ .Values.flux.updateAutomation.sourceRef.name }}
+    name: {{ .Values.flux.imageUpdateOverwrite.sourceRef.name }}
   git:
     checkout:
       ref:
-        branch: {{ .Values.flux.updateAutomation.git.branch | default "main" }}
+        branch: {{ .Values.flux.imageUpdateOverwrite.git.branch | default "main" }}
     commit:
       author:
-        email: {{ .Values.flux.updateAutomation.git.commit.author.email | default "fluxcdbot@users.noreply.github.com" }}
-        name: {{ .Values.flux.updateAutomation.git.commit.author.name | default "fluxcdbot" }}
-      messageTemplate: {{ .Values.flux.updateAutomation.git.commit.messageTemplate | default "chore(image): update to {{range .Updated.Images}}{{println .}}{{end}}" | quote }}
+        email: {{ .Values.flux.imageUpdateOverwrite.git.commit.author.email | default "fluxcdbot@users.noreply.github.com" }}
+        name: {{ .Values.flux.imageUpdateOverwrite.git.commit.author.name | default "fluxcdbot" }}
+      messageTemplate: {{ .Values.flux.imageUpdateOverwrite.git.commit.messageTemplate | default "chore(image): update to {{range .Updated.Images}}{{println .}}{{end}}" | quote }}
     push:
-      branch: {{ .Values.flux.updateAutomation.git.branch | default "main" }}
+      branch: {{ .Values.flux.imageUpdateOverwrite.git.branch | default "main" }}
 {{- end }}

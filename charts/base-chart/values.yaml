@@ -928,48 +928,40 @@ infisicalSecret:
 # OBSERVAÇÃO: Para que a automação escreva no arquivo, não esqueça de colocar
 # o marcador no seu HelmRelease/Deployment: # {"$imagepolicy": "namespace:imagepolicy-name"}
 flux:
-  # Habilita a criação de ImageRepository, ImagePolicy e GitRepository
+  # Habilita a criação de ImageRepository e ImagePolicy
   enabled: true
-  
-  namespace: "flux-system"
 
   # Intervalo padrão de verificação para o GitRepository e ImageRepository principal
-  interval: "7m0s"
-  
-  # Secret usado para autenticar no registry da imagem (.dockerconfigjson)
+  interval: "1m0s"
+
+  # Secret usado para autenticar no registry da imagem (ghcr.io)
   imagePullSecret: "flux-docker-auth"
 
   # Política de atualização da imagem principal
   policy:
     semver:
-      range: '>=1.0.0'
-  
+      range: ">=1.0.0 <2.0.0"
+
   # Filtros opcionais para tags (deixe vazio se não usar)
   filterTags: {}
-
-  # Configuração do repositório Git onde o Flux fará os commits
-  gitRepo:
-    url: ""                     # "ssh://git@github.com/<user or org>/<repo>"
-    branch: "main"
-    secretName: "flux-git-auth" # Secret para autenticar no Git (se necessário)
 
   # Políticas adicionais caso tenha múltiplos containers
   extraPolicies: []
 
   # Configuração do ImageUpdateAutomation
-  updateAutomation:
+  imageUpdateOverwrite:
+    # Habilita criação de ImageUpdateAutomation
     enabled: true
-    interval: "7m"
-    sourceRef:
-      name: "flux-system"
+    interval: "1m"
     git:
-      branch: "main"
+      # branch: "main"
+      branch: feat/testing-fluxcd-flow
       commit:
         author:
           name: "fluxcdbot"
           email: "fluxcdbot@users.noreply.github.com"
         # O Helm precisa do quote para não interpretar as chaves do Go template do Flux
-        messageTemplate: '{{range .Changed.Changes}}{{print .OldValue}} -> {{println .NewValue}}{{end}}'
+        messageTemplate: "{{range .Changed.Changes}}{{print .OldValue}} -> {{println .NewValue}}{{end}}"
 
 # CronJobs - tarefas agendadas
 # Mais informações: https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/
@@ -1188,5 +1180,3 @@ cloudsql:
 #               mode: QueueLength
 #               value: "1"
 extraDeployments: {}
-
-
