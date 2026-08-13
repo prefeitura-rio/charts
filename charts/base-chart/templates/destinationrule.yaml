@@ -6,8 +6,6 @@ metadata:
   name: {{ $fullName }}
   labels:
     {{- include "base-chart.labels" . | nindent 4 }}
-  annotations:
-    argocd.argoproj.io/sync-wave: "3"
 spec:
   host: {{ $fullName }}.{{ .Release.Namespace }}.svc.cluster.local
   {{- with .Values.istio.destinationRule.trafficPolicy }}

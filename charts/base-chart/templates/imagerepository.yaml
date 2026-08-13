@@ -1,0 +1,20 @@
+{{- if .Values.flux.automated }}
+{{- $fullName := include "base-chart.fullname" . }}
+{{- $labels := include "base-chart.labels" . }}
+{{- $namespace := default .Release.Namespace }}
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: {{ $fullName }}
+  namespace: {{ $namespace }}
+  labels:
+  {{- $labels | nindent 4 }}
+spec:
+  image: {{ .Values.image.repository }}
+  interval: {{ .Values.flux.interval }}
+  {{- if .Values.flux.imagePullSecret }}
+  secretRef:
+    name: {{ .Values.flux.imagePullSecret }}
+  {{- end }}
+{{- end }}

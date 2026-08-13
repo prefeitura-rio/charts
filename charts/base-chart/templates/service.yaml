@@ -4,8 +4,6 @@ metadata:
   name: {{ include "base-chart.fullname" . }}
   labels:
     {{- include "base-chart.labels" . | nindent 4 }}
-  annotations:
-    argocd.argoproj.io/sync-wave: "1"
 spec:
   type: {{ .Values.service.type }}
   ports:

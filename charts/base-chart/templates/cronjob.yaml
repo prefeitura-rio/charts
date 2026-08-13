@@ -9,8 +9,6 @@ metadata:
     {{- include "base-chart.labels" $ | nindent 4 }}
     app.kubernetes.io/component: cronjob
     app.kubernetes.io/cronjob-name: {{ $name }}
-  annotations:
-    argocd.argoproj.io/sync-wave: "2"
 spec:
   schedule: {{ $job.schedule | quote }}
   concurrencyPolicy: {{ $job.concurrencyPolicy | default "Forbid" }}

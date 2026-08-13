@@ -1,0 +1,31 @@
+{{- if and .Values.flux.enabled .Values.flux.imageUpdateOverwrite.enabled }}
+{{- $fullName := include "base-chart.fullname" . }}
+{{- $labels := include "base-chart.labels" . }}
+{{- $namespace := default .Release.Namespace }}
+{{- $name := default .Release.Name }}
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageUpdateAutomation
+metadata:
+  name: {{ $fullName }}
+  namespace: {{ $namespace }}
+  labels:
+  {{- $labels | nindent 4 }}
+spec:
+  interval: {{ .Values.flux.imageUpdateOverwrite.interval | default "1m" }}
+  sourceRef:
+    kind: GitRepository
+    name: {{ $name }}
+
+  git:
+    checkout:
+      ref:
+        branch: {{ .Values.flux.imageUpdateOverwrite.git.branch | default "main" }}
+    commit:
+      author:
+        email: {{ .Values.flux.imageUpdateOverwrite.git.commit.author.email | default "fluxcdbot@users.noreply.github.com" }}
+        name: {{ .Values.flux.imageUpdateOverwrite.git.commit.author.name | default "fluxcdbot" }}
+      messageTemplate: {{ .Values.flux.imageUpdateOverwrite.git.commit.messageTemplate | default "chore(image): update to {{range .Updated.Images}}{{println .}}{{end}}" | quote }}
+    push:
+      branch: {{ .Values.flux.imageUpdateOverwrite.git.branch | default "main" }}
+{{- end }}

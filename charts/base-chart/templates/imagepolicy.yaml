@@ -1,0 +1,20 @@
+{{- if .Values.flux.enabled }}
+{{- $fullName := include "base-chart.fullname" . }}
+{{- $labels := include "base-chart.labels" . }}
+{{- $namespace := default .Release.Namespace }}
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: {{ $fullName }}
+  namespace: {{ $namespace }}
+  labels:
+  {{- $labels | nindent 4 }}
+spec:
+  filterTags:
+    {{- toYaml .Values.flux.filterTags | nindent 4 }}
+  imageRepositoryRef:
+    name: {{ $fullName }}
+  policy:
+    {{- toYaml .Values.flux.policy | nindent 4 }}
+{{- end }}
