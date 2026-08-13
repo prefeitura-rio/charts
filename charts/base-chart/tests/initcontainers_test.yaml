@@ -279,13 +279,19 @@ tests:
       initContainers:
         - name: wait-for-postgres
           image: postgres:15-alpine
-          command: ["sh", "-c", "until pg_isready -h $DB_HOST; do sleep 2; done"]
+          command:
+            ["sh", "-c", "until pg_isready -h $DB_HOST; do sleep 2; done"]
           env:
             - name: DB_HOST
               value: postgres.database.svc.cluster.local
         - name: wait-for-redis
           image: redis:7-alpine
-          command: ["sh", "-c", "until redis-cli -h $REDIS_HOST ping; do sleep 2; done"]
+          command:
+            [
+              "sh",
+              "-c",
+              "until redis-cli -h $REDIS_HOST ping; do sleep 2; done",
+            ]
           env:
             - name: REDIS_HOST
               value: redis.cache.svc.cluster.local

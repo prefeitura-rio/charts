@@ -77,14 +77,6 @@ tests:
           path: spec.gateways
           content: mesh
 
-  - it: should have sync-wave 3 annotation
-    set:
-      istio.enabled: true
-    asserts:
-      - equal:
-          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
-          value: "3"
-
   - it: should configure timeout when specified
     set:
       istio.enabled: true

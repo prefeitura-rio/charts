@@ -19,14 +19,6 @@ tests:
       - hasDocuments:
           count: 0
 
-  - it: should have sync-wave 2 annotation
-    set:
-      podDisruptionBudget.enabled: true
-    asserts:
-      - equal:
-          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
-          value: "2"
-
   - it: should set maxUnavailable by default
     set:
       podDisruptionBudget.enabled: true

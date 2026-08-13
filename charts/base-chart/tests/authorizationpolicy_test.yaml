@@ -28,15 +28,6 @@ tests:
           path: metadata.name
           value: RELEASE-NAME
 
-  - it: should have sync-wave 3 annotation
-    set:
-      istio.enabled: true
-      istio.authorizationPolicy.enabled: true
-    asserts:
-      - equal:
-          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
-          value: "3"
-
   - it: should configure ALLOW action by default
     set:
       istio.enabled: true

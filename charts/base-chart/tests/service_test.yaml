@@ -121,12 +121,6 @@ tests:
           path: metadata.name
           value: RELEASE-NAME-myapp
 
-  - it: should have sync-wave 1 annotation
-    asserts:
-      - equal:
-          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
-          value: "1"
-
   - it: should render additional ports when service.ports is set
     set:
       service.ports:

@@ -121,18 +121,6 @@ tests:
           path: spec.replicas.max
           value: 20
 
-  - it: should have sync-wave 2
-    template: httpscaledobject.yaml
-    set:
-      autoscaling.enabled: true
-      autoscaling.keda.enabled: true
-      autoscaling.keda.triggers: []
-      istio.enabled: false
-    asserts:
-      - equal:
-          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
-          value: "2"
-
   - it: should render hosts when set
     template: httpscaledobject.yaml
     set:

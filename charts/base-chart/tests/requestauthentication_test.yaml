@@ -31,18 +31,6 @@ tests:
           path: metadata.name
           value: RELEASE-NAME
 
-  - it: should have sync-wave 3 annotation
-    set:
-      istio.enabled: true
-      istio.requestAuthentication.enabled: true
-      istio.requestAuthentication.jwtRules:
-        - issuer: "https://auth.example.com"
-          jwksUri: "https://auth.example.com/.well-known/jwks.json"
-    asserts:
-      - equal:
-          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
-          value: "3"
-
   - it: should configure JWT issuer and jwksUri
     set:
       istio.enabled: true

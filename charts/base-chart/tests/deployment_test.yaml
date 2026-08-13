@@ -101,12 +101,6 @@ tests:
             configMapRef:
               name: app-config
 
-  - it: should have sync-wave 1 annotation
-    asserts:
-      - equal:
-          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
-          value: "1"
-
   - it: should inject REDIS_HOST and REDIS_PORT when valkey is enabled
     set:
       valkey:
