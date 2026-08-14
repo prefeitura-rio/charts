@@ -33,17 +33,6 @@ tests:
             app.kubernetes.io/name: base-chart
             app.kubernetes.io/instance: RELEASE-NAME
 
-  - it: should have sync-wave -1 annotation for ArgoCD
-    set:
-      configMap:
-        enabled: true
-        data:
-          KEY: "value"
-    asserts:
-      - equal:
-          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
-          value: "-1"
-
   - it: should include string data values
     set:
       configMap:

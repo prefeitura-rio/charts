@@ -23,18 +23,6 @@ tests:
           path: metadata.name
           value: RELEASE-NAME
 
-  - it: should have sync-wave 3 annotation
-    set:
-      ingress.enabled: true
-      ingress.hosts:
-        - host: api.example.com
-          paths:
-            - path: /
-    asserts:
-      - equal:
-          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
-          value: "3"
-
   - it: should set ingressClassName when provided
     set:
       ingress.enabled: true

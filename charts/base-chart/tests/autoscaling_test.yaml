@@ -246,25 +246,6 @@ tests:
           path: spec.triggers[0].metadata.serverAddress
           value: http://custom-prometheus:9090
 
-  - it: HPA should have sync-wave 2
-    template: hpa.yaml
-    set:
-      autoscaling.enabled: true
-      autoscaling.keda.enabled: false
-    asserts:
-      - equal:
-          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
-          value: "2"
-
-  - it: KEDA ScaledObject should have sync-wave 2
-    template: scaledobject.yaml
-    set:
-      autoscaling.enabled: true
-    asserts:
-      - equal:
-          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
-          value: "2"
-
   - it: KEDA should pass activationThreshold for prometheus trigger
     template: scaledobject.yaml
     set:

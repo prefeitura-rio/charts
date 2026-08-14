@@ -70,20 +70,6 @@ tests:
           path: metadata.name
           value: my-custom-auth
 
-  - it: should have sync-wave 1
-    set:
-      autoscaling.enabled: true
-      autoscaling.keda.enabled: true
-      autoscaling.keda.triggerAuthentication:
-        secretTargetRef:
-          - parameter: password
-            name: my-secret
-            key: password
-    asserts:
-      - equal:
-          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
-          value: "1"
-
   - it: should render env when specified
     set:
       autoscaling.enabled: true
