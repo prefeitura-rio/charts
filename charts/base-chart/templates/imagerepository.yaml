@@ -1,4 +1,4 @@
-{{- if .Values.flux.automated }}
+{{- if .Values.flux.enabled }}
 {{- $fullName := include "base-chart.fullname" . }}
 {{- $labels := include "base-chart.labels" . }}
 {{- $namespace := default .Release.Namespace }}
