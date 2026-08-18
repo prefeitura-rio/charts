@@ -281,3 +281,21 @@ tests:
           path: spec.defaultBackend
       - exists:
           path: spec.rules
+
+  - it: should have hook annotations present
+    set:
+      ingress.enabled: true
+      ingress.defaultBackend:
+        service:
+          name: my-service
+          port: 80
+    asserts:
+      - equal:
+          path: metadata.annotations["helm.sh/hook"]
+          value: "post-install,post-upgrade"
+      - equal:
+          path: metadata.annotations["helm.sh/hook-weight"]
+          value: "1"
+      - equal:
+          path: metadata.annotations["helm.sh/hook-delete-policy"]
+          value: "before-hook-creation"

@@ -241,3 +241,24 @@ tests:
           content:
             name: REDIS_SENTINEL_MASTER
             value: mymaster
+
+  - it: should have hook annotations present
+    set:
+      cronjobs:
+        cleanup:
+          enabled: true
+          schedule: "0 2 * * *"
+          command:
+            - /bin/sh
+            - -c
+            - echo hello
+    asserts:
+      - equal:
+          path: metadata.annotations["helm.sh/hook"]
+          value: "pre-install,pre-upgrade"
+      - equal:
+          path: metadata.annotations["helm.sh/hook-weight"]
+          value: "1"
+      - equal:
+          path: metadata.annotations["helm.sh/hook-delete-policy"]
+          value: "before-hook-creation"

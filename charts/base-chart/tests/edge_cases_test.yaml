@@ -293,3 +293,12 @@ tests:
       - equal:
           path: spec.http[0].route[0].destination.host
           value: RELEASE-NAME.test-ns.svc.cluster.local
+  - it: should not render imageupdater when disabled
+    templates:
+      - imageupdateautomation.yaml
+    set:
+      flux.imageUpdateOverwrite:
+        enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0

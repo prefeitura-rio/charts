@@ -64,3 +64,17 @@ tests:
     asserts:
       - exists:
           path: spec.selector.matchLabels
+
+  - it: should have hook annotations present
+    set:
+      podDisruptionBudget.enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations["helm.sh/hook"]
+          value: "pre-install,pre-upgrade"
+      - equal:
+          path: metadata.annotations["helm.sh/hook-weight"]
+          value: "1"
+      - equal:
+          path: metadata.annotations["helm.sh/hook-delete-policy"]
+          value: "before-hook-creation"

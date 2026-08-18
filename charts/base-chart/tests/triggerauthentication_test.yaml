@@ -95,3 +95,21 @@ tests:
       - equal:
           path: spec.podIdentity.provider
           value: gcp
+
+  - it: should have hook annotations present
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.enabled: true
+      autoscaling.keda.triggerAuthentication:
+        podIdentity:
+          provider: gcp
+    asserts:
+      - equal:
+          path: metadata.annotations["helm.sh/hook"]
+          value: "pre-install,pre-upgrade"
+      - equal:
+          path: metadata.annotations["helm.sh/hook-weight"]
+          value: "0"
+      - equal:
+          path: metadata.annotations["helm.sh/hook-delete-policy"]
+          value: "before-hook-creation"
