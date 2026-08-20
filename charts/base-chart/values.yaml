@@ -945,9 +945,6 @@ flux:
   # Filtros opcionais para tags (deixe vazio se não usar)
   filterTags: {}
 
-  # Políticas adicionais caso tenha múltiplos containers
-  extraPolicies: []
-
   # Configuração do ImageUpdateAutomation
   imageUpdateOverwrite:
     # Habilita criação de ImageUpdateAutomation
