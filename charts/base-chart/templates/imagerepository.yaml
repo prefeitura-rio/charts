@@ -9,7 +9,7 @@ metadata:
   name: {{ $fullName }}
   namespace: {{ $namespace }}
   labels:
-  {{- $labels | nindent 4 }}
+    {{- $labels | nindent 4 }}
 spec:
   image: {{ .Values.image.repository }}
   interval: {{ .Values.flux.interval }}
@@ -17,4 +17,30 @@ spec:
   secretRef:
     name: {{ .Values.flux.imagePullSecret }}
   {{- end }}
+
+{{- range $name, $spec := .Values.extraDeployments }}
+{{- $extraFluxEnabled := $.Values.flux.enabled }}
+{{- if and $spec.flux (hasKey $spec.flux "enabled") }}
+  {{- $extraFluxEnabled = $spec.flux.enabled }}
+{{- end }}
+{{- if and $spec.enabled $extraFluxEnabled $spec.image $spec.image.repository (ne $spec.image.repository $.Values.image.repository) }}
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: {{ $fullName }}-{{ $name }}
+  namespace: {{ $namespace }}
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  image: {{ $spec.image.repository }}
+  interval: {{ dig "flux" "interval" $.Values.flux.interval $spec }}
+  {{- $secret := dig "flux" "imagePullSecret" $.Values.flux.imagePullSecret $spec }}
+  {{- if $secret }}
+  secretRef:
+    name: {{ $secret }}
+  {{- end }}
+{{- end }}
+{{- end }}
 {{- end }}

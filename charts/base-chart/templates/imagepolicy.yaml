@@ -9,7 +9,7 @@ metadata:
   name: {{ $fullName }}
   namespace: {{ $namespace }}
   labels:
-  {{- $labels | nindent 4 }}
+    {{- $labels | nindent 4 }}
 spec:
   filterTags:
     {{- toYaml .Values.flux.filterTags | nindent 4 }}
@@ -17,4 +17,41 @@ spec:
     name: {{ $fullName }}
   policy:
     {{- toYaml .Values.flux.policy | nindent 4 }}
+
+{{- range $name, $spec := .Values.extraDeployments }}
+{{- $extraFluxEnabled := $.Values.flux.enabled }}
+{{- if and $spec.flux (hasKey $spec.flux "enabled") }}
+  {{- $extraFluxEnabled = $spec.flux.enabled }}
+{{- end }}
+{{- if and $spec.enabled $extraFluxEnabled }}
+{{- $repoRef := $fullName }}
+{{- if and $spec.image $spec.image.repository (ne $spec.image.repository $.Values.image.repository) }}
+  {{- $repoRef = printf "%s-%s" $fullName $name }}
+{{- end }}
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: {{ $fullName }}-{{ $name }}
+  namespace: {{ $namespace }}
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  filterTags:
+    {{- with dig "flux" "filterTags" nil $spec }}
+    {{- toYaml . | nindent 4 }}
+    {{- else }}
+    {{- toYaml $.Values.flux.filterTags | nindent 4 }}
+    {{- end }}
+  imageRepositoryRef:
+    name: {{ $repoRef }}
+  policy:
+    {{- with dig "flux" "policy" nil $spec }}
+    {{- toYaml . | nindent 4 }}
+    {{- else }}
+    {{- toYaml $.Values.flux.policy | nindent 4 }}
+    {{- end }}
+{{- end }}
+{{- end }}
 {{- end }}
