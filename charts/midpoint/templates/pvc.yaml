@@ -1,0 +1,17 @@
+{{- if and .Values.home.persistence.enabled (not .Values.home.persistence.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "midpoint.fullname" . }}-home
+  labels:
+    {{- include "midpoint.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.home.persistence.accessMode | quote }}
+  {{- if .Values.home.persistence.storageClass }}
+  storageClassName: {{ .Values.home.persistence.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.home.persistence.size | quote }}
+{{- end }}

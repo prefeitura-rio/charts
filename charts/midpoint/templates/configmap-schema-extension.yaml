@@ -1,0 +1,13 @@
+{{- if and .Values.schemaExtension.enabled (not .Values.schemaExtension.existingConfigMap) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "midpoint.schemaExtension.configMapName" . }}
+  labels:
+    {{- include "midpoint.labels" . | nindent 4 }}
+data:
+  {{- range $name, $content := .Values.schemaExtension.files }}
+  {{ $name }}: |
+    {{- $content | nindent 4 }}
+  {{- end }}
+{{- end }}

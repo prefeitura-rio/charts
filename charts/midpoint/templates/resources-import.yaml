@@ -1,0 +1,79 @@
+{{- if .Values.resourcesImport.enabled }}
+{{- if not .Values.resourcesImport.existingConfigMap }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "midpoint.fullname" . }}-resources-import
+  labels:
+    {{- include "midpoint.labels" . | nindent 4 }}
+data:
+  {{- range $name, $content := .Values.resourcesImport.files }}
+  {{ $name }}: |
+    {{- $content | nindent 4 }}
+  {{- end }}
+---
+{{- end }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "midpoint.fullname" . }}-resources-import
+  labels:
+    {{- include "midpoint.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: {{ .Values.resourcesImport.backoffLimit }}
+  ttlSecondsAfterFinished: {{ .Values.resourcesImport.ttlSecondsAfterFinished }}
+  template:
+    metadata:
+      labels:
+        {{- include "midpoint.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: resources-import
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: resources-import
+          image: {{ .Values.resourcesImport.image }}
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              mkdir -p /work
+              cp /import/* /work/
+              {{- range $i, $s := .Values.resourcesImport.substitutions }}
+              sed -i "s#{{ $s.placeholder }}#$SUBST_{{ $i }}#g" /work/*
+              {{- end }}
+              {{- range .Values.resourcesImport.objects }}
+              oid=$(sed -n 's/[^>]*oid="\([^"]*\)".*/\1/p' "/work/{{ .file }}" | head -n1)
+              echo "Importing {{ .file }} (oid=$oid) into {{ .endpoint }}..."
+              curl -sS --fail-with-body --retry 30 --retry-delay 10 --retry-connrefused \
+                --user "$ADMIN_USERNAME:$ADMIN_PASSWORD" \
+                -H "Content-Type: application/xml" \
+                -X PUT "http://{{ include "midpoint.fullname" $ }}:{{ $.Values.service.port }}/midpoint/ws/rest/{{ .endpoint }}/$oid" \
+                --data-binary "@/work/{{ .file }}"
+              {{- end }}
+          env:
+            - name: ADMIN_USERNAME
+              value: {{ .Values.admin.username | quote }}
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "midpoint.admin.secretName" . }}
+                  key: {{ include "midpoint.admin.secretKey" . }}
+            {{- range $i, $s := .Values.resourcesImport.substitutions }}
+            - name: SUBST_{{ $i }}
+              valueFrom:
+                {{- toYaml $s.valueFrom | nindent 16 }}
+            {{- end }}
+          volumeMounts:
+            - name: import
+              mountPath: /import
+              readOnly: true
+      volumes:
+        - name: import
+          configMap:
+            name: {{ if .Values.resourcesImport.existingConfigMap }}{{ .Values.resourcesImport.existingConfigMap }}{{ else }}{{ include "midpoint.fullname" . }}-resources-import{{ end }}
+{{- end }}

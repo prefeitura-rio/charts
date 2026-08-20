@@ -1,0 +1,221 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "midpoint.fullname" . }}
+  labels:
+    {{- include "midpoint.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "midpoint.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "midpoint.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "midpoint.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+
+      initContainers:
+        - name: repository-init
+          image: {{ include "midpoint.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              cd /opt/midpoint
+              bin/midpoint.sh init-native
+              bin/ninja.sh -B info >/dev/null 2>/tmp/ninja.log || true
+              if grep -q ERROR /tmp/ninja.log; then
+                bin/ninja.sh -B run-sql --create --mode REPOSITORY
+                bin/ninja.sh -B run-sql --create --mode AUDIT
+              else
+                echo 'Repository init is not needed...'
+              fi
+          env:
+            - name: MP_INIT_CFG
+              value: /opt/midpoint/var
+            - name: MP_SET_midpoint_repository_database
+              value: postgresql
+            - name: MP_SET_midpoint_repository_jdbcUsername
+              value: {{ .Values.database.username | quote }}
+            - name: MP_SET_midpoint_repository_jdbcPassword
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "midpoint.database.secretName" . }}
+                  key: {{ include "midpoint.database.secretKey" . }}
+            - name: MP_SET_midpoint_repository_jdbcUrl
+              value: {{ include "midpoint.jdbcUrl" . | quote }}
+          volumeMounts:
+            - name: midpoint-home
+              mountPath: /opt/midpoint/var
+
+        {{- if .Values.connector.enabled }}
+        - name: connector-init
+          image: {{ .Values.connector.initImage }}
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args:
+            - >-
+              set -eu;
+              mkdir -p /opt/midpoint/var/connid-connectors;
+              JAR=/opt/midpoint/var/connid-connectors/{{ .Values.connector.name }};
+              if [ -f "$JAR" ] && echo "{{ .Values.connector.sha256 }}  $JAR" | sha256sum -c - >/dev/null 2>&1; then exit 0; fi;
+              curl -fsSL -o "$JAR.tmp" "{{ .Values.connector.url }}";
+              echo "{{ .Values.connector.sha256 }}  $JAR.tmp" | sha256sum -c -;
+              mv "$JAR.tmp" "$JAR"
+          volumeMounts:
+            - name: midpoint-home
+              mountPath: /opt/midpoint/var
+        {{- end }}
+
+        {{- if .Values.schemaExtension.enabled }}
+        - name: schema-extension-init
+          image: {{ .Values.connector.initImage }}
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args:
+            - >-
+              set -eu;
+              mkdir -p /opt/midpoint/var/schema;
+              cp /schema-extension-src/* /opt/midpoint/var/schema/
+          volumeMounts:
+            - name: midpoint-home
+              mountPath: /opt/midpoint/var
+            - name: schema-extension-src
+              mountPath: /schema-extension-src
+              readOnly: true
+        {{- end }}
+
+        {{- with .Values.extraInitContainers }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+
+      containers:
+        - name: midpoint
+          image: {{ include "midpoint.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          ports:
+            - name: gui
+              containerPort: 8080
+              protocol: TCP
+
+          env:
+            - name: MP_SET_midpoint_repository_database
+              value: postgresql
+            - name: MP_SET_midpoint_repository_jdbcUsername
+              value: {{ .Values.database.username | quote }}
+            - name: MP_SET_midpoint_repository_jdbcPassword
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "midpoint.database.secretName" . }}
+                  key: {{ include "midpoint.database.secretKey" . }}
+            - name: MP_SET_midpoint_repository_jdbcUrl
+              value: {{ include "midpoint.jdbcUrl" . | quote }}
+            - name: MP_SET_midpoint_administrator_initialPassword
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "midpoint.admin.secretName" . }}
+                  key: {{ include "midpoint.admin.secretKey" . }}
+            - name: MP_SET_midpoint_taskManager_clustered
+              value: {{ gt (int .Values.replicaCount) 1 | ternary "true" "false" | quote }}
+            {{- if gt (int .Values.replicaCount) 1 }}
+            - name: MP_SET_midpoint_nodeIdSource
+              value: hostname
+            {{- end }}
+            - name: MP_MEM_INIT
+              value: {{ .Values.memory.init | quote }}
+            - name: MP_MEM_MAX
+              value: {{ .Values.memory.max | quote }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+          {{- if .Values.livenessProbe.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.livenessProbe.path }}
+              port: gui
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+            failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+          {{- end }}
+
+          {{- if .Values.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.readinessProbe.path }}
+              port: gui
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+            failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+          {{- end }}
+
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+
+          volumeMounts:
+            - name: midpoint-home
+              mountPath: /opt/midpoint/var
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+
+      volumes:
+        - name: midpoint-home
+          {{- if .Values.home.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ if .Values.home.persistence.existingClaim }}{{ .Values.home.persistence.existingClaim }}{{ else }}{{ include "midpoint.fullname" . }}-home{{ end }}
+          {{- else }}
+          emptyDir:
+            {{- if .Values.home.persistence.emptyDirSizeLimit }}
+            sizeLimit: {{ .Values.home.persistence.emptyDirSizeLimit }}
+            {{- else }}
+            {}
+            {{- end }}
+          {{- end }}
+        {{- if .Values.schemaExtension.enabled }}
+        - name: schema-extension-src
+          configMap:
+            name: {{ include "midpoint.schemaExtension.configMapName" . }}
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -1,0 +1,19 @@
+MidPoint has been deployed!
+
+To access the GUI from within the cluster:
+
+  http://{{ include "midpoint.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.port }}/midpoint
+
+Administrator username: {{ .Values.admin.username }}
+Administrator password: kubectl get secret {{ include "midpoint.admin.secretName" . }} -n {{ .Release.Namespace }} -o jsonpath='{.data.password}' | base64 -d
+
+Repository: {{ include "midpoint.jdbcUrl" . }}
+
+{{- if not .Values.connector.enabled }}
+
+NOTE: connector.enabled is false - no ConnId connector jar will be installed.
+{{- end }}
+{{- if not .Values.schemaExtension.enabled }}
+
+NOTE: schemaExtension.enabled is false - no schema extension files will be installed.
+{{- end }}

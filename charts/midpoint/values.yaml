@@ -1,0 +1,194 @@
+# MidPoint Helm Chart - Default Values
+# Documentation: https://docs.evolveum.com/
+
+# Number of MidPoint replicas.
+# When > 1, MP_SET_midpoint_taskManager_clustered and MP_SET_midpoint_nodeIdSource
+# are set automatically. The Deployment uses the Recreate strategy, so scaling
+# still causes a brief full restart.
+replicaCount: 1
+
+# Container image configuration
+# Digest takes precedence over tag when set, matching upstream's supply-chain
+# pinning practice.
+image:
+  repository: evolveum/midpoint
+  tag: "" # Defaults to appVersion in Chart.yaml
+  digest: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+# MidPoint home directory persistence (/opt/midpoint/var)
+home:
+  persistence:
+    enabled: true
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 5Gi
+    # existingClaim: ""
+    # Size limit applied to the emptyDir fallback used when enabled is false.
+    # Empty string means no limit.
+    emptyDirSizeLimit: ""
+
+# Repository (PostgreSQL) connection.
+# The chart never creates a database - it only points MidPoint at one and,
+# via the repository-init container, creates the schema on first boot.
+database:
+  host: ""
+  port: 5432
+  name: midpoint
+  username: midpoint
+
+  # Reference an existing secret instead of creating one from db.password
+  existingSecret: ""
+  existingSecretKey: "password"
+
+  # Used only when existingSecret is empty
+  password: ""
+
+# MidPoint administrator bootstrap credentials
+admin:
+  username: administrator
+
+  # Reference an existing secret instead of creating one from admin.password
+  existingSecret: ""
+  existingSecretKey: "password"
+
+  # Used only when existingSecret is empty
+  password: ""
+
+# ConnId connector bootstrap.
+# Downloads a connector jar into the MidPoint home directory before startup,
+# verified against connector.sha256.
+connector:
+  enabled: false
+  name: ""
+  url: ""
+  sha256: ""
+  initImage: curlimages/curl:8.11.1
+
+# Schema extension bootstrap.
+# Copies extension XSDs from a ConfigMap into MidPoint's schema directory
+# before startup.
+schemaExtension:
+  enabled: false
+  # Map of filename -> file content, rendered into a ConfigMap by the chart
+  files: {}
+  # Reference an existing ConfigMap instead (takes precedence over files)
+  existingConfigMap: ""
+
+# Additional environment variables
+extraEnv: []
+#  - name: MP_SET_midpoint_taskManager_clustered
+#    value: "true"
+
+# Additional environment variables from secrets/configmaps
+extraEnvFrom: []
+
+# Additional init containers, appended after the chart's own
+# (repository-init, connector-init, schema-extension-init)
+extraInitContainers: []
+
+# Additional volumes / volume mounts on the main container
+extraVolumes: []
+extraVolumeMounts: []
+
+# JVM heap sizing
+memory:
+  init: 1536m
+  max: 3072m
+
+service:
+  type: ClusterIP
+  port: 8080
+  annotations: {}
+
+resources:
+  requests:
+    cpu: 1
+    memory: 3Gi
+  limits:
+    cpu: 2
+    memory: 4Gi
+
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+livenessProbe:
+  enabled: true
+  path: /midpoint/actuator/health
+  initialDelaySeconds: 120
+  periodSeconds: 30
+  failureThreshold: 6
+
+readinessProbe:
+  enabled: true
+  path: /midpoint/actuator/health
+  initialDelaySeconds: 60
+  periodSeconds: 15
+  failureThreshold: 6
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+  # maxUnavailable: 1
+
+# Resource import: submits MidPoint objects (resources, object templates,
+# archetypes, tasks, ...) into a running instance via its REST API, once per
+# install/upgrade, using a post-install/post-upgrade Helm hook Job.
+resourcesImport:
+  enabled: false
+  image: curlimages/curl:8.11.1
+  backoffLimit: 4
+  ttlSecondsAfterFinished: 86400
+
+  # Map of filename -> file content, rendered into a ConfigMap by the chart.
+  # Ignored when existingConfigMap is set.
+  files: {}
+
+  # Reference an existing ConfigMap instead of creating one from `files`
+  existingConfigMap: ""
+
+  # Ordered list of objects to import. Each entry maps a file (from the
+  # ConfigMap above) to a MidPoint REST collection endpoint, e.g. resources,
+  # objectTemplates, archetypes, tasks, roles, users. The object's oid is
+  # read directly from the XML file.
+  objects: []
+  # - file: people-v1-resource.xml
+  #   endpoint: resources
+  # - file: vinculo-lifecycle-template.xml
+  #   endpoint: objectTemplates
+  # - file: servidor-archetype.xml
+  #   endpoint: archetypes
+  # - file: people-v1-livesync-task.xml
+  #   endpoint: tasks
+
+  # Placeholder substitutions applied to file contents before import, e.g.
+  # injecting a password read from a Secret into a resource XML.
+  substitutions: []
+  # - placeholder: __READER_PASSWORD__
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: identity-mirror-midpoint-reader
+  #       key: password

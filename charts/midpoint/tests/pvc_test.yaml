@@ -1,0 +1,44 @@
+suite: test midpoint pvc
+templates:
+  - pvc.yaml
+values:
+  - ../values.yaml
+tests:
+  - it: should create a PVC by default
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: PersistentVolumeClaim
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-midpoint-home
+      - equal:
+          path: spec.resources.requests.storage
+          value: 5Gi
+
+  - it: should use custom size and storage class
+    set:
+      home.persistence.size: 20Gi
+      home.persistence.storageClass: premium-rwo
+    asserts:
+      - equal:
+          path: spec.resources.requests.storage
+          value: 20Gi
+      - equal:
+          path: spec.storageClassName
+          value: premium-rwo
+
+  - it: should not create a PVC when persistence is disabled
+    set:
+      home.persistence.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should not create a PVC when using an existing claim
+    set:
+      home.persistence.existingClaim: my-existing-pvc
+    asserts:
+      - hasDocuments:
+          count: 0

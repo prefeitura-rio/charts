@@ -1,0 +1,147 @@
+suite: test midpoint resources import
+templates:
+  - resources-import.yaml
+values:
+  - ../values.yaml
+tests:
+  - it: should render nothing by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should create a ConfigMap and a Job when enabled
+    set:
+      resourcesImport.enabled: true
+      resourcesImport.files:
+        people-v1-resource.xml: '<resource oid="aaa"/>'
+      resourcesImport.objects:
+        - file: people-v1-resource.xml
+          endpoint: resources
+    asserts:
+      - hasDocuments:
+          count: 2
+      - documentIndex: 0
+        isKind:
+          of: ConfigMap
+      - documentIndex: 0
+        equal:
+          path: metadata.name
+          value: RELEASE-NAME-midpoint-resources-import
+      - documentIndex: 1
+        isKind:
+          of: Job
+      - documentIndex: 1
+        equal:
+          path: metadata.name
+          value: RELEASE-NAME-midpoint-resources-import
+
+  - it: should be a post-install/post-upgrade hook
+    set:
+      resourcesImport.enabled: true
+      resourcesImport.files:
+        a.xml: '<a oid="1"/>'
+      resourcesImport.objects:
+        - file: a.xml
+          endpoint: resources
+    documentIndex: 1
+    asserts:
+      - equal:
+          path: metadata.annotations["helm.sh/hook"]
+          value: post-install,post-upgrade
+      - equal:
+          path: metadata.annotations["helm.sh/hook-delete-policy"]
+          value: before-hook-creation
+
+  - it: should not create a ConfigMap when using an existing one
+    set:
+      resourcesImport.enabled: true
+      resourcesImport.existingConfigMap: my-existing-cm
+      resourcesImport.objects:
+        - file: a.xml
+          endpoint: resources
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Job
+
+  - it: should reference the existing ConfigMap in the Job volume
+    set:
+      resourcesImport.enabled: true
+      resourcesImport.existingConfigMap: my-existing-cm
+      resourcesImport.objects:
+        - file: a.xml
+          endpoint: resources
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.template.spec.volumes[0].configMap.name
+          value: my-existing-cm
+
+  - it: should curl each object to its configured REST endpoint
+    set:
+      resourcesImport.enabled: true
+      resourcesImport.files:
+        people-v1-resource.xml: '<resource oid="aaa"/>'
+        servidor-archetype.xml: '<archetype oid="bbb"/>'
+      resourcesImport.objects:
+        - file: people-v1-resource.xml
+          endpoint: resources
+        - file: servidor-archetype.xml
+          endpoint: archetypes
+    documentIndex: 1
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.containers[0].args[0]
+          pattern: "ws/rest/resources/\\$oid"
+      - matchRegex:
+          path: spec.template.spec.containers[0].args[0]
+          pattern: "ws/rest/archetypes/\\$oid"
+
+  - it: should apply substitutions before importing
+    set:
+      resourcesImport.enabled: true
+      resourcesImport.files:
+        a.xml: '<a oid="1">__READER_PASSWORD__</a>'
+      resourcesImport.objects:
+        - file: a.xml
+          endpoint: resources
+      resourcesImport.substitutions:
+        - placeholder: __READER_PASSWORD__
+          valueFrom:
+            secretKeyRef:
+              name: identity-mirror-midpoint-reader
+              key: password
+    documentIndex: 1
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.containers[0].args[0]
+          pattern: "sed -i \"s#__READER_PASSWORD__#\\$SUBST_0#g\" /work/\\*"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SUBST_0
+            valueFrom:
+              secretKeyRef:
+                name: identity-mirror-midpoint-reader
+                key: password
+
+  - it: should read the admin username from values and the password from the admin secret
+    set:
+      resourcesImport.enabled: true
+      resourcesImport.files:
+        a.xml: '<a oid="1"/>'
+      resourcesImport.objects:
+        - file: a.xml
+          endpoint: resources
+      admin.username: administrator
+    documentIndex: 1
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: ADMIN_USERNAME
+            value: administrator
+      - equal:
+          path: spec.template.spec.containers[0].env[1].valueFrom.secretKeyRef.name
+          value: RELEASE-NAME-midpoint-admin

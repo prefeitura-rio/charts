@@ -1,0 +1,236 @@
+suite: test midpoint deployment
+templates:
+  - deployment.yaml
+values:
+  - ../values.yaml
+tests:
+  - it: should render deployment with required values
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-midpoint
+
+  - it: should use Recreate strategy
+    asserts:
+      - equal:
+          path: spec.strategy.type
+          value: Recreate
+
+  - it: should use appVersion tag by default
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "evolveum/midpoint:4.10.3-alpine"
+
+  - it: should use custom tag when specified
+    set:
+      image.tag: "4.10.3-alpine-custom"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "evolveum/midpoint:4.10.3-alpine-custom"
+
+  - it: should prefer digest over tag when both are set
+    set:
+      image.tag: "4.10.3-alpine"
+      image.digest: "sha256:68970b425dce75d8ee444f3871d8030a993ee8b3244d1da45765b18e727e9cb3"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "evolveum/midpoint@sha256:68970b425dce75d8ee444f3871d8030a993ee8b3244d1da45765b18e727e9cb3"
+
+  - it: should use default replica count (1)
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 1
+
+  - it: should use custom replica count
+    set:
+      replicaCount: 2
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 2
+
+  - it: should always render the repository-init init container
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: repository-init
+
+  - it: should render only repository-init by default
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.initContainers
+          count: 1
+
+  - it: should render connector-init when connector.enabled is true
+    set:
+      connector.enabled: true
+      connector.name: connector-keycloak-2.0.0.jar
+      connector.url: https://example.com/connector-keycloak-2.0.0.jar
+      connector.sha256: deadbeef
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.initContainers
+          count: 2
+      - equal:
+          path: spec.template.spec.initContainers[1].name
+          value: connector-init
+      - matchRegex:
+          path: spec.template.spec.initContainers[1].args[0]
+          pattern: "connector-keycloak-2.0.0.jar"
+
+  - it: should not render schema-extension-init by default
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.initContainers
+          count: 1
+
+  - it: should render schema-extension-init when schemaExtension.enabled is true
+    set:
+      schemaExtension.enabled: true
+      schemaExtension.files:
+        extension.xsd: "<xsd/>"
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.initContainers
+          count: 2
+      - equal:
+          path: spec.template.spec.initContainers[1].name
+          value: schema-extension-init
+      - lengthEqual:
+          path: spec.template.spec.volumes
+          count: 2
+      - equal:
+          path: spec.template.spec.volumes[1].name
+          value: schema-extension-src
+
+  - it: should append extraInitContainers after the built-in ones
+    set:
+      extraInitContainers:
+        - name: custom-init
+          image: busybox:1.36
+          command: ["true"]
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[1].name
+          value: custom-init
+
+  - it: should reference the database secret for the repository password
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].env[3].valueFrom.secretKeyRef.name
+          value: RELEASE-NAME-midpoint-db
+      - equal:
+          path: spec.template.spec.containers[0].env[2].valueFrom.secretKeyRef.name
+          value: RELEASE-NAME-midpoint-db
+
+  - it: should use existing database secret when configured
+    set:
+      database.existingSecret: my-db-secret
+      database.existingSecretKey: db-password
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].env[2].valueFrom.secretKeyRef.name
+          value: my-db-secret
+      - equal:
+          path: spec.template.spec.containers[0].env[2].valueFrom.secretKeyRef.key
+          value: db-password
+
+  - it: should reference the admin secret for the initial password
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].env[4].valueFrom.secretKeyRef.name
+          value: RELEASE-NAME-midpoint-admin
+
+  - it: should build the jdbc url from database host, port and name
+    set:
+      database.host: postgres.cloudsql-proxy.svc.cluster.local
+      database.port: 5432
+      database.name: midpoint
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].env[3].value
+          value: "jdbc:postgresql://postgres.cloudsql-proxy.svc.cluster.local:5432/midpoint"
+
+  - it: should mount the home PVC by default
+    asserts:
+      - equal:
+          path: spec.template.spec.volumes[0].persistentVolumeClaim.claimName
+          value: RELEASE-NAME-midpoint-home
+
+  - it: should mount an existing claim when configured
+    set:
+      home.persistence.existingClaim: my-existing-pvc
+    asserts:
+      - equal:
+          path: spec.template.spec.volumes[0].persistentVolumeClaim.claimName
+          value: my-existing-pvc
+
+  - it: should fall back to an emptyDir when persistence is disabled
+    set:
+      home.persistence.enabled: false
+    asserts:
+      - isNotNull:
+          path: spec.template.spec.volumes[0].emptyDir
+      - isNull:
+          path: spec.template.spec.volumes[0].persistentVolumeClaim
+
+  - it: should append extraEnv to the main container
+    set:
+      extraEnv:
+        - name: MP_SET_midpoint_taskManager_clustered
+          value: "true"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: MP_SET_midpoint_taskManager_clustered
+            value: "true"
+
+  - it: should have default resources
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: 1
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: 4Gi
+
+  - it: should have liveness and readiness probes enabled by default
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.path
+          value: /midpoint/actuator/health
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.path
+          value: /midpoint/actuator/health
+
+  - it: should not render probes when disabled
+    set:
+      livenessProbe.enabled: false
+      readinessProbe.enabled: false
+    asserts:
+      - isNull:
+          path: spec.template.spec.containers[0].livenessProbe
+      - isNull:
+          path: spec.template.spec.containers[0].readinessProbe
+
+  - it: should have pod security context with fsGroup 1000
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 1000
+
+  - it: should have hardened container security context
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation
+          value: false
+      - contains:
+          path: spec.template.spec.containers[0].securityContext.capabilities.drop
+          content: ALL

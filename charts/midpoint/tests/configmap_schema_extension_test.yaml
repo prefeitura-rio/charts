@@ -1,0 +1,37 @@
+suite: test midpoint schema extension configmap
+templates:
+  - configmap-schema-extension.yaml
+values:
+  - ../values.yaml
+tests:
+  - it: should not create a ConfigMap by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should create a ConfigMap from files when enabled
+    set:
+      schemaExtension.enabled: true
+      schemaExtension.files:
+        extension.xsd: "<xsd:schema/>"
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-midpoint-schema-extension
+      - matchRegex:
+          path: data["extension.xsd"]
+          pattern: "xsd:schema"
+
+  - it: should not create a ConfigMap when using an existing one
+    set:
+      schemaExtension.enabled: true
+      schemaExtension.existingConfigMap: my-existing-cm
+      schemaExtension.files:
+        extension.xsd: "<xsd:schema/>"
+    asserts:
+      - hasDocuments:
+          count: 0

@@ -1,0 +1,19 @@
+apiVersion: v2
+name: midpoint
+version: 1.0.0
+appVersion: "4.10.3-alpine"
+description: MidPoint is an open-source Identity Governance and Administration (IGA) platform by Evolveum
+type: application
+keywords:
+  - midpoint
+  - identity
+  - iam
+  - idm
+  - identity-management
+  - identity-governance
+home: https://evolveum.com/midpoint/
+sources:
+  - https://github.com/Evolveum/midpoint
+  - https://github.com/Evolveum/midpoint-kubernetes
+  - https://hub.docker.com/r/evolveum/midpoint
+icon: https://evolveum.com/wp-content/uploads/2021/10/midpoint-logo.svg
