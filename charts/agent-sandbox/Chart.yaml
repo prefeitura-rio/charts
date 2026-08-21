@@ -2,7 +2,7 @@ apiVersion: v2
 name: agent-sandbox
 description: Kubernetes controller for managing agent sandboxes
 type: application
-version: 1.0.0
+version: 1.0.1
 appVersion: "v0.5.6"
 keywords:
   - agent
