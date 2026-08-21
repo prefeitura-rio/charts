@@ -48,6 +48,9 @@ spec:
     spec:
       imagePullSecrets:
         {{- include "base-chart.imagePullSecrets" . | nindent 8 }}
+      {{- if .Values.security.insecure }}
+      runtimeClassName: gvisor
+      {{- end }}
       serviceAccountName: {{ include "base-chart.serviceAccountName" . }}
       {{- with .Values.podSecurityContext }}
       securityContext:

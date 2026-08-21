@@ -35,6 +35,19 @@ tests:
       - notExists:
           path: spec.replicas
 
+  - it: should not set runtimeClassName by default
+    asserts:
+      - notExists:
+          path: spec.template.spec.runtimeClassName
+
+  - it: should set runtimeClassName to gvisor when security.insecure is true
+    set:
+      security.insecure: true
+    asserts:
+      - equal:
+          path: spec.template.spec.runtimeClassName
+          value: gvisor
+
   - it: should add Istio sidecar annotations when enabled
     set:
       istio.enabled: true

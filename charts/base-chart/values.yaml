@@ -168,6 +168,13 @@ securityContext:
     drop:
       - ALL
   readOnlyRootFilesystem: false # false por padrão pois muitas apps precisam escrever
+# Sandboxing de runtime - isolamento extra para workloads que executam código não confiável
+# Requer um RuntimeClass "gvisor" e um nodepool com suporte a gVisor já configurados no cluster
+# Mais informações: https://kubernetes.io/docs/concepts/containers/runtime-class/
+security:
+  # Quando true, define runtimeClassName: gvisor no pod do Deployment principal
+  insecure: false
+
 # Para máxima segurança, adicione:
 # securityContext:
 #   readOnlyRootFilesystem: true
