@@ -1,0 +1,28 @@
+suite: test deployment
+templates:
+  - templates/deployment.yaml
+set:
+  image:
+    tag: v0.5.6
+tests:
+  - it: renders the controller deployment with the given image tag
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: agent-sandbox-controller
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: registry.k8s.io/agent-sandbox/agent-sandbox-controller:v0.5.6
+      - equal:
+          path: spec.replicas
+          value: 1
+
+  - it: fails to render without image.tag
+    set:
+      image:
+        tag: ""
+    asserts:
+      - failedTemplate:
+          errorMessage: "image.tag is required"
