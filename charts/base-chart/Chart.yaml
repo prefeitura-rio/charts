@@ -20,10 +20,3 @@ dependencies:
     repository: "oci://registry-1.docker.io/cloudpirates"
     condition: rabbitmq.enabled
     alias: rabbitmq
-  # Cloud SQL Proxy - Secure connections to Google Cloud SQL
-  # https://github.com/prefeitura-rio/charts/tree/main/charts/cloudsql-proxy
-  - name: cloudsql-proxy
-    version: "1.0.2"
-    repository: "oci://ghcr.io/prefeitura-rio/charts"
-    condition: cloudsql.enabled
-    alias: cloudsql
