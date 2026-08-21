@@ -33,6 +33,21 @@ tests:
             app.kubernetes.io/name: base-chart
             app.kubernetes.io/instance: RELEASE-NAME
 
+  - it: should have hook annotations present
+    set:
+      configMap:
+        enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations["helm.sh/hook"]
+          value: "pre-install,pre-upgrade"
+      - equal:
+          path: metadata.annotations["helm.sh/hook-weight"]
+          value: "-2"
+      - equal:
+          path: metadata.annotations["helm.sh/hook-delete-policy"]
+          value: "before-hook-creation"
+
   - it: should include string data values
     set:
       configMap:

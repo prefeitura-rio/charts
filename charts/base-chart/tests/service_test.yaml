@@ -155,3 +155,15 @@ tests:
       - equal:
           path: spec.ports[1].protocol
           value: TCP
+
+  - it: should have hook annotations present
+    asserts:
+      - equal:
+          path: metadata.annotations["helm.sh/hook"]
+          value: "pre-install,pre-upgrade"
+      - equal:
+          path: metadata.annotations["helm.sh/hook-weight"]
+          value: "0"
+      - equal:
+          path: metadata.annotations["helm.sh/hook-delete-policy"]
+          value: "before-hook-creation"

@@ -304,3 +304,17 @@ tests:
       - notContains:
           path: spec.gateways
           content: istio-system/istio-gateway
+
+  - it: should have annotations present
+    set:
+      istio.enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations["helm.sh/hook"]
+          value: "post-install,post-upgrade"
+      - equal:
+          path: metadata.annotations["helm.sh/hook-weight"]
+          value: "0"
+      - equal:
+          path: metadata.annotations["helm.sh/hook-delete-policy"]
+          value: "before-hook-creation"

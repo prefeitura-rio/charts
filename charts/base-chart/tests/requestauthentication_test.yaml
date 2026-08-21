@@ -80,3 +80,18 @@ tests:
       - contains:
           path: spec.jwtRules[0].audiences
           content: my-service
+
+  - it: should have hook annotations present
+    set:
+      istio.enabled: true
+      istio.requestAuthentication.enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations["helm.sh/hook"]
+          value: "post-install,post-upgrade"
+      - equal:
+          path: metadata.annotations["helm.sh/hook-weight"]
+          value: "0"
+      - equal:
+          path: metadata.annotations["helm.sh/hook-delete-policy"]
+          value: "before-hook-creation"

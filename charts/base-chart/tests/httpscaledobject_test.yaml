@@ -205,3 +205,21 @@ tests:
       - equal:
           path: spec.scaleTargetRef.port
           value: 8080
+
+  - it: should render HTTPScaledObject when istio disabled and no triggers
+    template: httpscaledobject.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.keda.enabled: true
+      autoscaling.keda.triggers: []
+      istio.enabled: false
+    asserts:
+      - equal:
+          path: metadata.annotations["helm.sh/hook"]
+          value: "pre-install,pre-upgrade"
+      - equal:
+          path: metadata.annotations["helm.sh/hook-weight"]
+          value: "1"
+      - equal:
+          path: metadata.annotations["helm.sh/hook-delete-policy"]
+          value: "before-hook-creation"

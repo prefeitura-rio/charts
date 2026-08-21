@@ -121,3 +121,18 @@ tests:
     asserts:
       - exists:
           path: spec.selector.matchLabels
+
+  - it: should have hook annotations present
+    set:
+      istio.enabled: true
+      istio.authorizationPolicy.enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations["helm.sh/hook"]
+          value: "post-install,post-upgrade"
+      - equal:
+          path: metadata.annotations["helm.sh/hook-weight"]
+          value: "0"
+      - equal:
+          path: metadata.annotations["helm.sh/hook-delete-policy"]
+          value: "before-hook-creation"
