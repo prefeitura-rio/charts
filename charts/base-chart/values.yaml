@@ -942,7 +942,7 @@ flux:
   interval: "1m0s"
 
   # Secret usado para autenticar no registry da imagem (ghcr.io)
-  imagePullSecret: "flux-docker-auth"
+  imagePullSecret: "flux-git-auth"
 
   # Política de atualização da imagem principal
   policy:

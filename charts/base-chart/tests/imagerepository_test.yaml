@@ -1,0 +1,22 @@
+suite: test Flux image repository
+templates:
+  - imagerepository.yaml
+tests:
+  - it: should use the shared Flux authentication secret by default
+    set:
+      image.repository: ghcr.io/example/application
+    asserts:
+      - isKind:
+          of: ImageRepository
+      - equal:
+          path: spec.secretRef.name
+          value: flux-git-auth
+
+  - it: should allow the authentication secret to be overridden
+    set:
+      image.repository: ghcr.io/example/application
+      flux.imagePullSecret: custom-registry-auth
+    asserts:
+      - equal:
+          path: spec.secretRef.name
+          value: custom-registry-auth
