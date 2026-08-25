@@ -308,6 +308,26 @@ tests:
             name: REDIS_PORT
             value: "6379"
 
+  - it: should use the Sentinel service when Valkey Sentinel is enabled
+    set:
+      autoscaling:
+        keda:
+          scaledJobs:
+            consumer:
+              enabled: true
+              command: ["echo"]
+              triggers: []
+      valkey:
+        enabled: true
+        sentinel:
+          enabled: true
+    asserts:
+      - contains:
+          path: spec.jobTargetRef.template.spec.containers[0].env
+          content:
+            name: REDIS_HOST
+            value: RELEASE-NAME-valkey-sentinel
+
   - it: should not inject sentinel env vars when valkey sentinel is disabled
     set:
       autoscaling:

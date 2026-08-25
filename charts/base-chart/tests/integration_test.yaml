@@ -193,6 +193,22 @@ tests:
             secretRef:
               name: api-secrets
 
+  - it: "scenario: API with Valkey Sentinel"
+    templates:
+      - deployment.yaml
+    set:
+      valkey:
+        enabled: true
+        sentinel:
+          enabled: true
+    asserts:
+      - template: deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REDIS_HOST
+            value: RELEASE-NAME-valkey-sentinel
+
   - it: "scenario: app with multiple cronjobs"
     templates:
       - cronjob.yaml

@@ -68,6 +68,14 @@ Resolve imagePullSecrets - falls back to ghcr-credentials if none provided
 {{/*
 Create the name of the service account to use
 */}}
+{{- define "base-chart.valkeyHost" -}}
+{{- if .Values.valkey.sentinel.enabled -}}
+{{- printf "%s-valkey-sentinel" .Release.Name -}}
+{{- else -}}
+{{- printf "%s-valkey" .Release.Name -}}
+{{- end -}}
+{{- end }}
+
 {{- define "base-chart.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
 {{- default (include "base-chart.fullname" .) .Values.serviceAccount.name }}
