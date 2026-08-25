@@ -1069,11 +1069,14 @@ valkey:
 #   - RABBITMQ_HOST: <release>-rabbitmq (service hostname)
 #   - RABBITMQ_PORT: 5672 (AMQP port)
 #   - RABBITMQ_USER: <release> (release name)
-#   - RABBITMQ_PASSWORD: from Infisical secret (requires infisicalSecret.enabled)
-#   - RABBITMQ_ERLANG_COOKIE: from Infisical secret (for clustering)
 #
-# Connection string format (built by application):
-#   amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/
+# When Infisical and auth.existingSecret are enabled, the operator also creates:
+#   - Secret: <release>-rabbitmq-url
+#   - Key: RABBITMQ_URL
+#
+# The URL uses the configured username, the password from existingPasswordKey,
+# and the fully qualified RabbitMQ service name. Consumers must explicitly
+# reference this secret; credentials are not injected into every workload.
 #
 # CONFIGURAÇÃO OBRIGATÓRIA quando usar com Infisical:
 #   rabbitmq:
