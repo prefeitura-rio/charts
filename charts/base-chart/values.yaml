@@ -437,6 +437,38 @@ autoscaling:
     #             value: "1"
     scaledJobs: {}
 
+# Configuração do Canary Deployment (Flagger)
+canary:
+  enabled: false
+  service:
+    # Gateways que definem origem do tráfego
+    # "mesh" pra tráfego interno ao cluster, Istio Ingress Gateway pra tráfego externo.
+    gateways:
+      - mesh
+      - istio-system/istio-gateway
+    # hosts / domínios pro VirtualService que será gerado
+    hosts: []
+      # - "*"
+      # - api.example.com
+
+  analysis:
+    loadTester:
+      enabled: false
+    # Intervalo entre etapas do rollout
+    interval: "1m"
+    # Número limite de falhas na checagem de métricas antes que seja acionado um rollback automático
+    threshold: 5
+    # Taxa máxima de tráfego roteado pra versão canary (e.g., max 50% antes do update completo)
+    maxWeight: 50
+    # Incremento percentual a cada etapa (e.g., 10% -> 20% -> 30% -> 40% -> 50%)
+    stepWeight: 10
+
+    metrics:
+      # Porcentagem mínima de respostas HTTP 2xx/3xx (0 - 100)
+      minSuccessRate: 99
+      # Máxima espera de um request em milisegundos (p99 latency)
+      maxDurationMs: 500
+
 # Volumes adicionais para serem montados no deployment
 volumes: []
 # Exemplo:
@@ -760,14 +792,6 @@ istio:
 
       # Headers específicos para este roteamento (sobrescreve headers global)
       headers: {}
-
-    # Suporte para deploy canário (blue/green)
-    canary:
-      # Habilita deploy canário (desabilitado por padrão)
-      enabled: false
-
-      # Porcentagem de tráfego para a versão canário (0-100)
-      weight: 0
 
   # Configuração do RequestAuthentication - autenticação JWT
   requestAuthentication:

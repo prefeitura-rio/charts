@@ -1,4 +1,4 @@
-{{- if and .Values.istio.enabled .Values.istio.virtualService.enabled -}}
+{{- if and .Values.istio.enabled .Values.istio.virtualService.enabled (not .Values.canary.enabled) -}}
 {{- $fullName := include "base-chart.fullname" . -}}
 {{- $servicePath := .Values.istio.virtualService.pathBasedRouting.servicePath | default (include "base-chart.name" .) -}}
 {{- $vs := .Values.istio.virtualService -}}
@@ -91,14 +91,6 @@ spec:
             host: {{ $fullName }}.{{ .Release.Namespace }}.svc.cluster.local
             port:
               number: {{ .Values.service.port }}
-          weight: {{ sub 100 ($vs.canary.weight | int) }}
-        {{- if $vs.canary.enabled }}
-        - destination:
-            host: {{ $fullName }}-canary
-            port:
-              number: {{ .Values.service.port }}
-          weight: {{ $vs.canary.weight }}
-        {{- end }}
   {{- else if $vs.http }}
     {{- range $vs.http }}
     - {{- if .name }}
