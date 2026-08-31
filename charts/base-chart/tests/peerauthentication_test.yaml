@@ -1,0 +1,78 @@
+suite: test istio peer authentication
+templates:
+  - peerauthentication.yaml
+tests:
+  - it: should not render when istio is disabled
+    set:
+      istio.enabled: false
+      istio.peerAuthentication.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should not render when peerAuthentication is disabled
+    set:
+      istio.enabled: true
+      istio.peerAuthentication.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render with STRICT mtls by default when enabled
+    set:
+      istio.enabled: true
+      istio.peerAuthentication.enabled: true
+    asserts:
+      - isKind:
+          of: PeerAuthentication
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+      - equal:
+          path: spec.mtls.mode
+          value: STRICT
+
+  - it: should configure PERMISSIVE mode when specified
+    set:
+      istio.enabled: true
+      istio.peerAuthentication.enabled: true
+      istio.peerAuthentication.mode: PERMISSIVE
+    asserts:
+      - equal:
+          path: spec.mtls.mode
+          value: PERMISSIVE
+
+  - it: should configure port level mtls overrides
+    set:
+      istio.enabled: true
+      istio.peerAuthentication.enabled: true
+      istio.peerAuthentication.portLevelMtls:
+        "8080":
+          mode: PERMISSIVE
+    asserts:
+      - equal:
+          path: spec.portLevelMtls.8080.mode
+          value: PERMISSIVE
+
+  - it: should configure selector with correct labels
+    set:
+      istio.enabled: true
+      istio.peerAuthentication.enabled: true
+    asserts:
+      - exists:
+          path: spec.selector.matchLabels
+
+  - it: should have hook annotations present
+    set:
+      istio.enabled: true
+      istio.peerAuthentication.enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations["helm.sh/hook"]
+          value: "post-install,post-upgrade"
+      - equal:
+          path: metadata.annotations["helm.sh/hook-weight"]
+          value: "0"
+      - equal:
+          path: metadata.annotations["helm.sh/hook-delete-policy"]
+          value: "before-hook-creation"

@@ -122,6 +122,68 @@ tests:
       - exists:
           path: spec.selector.matchLabels
 
+  - it: should build a namespace-only rule from simplified ingress (phase 2, no service account)
+    set:
+      istio.enabled: true
+      istio.authorizationPolicy.enabled: true
+      istio.authorizationPolicy.ingress:
+        - namespace: checkout
+    asserts:
+      - equal:
+          path: spec.rules[0].from[0].source.namespaces[0]
+          value: checkout
+      - notExists:
+          path: spec.rules[0].from[0].source.principals
+
+  - it: should build a principal rule from simplified ingress when serviceAccount is set
+    set:
+      istio.enabled: true
+      istio.authorizationPolicy.enabled: true
+      istio.authorizationPolicy.ingress:
+        - namespace: checkout
+          serviceAccount: payments-api
+    asserts:
+      - equal:
+          path: spec.rules[0].from[0].source.principals[0]
+          value: "cluster.local/ns/checkout/sa/payments-api"
+      - notExists:
+          path: spec.rules[0].from[0].source.namespaces
+
+  - it: should build one rule per simplified ingress entry
+    set:
+      istio.enabled: true
+      istio.authorizationPolicy.enabled: true
+      istio.authorizationPolicy.ingress:
+        - namespace: checkout
+        - namespace: billing
+          serviceAccount: invoices-api
+    asserts:
+      - equal:
+          path: spec.rules[0].from[0].source.namespaces[0]
+          value: checkout
+      - equal:
+          path: spec.rules[1].from[0].source.principals[0]
+          value: "cluster.local/ns/billing/sa/invoices-api"
+
+  - it: should ignore raw rules when simplified ingress is set
+    set:
+      istio.enabled: true
+      istio.authorizationPolicy.enabled: true
+      istio.authorizationPolicy.ingress:
+        - namespace: checkout
+      istio.authorizationPolicy.rules:
+        - from:
+            - source:
+                principals:
+                  - "cluster.local/ns/default/sa/my-service"
+    asserts:
+      - lengthEqual:
+          path: spec.rules
+          count: 1
+      - equal:
+          path: spec.rules[0].from[0].source.namespaces[0]
+          value: checkout
+
   - it: should have hook annotations present
     set:
       istio.enabled: true

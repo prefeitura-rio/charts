@@ -636,6 +636,11 @@ istio:
   # Habilita todas as funcionalidades do Istio (habilitado por padrão)
   enabled: true
 
+  # Modo do data plane: "sidecar" injeta um proxy Envoy por pod (padrão);
+  # "ambient" usa o ztunnel do node, sem proxy no pod. O baseline do NetworkPolicy
+  # (templates/networkpolicy.yaml) muda automaticamente conforme este valor.
+  dataplaneMode: "sidecar" # sidecar | ambient
+
   # Configuração do sidecar proxy do Istio
   # Valores padrão otimizados - apenas sobrescreva se necessário
   sidecar:
@@ -800,9 +805,24 @@ istio:
     # provider:
     #   name: "cerbos-authz"
 
-    # Regras de autorização - por padrão permite tudo
+    # Forma simplificada: namespace ou namespace+serviceAccount (fase 2 do rollout).
+    # Requer istio.peerAuthentication.enabled=true para a identidade ser confiável.
+    # Tem precedência sobre `rules` quando preenchido.
+    ingress: []
+    # ingress:
+    #   - namespace: checkout
+    #   - namespace: checkout
+    #     serviceAccount: payments-api
+
+    # Regras brutas (usado só quando `ingress` acima está vazio)
     rules:
       - {} # Regra vazia = permite tudo
+
+  # PeerAuthentication - exige mTLS entre workloads (base para o AuthorizationPolicy acima)
+  peerAuthentication:
+    enabled: false
+    mode: "STRICT" # STRICT | PERMISSIVE | DISABLE
+    portLevelMtls: {}
 
   # Configuração do DestinationRule - políticas de tráfego L4/L3
   destinationRule:
@@ -852,6 +872,46 @@ istio:
     #   connectionPool:
     #     tcp:
     #       maxConnections: 200
+
+# NetworkPolicy - controle de tráfego por namespace/pod (opt-in).
+# Ingress e Egress são independentes: lista vazia = sem restrição naquela direção.
+# Ao adicionar a 1ª entrada, a direção vira default-deny + baseline automático
+# (DNS, control-plane do Istio, health check do kubelet).
+# Rollout gradual do ingress: fase 1 por namespace, fase 3 por namespace+workload.
+networkPolicy:
+  enabled: false
+
+  # Espelha entradas entre ingress.from e egress.to (mesmos peers, direção trocada).
+  # As duas são independentes - habilite as duas para espelhar nos dois sentidos.
+  # Entradas diretas continuam valendo, como extras. Baseline não muda.
+  mirrorIngressToEgress: false # ingress.from -> também vira peer de egress.to
+  mirrorEgressToIngress: false # egress.to -> também vira peer de ingress.from
+
+  ingress:
+    # - namespace: <nome>                     -> qualquer pod do namespace
+    # - namespace: <nome>, workload: <nome>    -> só esse workload no namespace
+    # - namespace: <nome>, podSelector: {...}  -> seletor de pod customizado
+    # - namespaceSelector: {...}               -> seletor de namespace bruto
+    # - ipBlock: { cidr: ... }                 -> origem por CIDR
+    from: []
+    # from:
+    #   - namespace: ingress-nginx
+    #   - namespace: checkout
+    #     workload: payments-api
+
+    ports: [] # vazio = todas as portas
+    # ports:
+    #   - port: 8080
+    #     protocol: TCP
+
+  egress:
+    # Mesmo formato de ingress.from. DNS e control-plane do Istio já são liberados automaticamente.
+    to: []
+    # to:
+    #   - ipBlock:
+    #       cidr: 203.0.113.0/24
+
+    ports: []
 
 # PodDisruptionBudget - garante disponibilidade durante atualizações e manutenções
 # Mais informações: https://kubernetes.io/docs/concepts/workloads/pods/disruptions/

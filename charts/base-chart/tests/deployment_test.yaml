@@ -59,6 +59,41 @@ tests:
           path: spec.template.metadata.annotations["sidecar.istio.io/proxyCPU"]
           value: "100m"
 
+  - it: should add sidecar.istio.io/inject label by default (sidecar mode)
+    set:
+      istio.enabled: true
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels["sidecar.istio.io/inject"]
+          value: "true"
+      - notExists:
+          path: spec.template.metadata.labels["istio.io/dataplane-mode"]
+
+  - it: should add istio.io/dataplane-mode label and skip sidecar annotations in ambient mode
+    set:
+      istio.enabled: true
+      istio.dataplaneMode: ambient
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels["istio.io/dataplane-mode"]
+          value: ambient
+      - notExists:
+          path: spec.template.metadata.labels["sidecar.istio.io/inject"]
+      - notExists:
+          path: spec.template.metadata.annotations["sidecar.istio.io/proxyCPU"]
+      - notExists:
+          path: spec.template.metadata.annotations["sidecar.istio.io/rewriteAppHTTPProbers"]
+
+  - it: should not add any istio labels or annotations when istio is disabled, even in ambient mode
+    set:
+      istio.enabled: false
+      istio.dataplaneMode: ambient
+    asserts:
+      - notExists:
+          path: spec.template.metadata.labels["istio.io/dataplane-mode"]
+      - notExists:
+          path: spec.template.metadata.labels["sidecar.istio.io/inject"]
+
   - it: should include Infisical auto-reload annotation
     asserts:
       - equal:
