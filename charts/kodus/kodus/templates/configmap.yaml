@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "kodus.fullname" . }}-config
+  labels:
+    {{- include "kodus.labels" . | nindent 4 }}
+  {{- /*
+    Support fingerprint. When someone opens a ticket, the first four questions are
+    always which chart, which Kodus release, which platform, and which datastore
+    modes — and the answers arrive as screenshots, from memory, or wrong. This
+    puts all of them on one object:
+
+      kubectl get cm -n <ns> -l app.kubernetes.io/part-of=kodus \
+        -o jsonpath='{.items[0].metadata.annotations}' | tr ',' '\n'
+
+    Nothing here leaves the cluster. No hostnames, no URLs, no secrets, no
+    identifiers — only which knobs are set, which is exactly what a maintainer
+    needs and nothing a user would mind sharing. Annotations, not labels: no
+    charset or 63-character limit, and nothing here should ever be a selector.
+  */}}
+  annotations:
+    kodus.io/chart-version: {{ .Chart.Version | quote }}
+    kodus.io/app-version: {{ .Values.imageTag | default .Chart.AppVersion | quote }}
+    kodus.io/platform: {{ .Values.platform | quote }}
+    kodus.io/datastores: {{ printf "postgres=%s,mongodb=%s,rabbitmq=%s" .Values.postgres.mode .Values.mongodb.mode .Values.rabbitmq.mode | quote }}
+    {{- /* Per-service effective tag: the one place a partial override shows up. */}}
+    {{- $svcs := list }}
+    {{- range $name, $svc := .Values.services }}
+    {{- if or (kindIs "invalid" $svc.enabled) $svc.enabled }}
+    {{- $svcs = append $svcs (printf "%s=%s" $name ((dig "image" "tag" "" $svc) | default $.Values.imageTag | default $.Chart.AppVersion)) }}
+    {{- end }}
+    {{- end }}
+    kodus.io/services: {{ join "," $svcs | quote }}
+    kodus.io/ingress: {{ if eq .Values.platform "openshift" }}{{ if .Values.route.enabled }}route{{ else }}none{{ end }}{{ else }}{{ if .Values.ingress.enabled }}ingress{{ else }}none{{ end }}{{ end }}
+    {{- /* How secrets are sourced changes what a maintainer should even ask for. */}}
+    kodus.io/secrets: {{ if .Values.global.externalSecrets.enabled }}external-secrets{{ else if .Values.global.existingSecret }}existing-secret{{ else if .Values.global.autoGenerateSecrets }}chart-generated{{ else }}inline{{ end }}
+    kodus.io/hardening: {{ printf "networkPolicy=%v,pdb=%v,autoscaling=%v" .Values.networkPolicy.enabled .Values.pdb.enabled .Values.autoscaling.enabled | quote }}
+data:
+  {{- /* Start from user-supplied config, then fill empty webhook URLs from the
+         configured Ingress/Route host so connecting a repo registers a webhook
+         without the user hand-writing the URL. */}}
+  {{- $cfg := deepCopy .Values.global.config }}
+  {{- $base := include "kodus.webhooksBaseUrl" . }}
+  {{- if $base }}
+  {{- range $key, $seg := (include "kodus.webhookProviders" . | fromYaml) }}
+  {{- if not (index $cfg $key) }}
+  {{- $_ := set $cfg $key (printf "%s/%s/webhook" $base $seg) }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+  {{/* Same idea for the MCP OAuth callback: the browser is redirected back to the
+       WEB origin (not the mcp-manager), so an empty value ships a broken OAuth
+       flow. Derive it from the public web URL when the user didn't set one. */}}
+  {{- if index .Values.services "mcp-manager" | dig "enabled" false }}
+  {{- $webBase := include "kodus.webBaseUrl" . }}
+  {{- if and $webBase (not (index $cfg "API_MCP_MANAGER_REDIRECT_URI")) }}
+  {{- $_ := set $cfg "API_MCP_MANAGER_REDIRECT_URI" (printf "%s/setup/mcp/oauth" $webBase) }}
+  {{- end }}
+  {{/* CORS: scope to the web origin when we can derive it. "*" is the fallback for
+       an unknown host, not the default — a wide-open default survives into
+       production precisely because nothing ever fails to remind you. */}}
+  {{- if not (index $cfg "API_MCP_MANAGER_CORS_ORIGINS") }}
+  {{- $_ := set $cfg "API_MCP_MANAGER_CORS_ORIGINS" ($webBase | default "*") }}
+  {{- end }}
+  {{- end }}
+  {{- range $key, $value := $cfg }}
+  {{ $key }}: {{ tpl (toString $value) $ | quote }}
+  {{- end }}

@@ -1,0 +1,86 @@
+# Non-secret pilot overlay.
+#
+# Replace the example.com hosts and create the referenced TLS Secret before
+# exposing this release. Application secrets may be auto-generated for this
+# short-lived pilot, but provider and GitHub credentials must come from the
+# approved secret-management path and must not be added here.
+
+platform: kubernetes
+imageTag: "2.1.31"
+
+global:
+  labels:
+    kodus.io/environment: pilot
+    kodus.io/team: quality-gate
+  autoGenerateSecrets: true
+  config:
+    NEXTAUTH_URL: "https://kodus-pilot.example.com"
+    API_DATABASE_DISABLE_SSL: "true"
+    API_LOG_LEVEL: "info"
+    API_LOG_PRETTY: "false"
+
+services:
+  web:
+    replicas: 1
+  api:
+    replicas: 1
+  worker:
+    replicas: 1
+  webhooks:
+    replicas: 1
+  worker-analytics:
+    enabled: false
+  mcp-manager:
+    enabled: false
+
+autoscaling:
+  enabled: false
+
+pdb:
+  enabled: false
+
+networkPolicy:
+  enabled: true
+
+resourceQuota:
+  enabled: false
+
+ingress:
+  enabled: true
+  className: nginx
+  tls:
+    enabled: true
+    secretName: kodus-pilot-tls
+  hosts:
+    web:
+      host: kodus-pilot.example.com
+      path: /
+      serviceName: web
+    api:
+      host: kodus-api-pilot.example.com
+      path: /
+      serviceName: api
+    webhooks:
+      host: kodus-webhooks-pilot.example.com
+      path: /
+      serviceName: webhooks
+
+# Bundled stores keep the pilot self-contained. Replace these with external or
+# operator-managed stores before treating the deployment as production-ready.
+postgres:
+  mode: bundled
+  bundled:
+    storage:
+      size: 5Gi
+
+mongodb:
+  mode: bundled
+  bundled:
+    storage:
+      size: 5Gi
+
+rabbitmq:
+  mode: bundled
+  bundled:
+    storage:
+      size: 5Gi

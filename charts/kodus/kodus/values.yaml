@@ -1,0 +1,627 @@
+# Kodus — production-hardened defaults (SOC 2 Type II oriented).
+# Overlays (layer with -f on top of this file):
+#   values-dev.yaml               local/dev — relaxes security, single replicas, tags
+#   values-openshift.yaml         OpenShift — Routes + SCC-friendly security
+#   values-external-example.yaml  reuse existing Postgres/MongoDB/RabbitMQ
+# See charts/README.md → "Data stores" for the full walkthrough.
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Target platform. kubernetes → Ingress; openshift → Route + SecurityContext
+# Constraints, and pod fsGroup is left unset (OpenShift assigns UIDs via the SCC).
+# For OpenShift use the values-openshift.yaml overlay.
+platform: kubernetes # kubernetes | openshift
+
+global:
+  # Air-gapped: set to a private mirror (e.g. "registry.internal:5000") to
+  # repoint EVERY image (app + busybox + mongo + pgvector + rabbitmq) at it.
+  # Empty = pull from the original registries.
+  imageRegistry: ""
+  # Compliance/audit labels merged onto every resource.
+  labels:
+    kodus.io/environment: "" # REQUIRED: production | staging | development
+    kodus.io/team: "" # REQUIRED: owning team
+    kodus.io/compliance: "soc2"
+    kodus.io/data-classification: "confidential"
+
+  # --- Secret sourcing (choose ONE for production) ---
+  # Option 1: reference a pre-created Kubernetes Secret holding all app secret keys.
+  existingSecret: ""
+  # Option 2: external-secrets operator — generates ExternalSecret resources.
+  externalSecrets:
+    enabled: false
+    store: "" # SecretStore / ClusterSecretStore name
+    storeKind: SecretStore
+    refreshInterval: "1h"
+  # Option 3 (dev only): inline secrets. Ignored when existingSecret or
+  # externalSecrets is set. Empty required keys are auto-generated (stable across
+  # upgrade) with the correct format: API_CRYPTO_KEY / CODE_MANAGEMENT_SECRET are
+  # 32-byte HEX (kodus-ai parses them with Buffer.from(x,'hex')); JWT/NextAuth are
+  # base64. NEXTAUTH_SECRET is mirrored to WEB_NEXTAUTH_SECRET.
+  autoGenerateSecrets: true
+  secrets:
+    API_JWT_SECRET: ""
+    API_JWT_REFRESH_SECRET: ""
+    WEB_NEXTAUTH_SECRET: ""
+    NEXTAUTH_SECRET: ""
+    API_CRYPTO_KEY: ""
+    CODE_MANAGEMENT_SECRET: ""
+    CODE_MANAGEMENT_WEBHOOK_TOKEN: ""
+    # Optional
+    API_OPEN_AI_API_KEY: "" # NOTE: Anthropic/Claude key ALSO goes here
+    API_MORPHLLM_API_KEY: ""
+    API_E2B_KEY: ""
+    API_MCP_MANAGER_JWT_SECRET: ""
+    API_MCP_MANAGER_ENCRYPTION_SECRET: ""
+
+  # --- Non-sensitive config (rendered into the ConfigMap) ---
+  # {{ .Release.Name }} refs are resolved via `tpl` in configmap.yaml.
+  config:
+    # Web
+    WEB_NODE_ENV: "self-hosted"
+    # The web reaches the API via a SERVER-SIDE proxy (/api/proxy/…), so this must
+    # be the IN-CLUSTER API address, not a public hostname. Pointing it at the
+    # public Ingress/Route makes the web pod hairpin out to the router and fail
+    # ("fetch failed / other side closed"). Defaults to the in-cluster Service.
+    WEB_HOSTNAME_API: "{{ .Release.Name }}-api"
+    WEB_PORT_API: "3001"
+    WEB_PORT: "3000"
+    NEXTAUTH_URL: "" # REQUIRED — full HTTPS URL in production
+    WEB_SUPPORT_DOCS_URL: "https://docs.kodus.io"
+    WEB_SUPPORT_DISCORD_INVITE_URL: "https://discord.gg/QFzwwmNmdN"
+    # API
+    API_NODE_ENV: "production"
+    API_LOG_LEVEL: "error"
+    API_LOG_PRETTY: "false"
+    API_HOST: "0.0.0.0"
+    API_PORT: "3001"
+    API_RATE_MAX_REQUEST: "100"
+    API_RATE_INTERVAL: "1000"
+    API_CLOUD_MODE: "false"
+    API_JWT_EXPIRES_IN: "365d"
+    API_JWT_REFRESH_EXPIRES_IN: "7d"
+    API_WEBHOOKS_PORT: "3332"
+    API_FRONTEND_URL: "http://{{ .Release.Name }}-web:3000"
+    GLOBAL_API_CONTAINER_NAME: "kodus-api"
+    # Database
+    API_DATABASE_ENV: "production"
+    # SSL to Postgres. The bundled/operator Postgres runs IN-cluster without TLS,
+    # so SSL must be DISABLED by default — otherwise node-postgres sends an
+    # SSLRequest the server rejects ("server does not support SSL connections")
+    # and the migration Job + api/worker fail to connect. For mode=external with a
+    # managed PG that enforces TLS (RDS/Atlas), set this to "false"
+    # (values-external-example.yaml does).
+    API_DATABASE_DISABLE_SSL: "true"
+    # RabbitMQ
+    API_RABBITMQ_ENABLED: "true"
+    API_RABBITMQ_WAIT: "true"
+    # Runtime flags
+    RUN_MIGRATIONS: "false" # migrations run only via the migration Job (migration-job.yaml)
+    RUN_SEEDS: "false" # seeds run in the migration Job too
+    SANDBOX_PROVIDER: "local"
+    API_AGENT_REVIEW_ENABLED: "true"
+    NODE_ENV: "production"
+    # --- Graceful shutdown ---
+    # How long a worker spends draining after SIGTERM before exiting. The pod's
+    # terminationGracePeriodSeconds is DERIVED from this (see deployment.yaml), so
+    # the two can never disagree — Kubernetes will always wait longer than the app
+    # asks for.
+    #
+    # 60s, not the 600000 the schema suggests. Draining here means "stop consuming
+    # and let the queue reclaim the work", not "finish it": a review job may
+    # legitimately run 105 minutes, so no shutdown window can finish one, and a
+    # 10-minute grace period would make every node drain and `helm upgrade` crawl
+    # for no benefit. Raise it only if your workers genuinely complete work during
+    # shutdown, and expect drains to slow by the same amount.
+    API_WORKER_DRAIN_TIMEOUT_MS: "60000"
+    # Stale-job reaper — fails jobs left in PROCESSING by a worker that died
+    # mid-processing. This matters far more on Kubernetes than under Compose:
+    # OOMKill delivers no SIGTERM at all, so the process simply vanishes with the
+    # job still claimed, and HPA scale-down, node drains and rollouts all end
+    # workers routinely. Without the reaper those jobs are stuck forever.
+    WORKFLOW_STALE_JOB_REAPER_CRON: "0 */10 * * * *"
+    # Must exceed the longest legitimate run — the 105min job-abort timeout and the
+    # 150min inbox claim timeout — or the reaper kills live work. 180 leaves margin.
+    WORKFLOW_STALE_JOB_TIMEOUT_MINUTES: "180"
+    # Cron (UTC)
+    API_CRON_SYNC_CODE_REVIEW_REACTIONS: "0 0 * * *"
+    API_CRON_KODY_LEARNING: "0 0 * * 6"
+    API_CRON_CHECK_IF_PR_SHOULD_BE_APPROVED: "*/2 * * * *"
+    # MCP (all only relevant when services.mcp-manager.enabled=true)
+    API_MCP_SERVER_ENABLED: "true"
+    API_KODUS_SERVICE_MCP_MANAGER: "http://{{ .Release.Name }}-mcp-manager:3101"
+    API_KODUS_MCP_SERVER_URL: "http://{{ .Release.Name }}-api:3001/mcp"
+    # web → mcp-manager (frontend reaches it in-cluster by default)
+    WEB_HOSTNAME_MCP_MANAGER: "{{ .Release.Name }}-mcp-manager"
+    WEB_PORT_MCP_MANAGER: "3101"
+    API_MCP_MANAGER_LOG_LEVEL: "info"
+    API_MCP_MANAGER_PORT: "3101"
+    API_MCP_MANAGER_NODE_ENV: "production"
+    API_MCP_MANAGER_DATABASE_ENV: "production"
+    # Browser OAuth setup flow lands here — MUST be your PUBLIC web URL when MCP is
+    # enabled, e.g. https://kodus.example.com/setup/mcp/oauth (matches NEXTAUTH_URL host).
+    # AUTO-DERIVED (like the webhook URLs): leave empty and the chart fills it with
+    # <NEXTAUTH_URL or the web Route/Ingress host>/setup/mcp/oauth. Derivation is
+    # skipped when neither is known, so set it explicitly if you let the OpenShift
+    # router auto-assign the web host.
+    API_MCP_MANAGER_REDIRECT_URI: ""
+    # CORS for the mcp-manager. AUTO-DERIVED: left empty, the chart scopes it to
+    # the public web origin (NEXTAUTH_URL, else the web Route/Ingress host) — the
+    # only origin that legitimately calls it. It falls back to "*" only when
+    # neither is known at template time, so a hardened default never depends on
+    # the operator remembering to narrow it. Set explicitly to override.
+    API_MCP_MANAGER_CORS_ORIGINS: ""
+    API_MCP_MANAGER_MCP_PROVIDERS: "kodusmcp,custom"
+    API_MCP_MANAGER_PG_DB_SCHEMA: "mcp-manager"
+    # Git provider webhooks — REQUIRED to connect repos. When you connect a repo,
+    # Kodus registers this exact URL as a webhook on the provider, so it MUST be a
+    # PUBLIC https URL that the provider can reach, pointing at the `webhooks`
+    # service (port 3332). Empty/localhost → the app silently skips webhook
+    # registration and reviews never trigger.
+    #
+    # AUTO-DERIVED: leave these empty and the chart fills them from the webhooks
+    # host you set in `ingress.hosts.webhooks` / `route.hosts.webhooks` as
+    #   https://<that-host>/<provider>/webhook
+    # (see kodus.webhooksBaseUrl in templates/_helpers.tpl). Derivation is skipped
+    # when the host is empty (e.g. OpenShift auto-assigns the Route host) or still
+    # the example.com placeholder — then set the value(s) below explicitly. Format:
+    #   https://<public-webhooks-host>/github/webhook     (GitHub)
+    #   https://<public-webhooks-host>/gitlab/webhook     (GitLab)
+    API_GITHUB_CODE_MANAGEMENT_WEBHOOK: ""
+    API_GITLAB_CODE_MANAGEMENT_WEBHOOK: ""
+    GLOBAL_BITBUCKET_CODE_MANAGEMENT_WEBHOOK: ""
+    GLOBAL_AZURE_REPOS_CODE_MANAGEMENT_WEBHOOK: ""
+    API_FORGEJO_CODE_MANAGEMENT_WEBHOOK: ""
+
+# Kodus release version applied to ALL app service images + migrations when their
+# own image.tag is empty — one value for the whole stack, like docker-compose
+# IMAGE_TAG. Override a single service via services.<name>.image.tag.
+#
+# PINNED, and it must stay pinned. This used to default to `latest`, on the
+# reasoning that a pinned default goes stale the moment a new version ships. That
+# reasoning belonged to a chart you installed from a git checkout, where the only
+# version you had was whatever HEAD happened to be. The chart is now published and
+# versioned, so staleness is handled by releasing a new chart version — and
+# Chart.yaml's appVersion, which this must match, is what says which Kodus release
+# a given chart version installs.
+#
+# Three things `latest` costs, all of which pinning buys back:
+#   1. Mixed versions in one Service. imagePullPolicy is Always and the HPA scales
+#      2→4; running pods never re-pull, so a replica added next week pulls a NEWER
+#      image than its siblings and both answer traffic behind the same endpoint.
+#   2. Unintended upgrades. The migration Job is recreated every revision, so a
+#      `helm upgrade` meant to change one limit also pulls new app code and runs its
+#      schema migrations — which do not auto-revert.
+#   3. No rollback. `helm rollback` restores values, not image content, so `latest`
+#      re-resolves to the same new image and the rollback silently does nothing.
+#
+# The third one is why a floating default cannot survive in a published chart:
+# shipping `helm rollback kodus 0.2.0` as a supported operation while the images
+# float makes the command a lie.
+#
+# Track a newer Kodus release without waiting for a chart release:
+#   --set imageTag=2.1.28          (or services.<name>.image.digest to pin by SHA)
+# Keep this value and Chart.yaml's appVersion in step when bumping.
+imageTag: "2.1.31"
+
+# How many old ReplicaSets each Deployment keeps for rollback. Lower than the k8s
+# default (10) so upgrades don't pile up ReplicaSets and exhaust a namespace's
+# replicaset quota (multi-tenant / OpenShift sandbox). Raise if you need deeper
+# `kubectl rollout undo` history.
+revisionHistoryLimit: 3
+
+# Added to the app's drain timeout to form terminationGracePeriodSeconds. It covers
+# what happens after the drain returns — SIGTERM delivery, closing the AMQP and
+# database connections, the process actually exiting. Kubernetes must always wait
+# longer than the app asks for, or the drain never completes.
+terminationGraceBufferSeconds: 30
+
+image:
+  pullPolicy: Always
+imagePullSecrets: []
+# - name: ghcr-credentials
+
+# Init container image used to wait for data deps (TCP probe).
+waitForDeps:
+  image: busybox:1.37.0
+
+services:
+  web:
+    enabled: true
+    image:
+      repository: ghcr.io/kodustech/kodus-ai-web
+      tag: "" # REQUIRED
+    port: 3000
+    replicas: 2
+    # /api/health is a route handler returning {"status":"ok"}; "/" server-renders
+    # the whole sign-in page. Probing "/" ties liveness to the React tree, so a
+    # rendering regression on one page reads as a dead pod and CrashLoops the
+    # deployment — and it pays an SSR on every probe of every replica.
+    probes:
+      path: /api/health
+    # Next.js writes its image-optimization and ISR caches *inside* its own build
+    # tree, which readOnlyRootFilesystem blocks. It degrades silently rather than
+    # crashing — "Failed to write image to cache … EROFS" in the log, and every
+    # image request re-optimizes from scratch, burning CPU for the pod's lifetime.
+    writablePaths:
+      - /usr/src/app/apps/web/.next/cache
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits: { cpu: 500m, memory: 512Mi }
+
+  api:
+    enabled: true
+    image:
+      repository: ghcr.io/kodustech/kodus-ai-api
+      tag: "" # REQUIRED
+    port: 3001
+    replicas: 2
+    probes:
+      path: /health/simple # shallow (liveness/startup)
+      readinessPath: /health # deep (app + RabbitMQ + Postgres)
+    # Measured idle footprint is ~430Mi, so a 512Mi request left the pod at ~85%
+    # before serving a single review. Requests are what the scheduler and the HPA
+    # divide by, so undersizing them distorts both.
+    resources:
+      requests: { cpu: 250m, memory: 768Mi }
+      limits: { cpu: "1", memory: 1536Mi }
+
+  worker:
+    enabled: true
+    image:
+      repository: ghcr.io/kodustech/kodus-ai-worker
+      tag: "" # REQUIRED
+    port: null
+    replicas: 2
+    env:
+      WORKER_ROLE: code-review
+      RUN_MIGRATIONS: "false"
+    # The worker serves its own health endpoint on 3334, checking its consumer
+    # channels. Prefer it over the exec probe it replaced: an exec probe runs in a
+    # SEPARATE process, so it keeps reporting healthy while the worker's event loop
+    # is wedged — the exact failure a liveness probe exists to catch. It also spawned
+    # a full Node runtime and opened a fresh AMQP connection every 15s per pod.
+    probes:
+      path: /health
+      port: 3334
+    # Idles at ~275Mi, but this is where reviews actually run (diff parsing, AST),
+    # so the ceiling is raised while the request stays at the measured baseline.
+    resources:
+      requests: { cpu: 250m, memory: 512Mi }
+      limits: { cpu: "1", memory: 1536Mi }
+
+  # Analytics ingestion worker (Cockpit / self-hosted Enterprise). Harmless when
+  # the Enterprise features are unused — it just consumes its queues — so it ships
+  # on to keep the stack complete. Set false to trim it from a minimal install.
+  worker-analytics:
+    enabled: true
+    image:
+      repository: ghcr.io/kodustech/kodus-ai-worker
+      tag: "" # REQUIRED when enabled
+    port: null
+    replicas: 1
+    env:
+      WORKER_ROLE: analytics
+      RUN_MIGRATIONS: "false"
+    # The worker serves its own health endpoint on 3334, checking its consumer
+    # channels. Prefer it over the exec probe it replaced: an exec probe runs in a
+    # SEPARATE process, so it keeps reporting healthy while the worker's event loop
+    # is wedged — the exact failure a liveness probe exists to catch. It also spawned
+    # a full Node runtime and opened a fresh AMQP connection every 15s per pod.
+    probes:
+      path: /health
+      port: 3334
+    resources:
+      requests: { cpu: 250m, memory: 512Mi }
+      limits: { cpu: "1", memory: 1Gi }
+
+  webhooks:
+    enabled: true
+    image:
+      repository: ghcr.io/kodustech/kodus-ai-webhook
+      tag: "" # REQUIRED
+    port: 3332
+    replicas: 2
+    probes:
+      path: /health/live # liveness/startup
+      readinessPath: /health/ready # readiness (503 when degraded)
+    # Idles at ~170Mi (~67% of a 256Mi request) — enough headroom for the scheduler,
+    # but tight once webhook bursts arrive.
+    resources:
+      requests: { cpu: 100m, memory: 384Mi }
+      limits: { cpu: 500m, memory: 768Mi }
+
+  mcp-manager:
+    enabled: true
+    image:
+      repository: ghcr.io/kodustech/kodus-mcp-manager
+      tag: "" # falls back to the top-level imageTag
+    port: 3101
+    replicas: 1
+    probes:
+      path: /health
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits: { cpu: 500m, memory: 512Mi }
+
+# Database migrations run as a normal Job on each install/upgrade (named with
+# the release revision, TTL-cleaned). Not a Helm hook — a pre-install hook would
+# deadlock waiting for a bundled DB that Helm only creates after hooks finish.
+migrations:
+  enabled: true
+  image:
+    repository: ghcr.io/kodustech/kodus-ai-api
+    tag: "" # REQUIRED — should match services.api.tag
+  env:
+    RUN_MIGRATIONS: "true"
+    # Seeds run on every install AND upgrade (the Job is recreated per revision).
+    # Kodus seeds are upsert-style/idempotent, so re-running is a no-op; set to
+    # "false" if you maintain seed data out-of-band and want upgrades to skip it.
+    RUN_SEEDS: "true"
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {} # e.g. eks.amazonaws.com/role-arn for IRSA
+
+rbac:
+  # Kodus services read their config from env (ConfigMap/Secret → envFrom); they do
+  # NOT call the Kubernetes API, and the SA token is not mounted
+  # (automountServiceAccountToken: false). So NO Role is needed by default —
+  # granting namespace-wide `secrets` read would be a latent exposure for nothing.
+  # If you add a component that talks to the API, set create: true and scope rules
+  # tightly (prefer resourceNames; never an unscoped secrets read).
+  create: false
+  rules: []
+
+podSecurityContext:
+  fsGroup: 1001
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  readOnlyRootFilesystem: true
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # HSTS — ingress-nginx enables it by default on TLS, but set explicitly so it
+    # doesn't depend on controller defaults (belt-and-suspenders).
+    nginx.ingress.kubernetes.io/hsts: "true"
+    nginx.ingress.kubernetes.io/hsts-max-age: "31536000"
+    nginx.ingress.kubernetes.io/hsts-include-subdomains: "true"
+    # cert-manager.io/cluster-issuer: ""
+  tls:
+    enabled: true
+    secretName: ""
+  hosts:
+    web:
+      host: kodus.example.com
+      path: /
+      serviceName: web
+    api:
+      host: api.kodus.example.com
+      path: /
+      serviceName: api
+    webhooks:
+      # Dedicated host, path "/" — the webhooks server serves /github/webhook,
+      # /gitlab/webhook, … at the root (no prefix), so it must NOT share the api
+      # host under a /webhooks path (ingress-nginx forwards the path unchanged →
+      # 404). Point a DNS record + TLS SAN at this host.
+      host: webhooks.kodus.example.com
+      path: /
+      serviceName: webhooks
+
+# OpenShift only (platform: openshift). Routes replace Ingress.
+route:
+  enabled: true
+  # HSTS header — OpenShift Routes do NOT set it by default (ingress-nginx does),
+  # so we force it here. Tells browsers to only ever use HTTPS. Set "" to disable.
+  hsts: "max-age=31536000; includeSubDomains"
+  annotations: {} # extra Route annotations (timeouts, rate-limits, …)
+  tls:
+    # edge = TLS terminates at the router (router→pod is plaintext in-cluster).
+    # For high-security/closed environments that require encryption all the way to
+    # the pod, use `reencrypt` (needs the app to serve TLS with a cert) or
+    # `passthrough`. HSTS above requires edge or reencrypt.
+    termination: edge
+    insecureEdgePolicy: Redirect # force HTTPS
+  hosts:
+    web:
+      host: kodus.apps.cluster.example.com
+      serviceName: web
+    api:
+      host: api.kodus.apps.cluster.example.com
+      serviceName: api
+    webhooks:
+      # Dedicated host, NO path — the webhooks server serves /github/webhook,
+      # /gitlab/webhook, … at the root (no prefix). A `path:` here would break the
+      # endpoint (OpenShift Routes don't strip the prefix). See values-openshift.yaml.
+      host: webhooks.kodus.apps.cluster.example.com
+      serviceName: webhooks
+
+# OpenShift only. Optional custom SecurityContextConstraints bound to the SA.
+# By default we rely on the built-in restricted-v2 SCC (create: false).
+scc:
+  create: false
+  name: ""
+
+networkPolicy:
+  enabled: true
+  # Pod labels of your ingress controller (e.g. {app.kubernetes.io/name: ingress-nginx}).
+  # When set, the web/api/webhooks ingress policies allow ONLY that controller.
+  # Left empty → permissive fallback (any namespace). Ingress controllers run in a
+  # DIFFERENT namespace, so these labels are combined with the namespaceSelector
+  # below (AND) — a podSelector alone would only match the release's own namespace.
+  ingressControllerLabels: {}
+  # Namespace selector for the ingress controller. Default {} = any namespace
+  # (the pod labels above already identify the controller). Narrow it to your
+  # controller's namespace for stricter isolation, e.g.
+  #   {matchLabels: {kubernetes.io/metadata.name: ingress-nginx}}
+  ingressControllerNamespaceSelector: {}
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  # Each app replica holds a Postgres pool, so replicas × pool must stay under the
+  # server's max_connections (bundled default: postgres.bundled.maxConnections).
+  # api + worker + webhooks scale independently, so budget for all three at max.
+  # Raise this together with max_connections (or point at an external/operator DB).
+  maxReplicas: 4
+  targetCPU: 80
+  # targetMemory is deliberately UNSET. Memory-based HPA does not converge for
+  # these services: each Node process carries a baseline heap that does NOT shrink
+  # when replicas are added, so `replicas × (usage / target)` never falls back below
+  # the target — the HPA ratchets straight to maxReplicas at idle and stays there.
+  # Measured idle usage vs. the requests below is 55-85%, i.e. a target of 80 fires
+  # on an empty install. The visible symptom is not "high memory" but replica
+  # sprawl exhausting Postgres connections, which looks like an app outage.
+  # CPU does converge (more replicas → less CPU each), so it is the only metric here.
+  # Only set this if you have a service whose memory genuinely scales with replicas.
+  targetMemory: null
+
+pdb:
+  enabled: true
+  # A PDB is generated ONLY for services whose replica floor is above 1 (the HPA's
+  # minReplicas when autoscaling is on, else the Deployment's replicas). At a floor
+  # of 1, `disruptionsAllowed = currentHealthy - minAvailable` is 0 — evictions are
+  # not slowed, they are forbidden permanently, and `kubectl drain` hangs on that
+  # pod for as long as it exists. mcp-manager and worker-analytics ship at
+  # replicas 1, so they are skipped; raise their replicas to get a PDB.
+  # Keep this at 1: setting it to the replica floor recreates the same deadlock,
+  # so the chart REFUSES to render when minAvailable >= the floor of any service
+  # (the error names the service and shows the arithmetic). A percentage — "50%" —
+  # is accepted as-is: it scales with the replica count instead of pinning to it.
+  minAvailable: 1
+
+resourceQuota:
+  enabled: false
+  hard:
+    requests.cpu: "8"
+    requests.memory: "16Gi"
+    limits.cpu: "16"
+    limits.memory: "32Gi"
+    pods: "50"
+    persistentvolumeclaims: "10"
+
+# =========================================================================
+# Data stores — mode: bundled | external | operator
+#   bundled  : a StatefulSet run by THIS chart using Kodus/official images
+#              (pgvector, kodus-rabbitmq, mongo) — the "bring it up together"
+#              path, equivalent to docker-compose USE_LOCAL_DB=true. Default.
+#   external : managed/self-managed service (RDS/Atlas/CloudAMQP, or your own),
+#              equivalent to USE_LOCAL_DB=false.
+#   operator : provisioned by a cluster operator (advanced HA). The operator
+#              MUST be pre-installed (see Chart.yaml annotations).
+# Passwords for bundled mode are auto-generated (stable across upgrades) when left
+# empty. Single-replica bundled stores are for simple/trial installs; use external
+# or operator for production HA.
+# =========================================================================
+
+postgres:
+  mode: bundled # bundled | external | operator
+  bundled:
+    image: pgvector/pgvector:pg16
+    database: kodus_db
+    username: kodusdev
+    password: "" # auto-generated when empty
+    # Passed as `-c max_connections=`. The image default (100) is not enough once
+    # api/worker/webhooks each run several replicas with their own pools; the
+    # failure mode is "sorry, too many clients already" from every service at once.
+    # Budget roughly (api + worker + webhooks) × maxReplicas × pool size, plus the
+    # migration Job. Raise together with autoscaling.maxReplicas — and note that
+    # Postgres reserves work memory per connection, so raise the memory request too.
+    maxConnections: 200
+    storage:
+      size: 10Gi
+      storageClass: ""
+    resources:
+      requests: { cpu: 250m, memory: 512Mi }
+      limits: { cpu: "1", memory: 1Gi }
+  external:
+    # PREREQUISITE: the target Postgres MUST have the `vector` (pgvector) extension
+    # available — Kodus runs `CREATE EXTENSION vector`. On RDS/Aurora it's built in
+    # (just needs enabling); on a self-managed PG install the pgvector package.
+    # A dedicated database (below) on your existing instance is fine.
+    host: ""
+    port: 5432
+    username: kodusdev
+    database: kodus_db
+    existingSecret: "" # holds the password under passwordKey
+    passwordKey: password
+  operator:
+    # CloudNativePG Cluster. Image MUST ship pgvector (a stock CNPG image does
+    # NOT) — set a CNPG-compatible pgvector image here.
+    image: "" # REQUIRED for mode=operator
+    instances: 2
+    database: kodus_db
+    owner: kodusdev
+    storage:
+      size: 10Gi
+      storageClass: ""
+
+mongodb:
+  mode: bundled
+  bundled:
+    image: mongo:8
+    database: kodus_db
+    username: kodusdev # root user
+    password: "" # auto-generated when empty
+    storage:
+      size: 10Gi
+      storageClass: ""
+    # WiredTiger sizes its cache from the container limit and idles at ~220Mi on an
+    # empty database, which already sat at ~86% of a 256Mi request.
+    resources:
+      requests: { cpu: 100m, memory: 512Mi }
+      limits: { cpu: 500m, memory: 1Gi }
+  external:
+    host: ""
+    port: 27017
+    username: kodusdev
+    database: kodus_db
+    existingSecret: ""
+    passwordKey: password
+  operator:
+    version: "8.0.4"
+    members: 3
+    database: kodus_db
+    username: kodusdev
+    storage:
+      size: 10Gi
+      storageClass: ""
+
+rabbitmq:
+  mode: bundled
+  bundled:
+    # Pre-built Kodus image: delayed_message_exchange plugin + kodus-ai/kodus-ast
+    # vhosts baked in. Runs init-definitions.sh on boot (same as docker-compose).
+    image: ghcr.io/kodustech/kodus-rabbitmq:4.2.2-kodus
+    username: kodus
+    password: "" # auto-generated when empty
+    storage:
+      size: 8Gi
+      storageClass: ""
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits: { cpu: 500m, memory: 1Gi }
+  external:
+    # PREREQUISITES on your existing RabbitMQ (the bundled image bakes these in;
+    # a vanilla broker does NOT have them and Kodus will fail confusingly without):
+    #   1. Enable the plugin:  rabbitmq-plugins enable rabbitmq_delayed_message_exchange
+    #   2. Create the vhosts:  rabbitmqctl add_vhost kodus-ai && rabbitmqctl add_vhost kodus-ast
+    #      then grant your user permissions on both (".*" ".*" ".*").
+    # The URI's vhost must be kodus-ai (see below).
+    uri: "" # amqps://user:pass@host:5671/kodus-ai
+    existingSecret: ""
+    uriKey: uri
+  operator:
+    image: ghcr.io/kodustech/kodus-rabbitmq:4.2.2-kodus
+    replicas: 1
+    storage:
+      size: 8Gi
+      storageClass: ""
