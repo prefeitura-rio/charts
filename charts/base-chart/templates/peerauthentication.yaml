@@ -1,0 +1,23 @@
+{{- if and .Values.istio.enabled .Values.istio.peerAuthentication.enabled -}}
+{{- $fullName := include "base-chart.fullname" . -}}
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: {{ $fullName }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation
+  labels:
+    {{- include "base-chart.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "base-chart.selectorLabels" . | nindent 6 }}
+  mtls:
+    mode: {{ .Values.istio.peerAuthentication.mode }}
+  {{- with .Values.istio.peerAuthentication.portLevelMtls }}
+  portLevelMtls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}

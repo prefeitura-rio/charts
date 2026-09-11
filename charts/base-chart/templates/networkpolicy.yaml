@@ -1,0 +1,112 @@
+{{- $mirrorIToE := .Values.networkPolicy.mirrorIngressToEgress -}}
+{{- $mirrorEToI := .Values.networkPolicy.mirrorEgressToIngress -}}
+{{- $ingressFrom := .Values.networkPolicy.ingress.from -}}
+{{- $egressTo := .Values.networkPolicy.egress.to -}}
+{{- $ingressActive := or (gt (len $ingressFrom) 0) (and $mirrorEToI (gt (len $egressTo) 0)) -}}
+{{- $egressActive := or (gt (len $egressTo) 0) (and $mirrorIToE (gt (len $ingressFrom) 0)) -}}
+{{- if and .Values.networkPolicy.enabled (or $ingressActive $egressActive) -}}
+{{- $fullName := include "base-chart.fullname" . -}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullName }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation
+  labels:
+    {{- include "base-chart.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "base-chart.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    {{- if $ingressActive }}
+    - Ingress
+    {{- end }}
+    {{- if $egressActive }}
+    - Egress
+    {{- end }}
+  {{- if $ingressActive }}
+  ingress:
+    {{- if .Values.istio.enabled }}
+    {{- if eq .Values.istio.dataplaneMode "ambient" }}
+    # HBONE (ztunnel -> ztunnel) - obrigatório para o tráfego do mesh alcançar o pod
+    - ports:
+        - port: 15008
+          protocol: TCP
+      from: []
+    # health check do kubelet - ambient faz SNAT do kubelet para este IP link-local
+    # (sem sidecar, não existe porta 15020; ver https://istio.io/latest/docs/ambient/usage/networkpolicy/)
+    - from:
+        - ipBlock:
+            cidr: 169.254.7.127/32
+        - ipBlock:
+            cidr: fd16:9254:7127:1337:ffff:ffff:ffff:ffff/128
+    {{- else }}
+    # kubelet/istio-agent health check (fonte é o node, por isso "from: []")
+    - ports:
+        - port: 15020
+          protocol: TCP
+      from: []
+    # Prometheus do mesh (istio-system) - usado pelo KEDA ScaledObject deste chart
+    - ports:
+        - port: 15090
+          protocol: TCP
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: istio-system
+    {{- end }}
+    {{- end }}
+    - from:
+        {{- if $mirrorEToI }}
+        {{- range $egressTo }}
+        {{- include "base-chart.networkPolicyPeer" . | nindent 8 }}
+        {{- end }}
+        {{- end }}
+        {{- range $ingressFrom }}
+        {{- include "base-chart.networkPolicyPeer" . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.networkPolicy.ingress.ports }}
+      ports:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  {{- end }}
+  {{- if $egressActive }}
+  egress:
+    # Resolução DNS via CoreDNS/kube-dns
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+    {{- if .Values.istio.enabled }}
+    # control-plane do Istio (istiod) - xDS e rotação de certificados mTLS
+    - ports:
+        - port: 15012
+          protocol: TCP
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: istio-system
+    {{- end }}
+    - to:
+        {{- if $mirrorIToE }}
+        {{- range $ingressFrom }}
+        {{- include "base-chart.networkPolicyPeer" . | nindent 8 }}
+        {{- end }}
+        {{- end }}
+        {{- range $egressTo }}
+        {{- include "base-chart.networkPolicyPeer" . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.networkPolicy.egress.ports }}
+      ports:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  {{- end }}
+{{- end }}
