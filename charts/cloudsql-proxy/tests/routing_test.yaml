@@ -30,7 +30,7 @@ tests:
           value: 10000
       - equal:
           path: spec.tcp[0].route[0].destination.host
-          value: cloudsql-proxy-rj-iplanrio-dia-postgres.NAMESPACE.svc.cluster.local
+          value: rj-iplanrio-dia-postgres.NAMESPACE.svc.cluster.local
       - equal:
           path: spec.tcp[0].route[0].destination.port.number
           value: 5432

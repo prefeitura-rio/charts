@@ -13,7 +13,7 @@ tests:
     asserts:
       - equal:
           path: metadata.name
-          value: cloudsql-proxy-rj-iplanrio-dia-postgres
+          value: rj-iplanrio-dia-postgres
       - contains:
           path: spec.template.spec.containers[0].args
           content: "--port=5432"
@@ -22,13 +22,13 @@ tests:
           content: "rj-iplanrio-dia:us-central1:postgres"
       - equal:
           path: spec.selector.matchLabels["app.kubernetes.io/instance"]
-          value: cloudsql-proxy-rj-iplanrio-dia-postgres
+          value: rj-iplanrio-dia-postgres
   - it: renders the MySQL deployment independently
     documentIndex: 1
     asserts:
       - equal:
           path: metadata.name
-          value: cloudsql-proxy-rj-sme-danfe-ai-mysql
+          value: rj-sme-danfe-ai-mysql
       - contains:
           path: spec.template.spec.containers[0].args
           content: "--port=3306"
@@ -37,7 +37,7 @@ tests:
           content: "rj-sme-danfe-ai:us-central1:mysql"
       - equal:
           path: spec.selector.matchLabels["app.kubernetes.io/instance"]
-          value: cloudsql-proxy-rj-sme-danfe-ai-mysql
+          value: rj-sme-danfe-ai-mysql
   - it: uses independent health ports
     documentIndex: 1
     asserts:

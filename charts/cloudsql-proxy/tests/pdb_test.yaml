@@ -17,7 +17,7 @@ tests:
     asserts:
       - equal:
           path: metadata.name
-          value: cloudsql-proxy-rj-iplanrio-dia-postgres
+          value: rj-iplanrio-dia-postgres
       - equal:
           path: spec.selector.matchLabels["app.kubernetes.io/instance"]
-          value: cloudsql-proxy-rj-iplanrio-dia-postgres
+          value: rj-iplanrio-dia-postgres

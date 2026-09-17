@@ -19,7 +19,7 @@
 
 {{/* Derive a DNS-safe instance name. */}}
 {{- define "cloudsql-proxy.instanceName" -}}
-{{- $raw := printf "cloudsql-proxy-%s-%s" .instance.project .instance.instance | lower | replace "." "-" | replace "_" "-" | trimAll "-" }}
+{{- $raw := printf "%s-%s" .instance.project .instance.instance | lower | replace "." "-" | replace "_" "-" | trimAll "-" }}
 {{- $raw | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
