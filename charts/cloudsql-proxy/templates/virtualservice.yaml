@@ -1,0 +1,25 @@
+{{- if .Values.routing.enabled }}
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ .Values.routing.gateway.name }}
+  namespace: {{ .Values.routing.gateway.namespace }}
+  labels:
+    {{- include "cloudsql-proxy.labels" . | nindent 4 }}
+spec:
+  gateways:
+    - {{ .Values.routing.gateway.namespace }}/{{ .Values.routing.gateway.name }}
+  hosts:
+    - "*"
+  tcp:
+    {{- range $instance := .Values.instances }}
+    {{- $ctx := dict "root" $ "instance" $instance }}
+    - match:
+        - port: {{ include "cloudsql-proxy.instanceListenPort" $ctx }}
+      route:
+        - destination:
+            host: {{ include "cloudsql-proxy.instanceName" $ctx }}.{{ $.Release.Namespace }}.svc.cluster.local
+            port:
+              number: {{ include "cloudsql-proxy.instancePort" $ctx }}
+    {{- end }}
+{{- end }}

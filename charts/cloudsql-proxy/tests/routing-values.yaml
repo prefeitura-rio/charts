@@ -1,0 +1,22 @@
+instances:
+  - project: rj-iplanrio-dia
+    instance: postgres
+    region: us-central1
+    port: 5432
+    listenPort: 10000
+  - project: rj-sme-danfe-ai
+    instance: mysql
+    region: us-central1
+    port: 3306
+    listenPort: 10001
+routing:
+  enabled: true
+  gateway:
+    name: cloudsql-gateway
+    namespace: istio-system
+    selector:
+      app: istio-ingressgateway
+      istio: ingressgateway
+  tailscale:
+    hostname: cloudsql-proxy
+    tags: tag:k8s-iplan

@@ -17,39 +17,38 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
-# Cloud SQL instance configuration
-# Supports TWO modes:
-#
-# Mode 1: Inline configuration (values used directly in args)
-#   instance:
-#     projectId: "my-project"
-#     region: "us-central1"
-#     name: "my-instance"
-#
-# Mode 2: ConfigMap reference (uses env var substitution like Terraform)
-#   instance:
-#     configMapRef:
-#       name: "postgres-config"
-#       keys:
-#         projectId: "CLOUD_SQL_PROJECT_ID"
-#         region: "CLOUD_SQL_INSTANCE_REGION"
-#         name: "CLOUD_SQL_INSTANCE_NAME"
-#
-instance:
-  # Inline values (used when configMapRef.name is empty)
-  projectId: ""
-  region: ""
-  name: ""
+# Cloud SQL instances. Each item renders one Deployment and Service.
+# Names are derived as cloudsql-proxy-<project>-<instance>, sanitized and truncated to 63 characters.
+instances:
+  - project: rj-iplanrio-dia
+    instance: postgres
+    region: us-central1
+    port: 5432
+    listenPort: 10000
+    healthCheckPort: 9090
+    # Optional: configMapRef with projectId, region, and name keys.
 
-  # ConfigMap reference (takes precedence over inline values)
-  configMapRef:
-    # Name of existing ConfigMap containing instance info
-    name: ""
-    # Key names within the ConfigMap
-    keys:
-      projectId: "CLOUD_SQL_PROJECT_ID"
-      region: "CLOUD_SQL_INSTANCE_REGION"
-      name: "CLOUD_SQL_INSTANCE_NAME"
+  - project: rj-sme-danfe-ai
+    instance: mysql
+    region: us-central1
+    port: 3306
+    listenPort: 10001
+    healthCheckPort: 9091
+
+# Per-instance optional fields:
+# privateIp, autoIamAuthn, healthCheckPort, and configMapRef.
+
+routing:
+  enabled: false
+  gateway:
+    name: cloudsql-gateway
+    namespace: istio-system
+    selector:
+      app: istio-ingressgateway
+      istio: ingressgateway
+  tailscale:
+    hostname: cloudsql-proxy
+    tags: tag:k8s-iplan
 
 # Proxy connection settings
 proxy:

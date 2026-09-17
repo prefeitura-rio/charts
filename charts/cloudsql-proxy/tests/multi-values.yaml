@@ -1,0 +1,15 @@
+instances:
+  - project: rj-iplanrio-dia
+    instance: postgres
+    region: us-central1
+    port: 5432
+    listenPort: 10000
+    healthCheckPort: 9090
+  - project: rj-sme-danfe-ai
+    instance: mysql
+    region: us-central1
+    port: 3306
+    listenPort: 10001
+    healthCheckPort: 9091
+serviceAccount:
+  existingServiceAccount: shared-cloudsql-proxy

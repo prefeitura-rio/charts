@@ -1,0 +1,24 @@
+{{- if .Values.routing.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.routing.tailscale.hostname }}
+  namespace: {{ .Values.routing.gateway.namespace }}
+  labels:
+    {{- include "cloudsql-proxy.labels" . | nindent 4 }}
+  annotations:
+    tailscale.com/hostname: {{ .Values.routing.tailscale.hostname }}
+    tailscale.com/tags: {{ .Values.routing.tailscale.tags | quote }}
+spec:
+  type: LoadBalancer
+  loadBalancerClass: tailscale
+  selector:
+    {{- toYaml .Values.routing.gateway.selector | nindent 4 }}
+  ports:
+    {{- range $instance := .Values.instances }}
+    - name: tcp-{{ include "cloudsql-proxy.instanceName" (dict "root" $ "instance" $instance) | trunc 50 | trimSuffix "-" }}
+      port: {{ include "cloudsql-proxy.instanceListenPort" (dict "root" $ "instance" $instance) }}
+      targetPort: {{ include "cloudsql-proxy.instanceListenPort" (dict "root" $ "instance" $instance) }}
+      protocol: TCP
+    {{- end }}
+{{- end }}

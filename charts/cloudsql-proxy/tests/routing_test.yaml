@@ -1,0 +1,62 @@
+suite: Istio and Tailscale routing
+templates:
+  - gateway.yaml
+  - virtualservice.yaml
+  - tailscale-service.yaml
+values:
+  - routing-values.yaml
+tests:
+  - it: renders an Istio Gateway with stable frontend ports
+    template: gateway.yaml
+    asserts:
+      - isKind:
+          of: Gateway
+      - equal:
+          path: metadata.name
+          value: cloudsql-gateway
+      - equal:
+          path: spec.servers[0].port.number
+          value: 10000
+      - equal:
+          path: spec.servers[1].port.number
+          value: 10001
+  - it: routes each frontend port to its matching backend
+    template: virtualservice.yaml
+    asserts:
+      - isKind:
+          of: VirtualService
+      - equal:
+          path: spec.tcp[0].match[0].port
+          value: 10000
+      - equal:
+          path: spec.tcp[0].route[0].destination.host
+          value: cloudsql-proxy-rj-iplanrio-dia-postgres.NAMESPACE.svc.cluster.local
+      - equal:
+          path: spec.tcp[0].route[0].destination.port.number
+          value: 5432
+      - equal:
+          path: spec.tcp[1].match[0].port
+          value: 10001
+      - equal:
+          path: spec.tcp[1].route[0].destination.port.number
+          value: 3306
+  - it: exposes all frontend ports through one Tailscale Service
+    template: tailscale-service.yaml
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: cloudsql-proxy
+      - equal:
+          path: spec.type
+          value: LoadBalancer
+      - equal:
+          path: spec.loadBalancerClass
+          value: tailscale
+      - equal:
+          path: spec.ports[0].port
+          value: 10000
+      - equal:
+          path: spec.ports[1].port
+          value: 10001

@@ -1,19 +1,23 @@
+{{- range $instance := .Values.instances }}
+{{- $ctx := dict "root" $ "instance" $instance }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "cloudsql-proxy.fullname" . }}
+  name: {{ include "cloudsql-proxy.instanceName" $ctx }}
   labels:
-    {{- include "cloudsql-proxy.labels" . | nindent 4 }}
-  {{- with .Values.service.annotations }}
+    {{- include "cloudsql-proxy.instanceLabels" $ctx | nindent 4 }}
+  {{- with $.Values.service.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  type: {{ .Values.service.type }}
+  type: {{ $.Values.service.type }}
   ports:
-    - port: {{ include "cloudsql-proxy.servicePort" . }}
+    - port: {{ default (include "cloudsql-proxy.instancePort" $ctx) $.Values.service.port }}
       targetPort: db
       protocol: TCP
       name: db
   selector:
-    {{- include "cloudsql-proxy.selectorLabels" . | nindent 4 }}
+    {{- include "cloudsql-proxy.instanceLabels" $ctx | nindent 4 }}
+---
+{{- end }}
