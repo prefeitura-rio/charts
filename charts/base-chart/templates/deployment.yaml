@@ -24,9 +24,9 @@ spec:
       {{- include "base-chart.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- if or .Values.istio.enabled .Values.podAnnotations }}
+      {{- if or (and .Values.istio.enabled (ne .Values.istio.dataplaneMode "ambient")) .Values.podAnnotations }}
       annotations:
-        {{- if .Values.istio.enabled }}
+        {{- if and .Values.istio.enabled (ne .Values.istio.dataplaneMode "ambient") }}
         sidecar.istio.io/rewriteAppHTTPProbers: {{ .Values.istio.sidecar.rewriteAppHTTPProbers | quote }}
         sidecar.istio.io/proxyCPU: {{ .Values.istio.sidecar.proxyCPU | quote }}
         sidecar.istio.io/proxyCPULimit: {{ .Values.istio.sidecar.proxyCPULimit | quote }}
@@ -40,7 +40,11 @@ spec:
       labels:
         {{- include "base-chart.labels" . | nindent 8 }}
         {{- if .Values.istio.enabled }}
+        {{- if eq .Values.istio.dataplaneMode "ambient" }}
+        istio.io/dataplane-mode: ambient
+        {{- else }}
         sidecar.istio.io/inject: "true"
+        {{- end }}
         {{- end }}
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}

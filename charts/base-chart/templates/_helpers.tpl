@@ -84,3 +84,39 @@ Create the name of the service account to use
 {{- end }}
 {{- end }}
 
+{{/*
+Renders a single NetworkPolicyPeer as a YAML list item ("- ...") from the simplified
+{namespace, workload, podSelector, namespaceSelector, ipBlock} shape used by
+networkPolicy.ingress.from / networkPolicy.egress.to.
+  - namespace only          -> qualquer pod do namespace
+  - namespace + workload    -> só esse workload (app.kubernetes.io/name) dentro do namespace
+  - namespace + podSelector -> seletor de pod customizado dentro do namespace
+  - namespaceSelector (raw) -> seletor de namespace bruto do Kubernetes
+  - ipBlock                 -> origem/destino por CIDR
+*/}}
+{{- define "base-chart.networkPolicyPeer" -}}
+{{- if .namespace -}}
+- namespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: {{ .namespace }}
+  {{- if .workload }}
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .workload }}
+  {{- else if .podSelector }}
+  podSelector:
+    {{- toYaml .podSelector | nindent 4 }}
+  {{- end }}
+{{- else if .namespaceSelector -}}
+- namespaceSelector:
+    {{- toYaml .namespaceSelector | nindent 4 }}
+  {{- with .podSelector }}
+  podSelector:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- else if .ipBlock -}}
+- ipBlock:
+    {{- toYaml .ipBlock | nindent 4 }}
+{{- end }}
+{{- end }}
+

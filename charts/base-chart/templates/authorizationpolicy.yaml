@@ -21,8 +21,21 @@ spec:
   provider:
     name: {{ .Values.istio.authorizationPolicy.provider.name }}
   {{- end }}
-  {{- with .Values.istio.authorizationPolicy.rules }}
+  {{- if .Values.istio.authorizationPolicy.ingress }}
   rules:
-    {{- toYaml . | nindent 4 }}
+    {{- range .Values.istio.authorizationPolicy.ingress }}
+    - from:
+        - source:
+            {{- if .serviceAccount }}
+            principals:
+              - "cluster.local/ns/{{ .namespace }}/sa/{{ .serviceAccount }}"
+            {{- else }}
+            namespaces:
+              - {{ .namespace }}
+            {{- end }}
+    {{- end }}
+  {{- else if .Values.istio.authorizationPolicy.rules }}
+  rules:
+    {{- toYaml .Values.istio.authorizationPolicy.rules | nindent 4 }}
   {{- end }}
 {{- end }}
