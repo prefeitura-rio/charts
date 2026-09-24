@@ -8,6 +8,24 @@ tests:
     asserts:
       - hasDocuments:
           count: 0
+  - it: should not render when canary is enabled
+    set:
+      canary.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render when canary is disabled
+    set:
+      istio.enabled: true
+      canary.enabled: false
+    asserts:
+      - isKind:
+          of: VirtualService
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+
 
   - it: should render when istio is enabled
     set:
@@ -31,23 +49,6 @@ tests:
       - equal:
           path: spec.http[0].rewrite.uri
           value: "/"
-
-  - it: should configure canary deployment when enabled
-    set:
-      istio.enabled: true
-      istio.virtualService.pathBasedRouting.enabled: true
-      istio.virtualService.canary.enabled: true
-      istio.virtualService.canary.weight: 20
-    asserts:
-      - equal:
-          path: spec.http[0].route[0].weight
-          value: 80
-      - equal:
-          path: spec.http[0].route[1].weight
-          value: 20
-      - equal:
-          path: spec.http[0].route[1].destination.host
-          value: RELEASE-NAME-canary
 
   - it: should configure custom hosts when specified
     set:
