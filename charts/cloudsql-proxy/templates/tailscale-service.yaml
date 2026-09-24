@@ -1,4 +1,4 @@
-{{- if eq (include "cloudsql-proxy.routingStrategy" .) "istio-gateway" }}
+{{- if and (eq (include "cloudsql-proxy.routingStrategy" .) "istio-gateway") .Values.routing.tailscale.enabled }}
 apiVersion: v1
 kind: Service
 metadata:

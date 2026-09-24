@@ -50,6 +50,27 @@ tests:
       - equal:
           path: spec.tcp[1].route[0].destination.port.number
           value: 3306
+  - it: keeps the Istio Gateway when Tailscale is disabled
+    template: gateway.yaml
+    set:
+      routing.tailscale.enabled: false
+    asserts:
+      - isKind:
+          of: Gateway
+  - it: keeps the VirtualService when Tailscale is disabled
+    template: virtualservice.yaml
+    set:
+      routing.tailscale.enabled: false
+    asserts:
+      - isKind:
+          of: VirtualService
+  - it: does not render a Tailscale Service when disabled
+    template: tailscale-service.yaml
+    set:
+      routing.tailscale.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
   - it: exposes all frontend ports through one Tailscale Service
     template: tailscale-service.yaml
     asserts:

@@ -10,7 +10,13 @@ Cloud SQL Proxy instances deployed:
 
 Exposure strategy: {{ include "cloudsql-proxy.routingStrategy" . }}
 {{- if eq (include "cloudsql-proxy.routingStrategy" .) "istio-gateway" }}
+{{- if .Values.routing.tailscale.enabled }}
 
 Istio/Tailscale frontend:
   {{ .Values.routing.tailscale.hostname }}:{{ (index .Values.instances 0).listenPort }} and the configured instance listen ports
+{{- else }}
+
+Istio Gateway:
+  {{ .Values.routing.gateway.namespace }}/{{ .Values.routing.gateway.name }}
+{{- end }}
 {{- end }}

@@ -58,10 +58,22 @@ routing:
       app: istio-ingressgateway
       istio: ingressgateway
   tailscale:
+    enabled: true
     hostname: cloudsql-proxy
     tags: tag:k8s-iplan
 ```
 
-This keeps the backend Services and also renders an Istio TCP Gateway, a TCP VirtualService, and one Tailscale LoadBalancer Service for the configured frontend ports.
+This keeps the backend Services and renders an Istio TCP Gateway and TCP VirtualService. `routing.tailscale.enabled` defaults to false. When it is true, the chart also renders one Tailscale LoadBalancer Service for the configured frontend ports.
+
+To use Istio without Tailscale:
+
+```yaml
+routing:
+  strategy: istio-gateway
+  tailscale:
+    enabled: false
+```
+
+The Istio Gateway and VirtualService remain enabled, but the Tailscale LoadBalancer Service is not rendered.
 
 For backwards compatibility, `routing.enabled: true` selects `istio-gateway` when `routing.strategy` is empty. An explicit strategy takes precedence.

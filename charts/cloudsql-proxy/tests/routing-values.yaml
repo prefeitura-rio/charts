@@ -20,5 +20,6 @@ routing:
       app: istio-ingressgateway
       istio: ingressgateway
   tailscale:
+    enabled: true
     hostname: cloudsql-proxy
     tags: tag:k8s-iplan

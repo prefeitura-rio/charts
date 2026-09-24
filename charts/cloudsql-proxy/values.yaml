@@ -51,6 +51,8 @@ routing:
       app: istio-ingressgateway
       istio: ingressgateway
   tailscale:
+    # Set true to add a Tailscale frontend to the Istio Gateway.
+    enabled: false
     hostname: cloudsql-proxy
     tags: tag:k8s-iplan
 
