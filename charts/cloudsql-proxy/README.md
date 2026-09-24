@@ -63,7 +63,7 @@ routing:
     tags: tag:k8s-iplan
 ```
 
-This keeps the backend Services and renders an Istio TCP Gateway and TCP VirtualService. `routing.tailscale.enabled` defaults to false. When it is true, the chart also renders one Tailscale LoadBalancer Service for the configured frontend ports.
+This keeps the backend Services and renders an Istio TCP Gateway, TCP VirtualService, and an internal frontend Service named `cloudsql-proxy` in the Gateway namespace. `routing.tailscale.enabled` defaults to false. When it is true, the frontend Service becomes a Tailscale LoadBalancer Service.
 
 To use Istio without Tailscale:
 
@@ -74,6 +74,6 @@ routing:
     enabled: false
 ```
 
-The Istio Gateway and VirtualService remain enabled, but the Tailscale LoadBalancer Service is not rendered.
+The Istio Gateway and VirtualService remain enabled, and the frontend Service remains available as a regular ClusterIP Service without Tailscale annotations.
 
 For backwards compatibility, `routing.enabled: true` selects `istio-gateway` when `routing.strategy` is empty. An explicit strategy takes precedence.

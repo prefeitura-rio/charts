@@ -64,13 +64,23 @@ tests:
     asserts:
       - isKind:
           of: VirtualService
-  - it: does not render a Tailscale Service when disabled
+  - it: renders an internal frontend Service when Tailscale is disabled
     template: tailscale-service.yaml
     set:
       routing.tailscale.enabled: false
     asserts:
-      - hasDocuments:
-          count: 0
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: cloudsql-proxy
+      - equal:
+          path: spec.type
+          value: ClusterIP
+      - isNull:
+          path: spec.loadBalancerClass
+      - isNull:
+          path: metadata.annotations
   - it: exposes all frontend ports through one Tailscale Service
     template: tailscale-service.yaml
     asserts:

@@ -1,4 +1,4 @@
-{{- if and (eq (include "cloudsql-proxy.routingStrategy" .) "istio-gateway") .Values.routing.tailscale.enabled }}
+{{- if eq (include "cloudsql-proxy.routingStrategy" .) "istio-gateway" }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -6,12 +6,16 @@ metadata:
   namespace: {{ .Values.routing.gateway.namespace }}
   labels:
     {{- include "cloudsql-proxy.labels" . | nindent 4 }}
+  {{- if .Values.routing.tailscale.enabled }}
   annotations:
     tailscale.com/hostname: {{ .Values.routing.tailscale.hostname }}
     tailscale.com/tags: {{ .Values.routing.tailscale.tags | quote }}
+  {{- end }}
 spec:
-  type: LoadBalancer
+  type: {{ if .Values.routing.tailscale.enabled }}LoadBalancer{{ else }}ClusterIP{{ end }}
+  {{- if .Values.routing.tailscale.enabled }}
   loadBalancerClass: tailscale
+  {{- end }}
   selector:
     {{- toYaml .Values.routing.gateway.selector | nindent 4 }}
   ports:

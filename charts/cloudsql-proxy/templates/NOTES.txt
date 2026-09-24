@@ -16,7 +16,7 @@ Istio/Tailscale frontend:
   {{ .Values.routing.tailscale.hostname }}:{{ (index .Values.instances 0).listenPort }} and the configured instance listen ports
 {{- else }}
 
-Istio Gateway:
-  {{ .Values.routing.gateway.namespace }}/{{ .Values.routing.gateway.name }}
+Istio Gateway frontend:
+  {{ .Values.routing.tailscale.hostname }}.{{ .Values.routing.gateway.namespace }}.svc.cluster.local
 {{- end }}
 {{- end }}
