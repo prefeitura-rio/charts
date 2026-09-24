@@ -1,4 +1,4 @@
-{{- if .Values.routing.enabled }}
+{{- if eq (include "cloudsql-proxy.routingStrategy" .) "istio-gateway" }}
 apiVersion: networking.istio.io/v1beta1
 kind: Gateway
 metadata:

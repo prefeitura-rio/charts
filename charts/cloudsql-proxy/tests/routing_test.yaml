@@ -6,6 +6,13 @@ templates:
 values:
   - routing-values.yaml
 tests:
+  - it: renders the gateway when the explicit Istio strategy is selected
+    template: gateway.yaml
+    set:
+      routing.strategy: istio-gateway
+    asserts:
+      - isKind:
+          of: Gateway
   - it: renders an Istio Gateway with stable frontend ports
     template: gateway.yaml
     asserts:
@@ -30,13 +37,16 @@ tests:
           value: 10000
       - equal:
           path: spec.tcp[0].route[0].destination.host
-          value: rj-iplanrio-dia-postgres.NAMESPACE.svc.cluster.local
+          value: postgres.NAMESPACE.svc.cluster.local
       - equal:
           path: spec.tcp[0].route[0].destination.port.number
           value: 5432
       - equal:
           path: spec.tcp[1].match[0].port
           value: 10001
+      - equal:
+          path: spec.tcp[1].route[0].destination.host
+          value: danfe.NAMESPACE.svc.cluster.local
       - equal:
           path: spec.tcp[1].route[0].destination.port.number
           value: 3306

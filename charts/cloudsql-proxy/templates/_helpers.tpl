@@ -23,6 +23,24 @@
 {{- $raw | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
+{{/* Resolve the backend Service name for an instance. */}}
+{{- define "cloudsql-proxy.instanceServiceName" -}}
+{{- $name := default (include "cloudsql-proxy.instanceName" .) .instance.serviceName }}
+{{- $name | lower | replace "." "-" | replace "_" "-" | trimAll "-" | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/* Resolve the exposure strategy, retaining the legacy enabled flag. */}}
+{{- define "cloudsql-proxy.routingStrategy" -}}
+{{- $strategy := default "" .Values.routing.strategy }}
+{{- if $strategy }}
+{{- $strategy }}
+{{- else if .Values.routing.enabled }}
+{{- "istio-gateway" }}
+{{- else }}
+{{- "multiservice" }}
+{{- end }}
+{{- end }}
+
 {{/* Common labels for an instance. */}}
 {{- define "cloudsql-proxy.instanceLabels" -}}
 app.kubernetes.io/name: {{ include "cloudsql-proxy.name" .root }}
@@ -77,13 +95,23 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- define "cloudsql-proxy.instancePort" -}}{{- required "instances[].port is required" .instance.port -}}{{- end }}
 {{- define "cloudsql-proxy.instanceListenPort" -}}{{- required "instances[].listenPort is required" .instance.listenPort -}}{{- end }}
 {{- define "cloudsql-proxy.validateInstances" -}}
+{{- $strategy := include "cloudsql-proxy.routingStrategy" . }}
+{{- if and (ne $strategy "multiservice") (ne $strategy "istio-gateway") }}
+  {{- fail (printf "routing.strategy must be one of multiservice or istio-gateway, got %q" $strategy) }}
+{{- end }}
 {{- $ports := dict }}
+{{- $services := dict }}
 {{- range .Values.instances }}
+  {{- $ctx := dict "root" $ "instance" . }}
   {{- $port := int (required "instances[].listenPort is required" .listenPort) }}
   {{- if or (lt $port 1024) (gt $port 65535) }}{{ fail (printf "listenPort %d must be between 1024 and 65535" $port) }}{{ end }}
-  {{- $key := printf "%d" $port }}
-  {{- if hasKey $ports $key }}{{ fail (printf "duplicate listenPort %d" $port) }}{{ end }}
-  {{- $_ := set $ports $key true }}
+  {{- $portKey := printf "%d" $port }}
+  {{- if hasKey $ports $portKey }}{{ fail (printf "duplicate listenPort %d" $port) }}{{ end }}
+  {{- $_ := set $ports $portKey true }}
+  {{- $serviceName := include "cloudsql-proxy.instanceServiceName" $ctx }}
+  {{- if not $serviceName }}{{ fail "instances[].serviceName must not be empty" }}{{ end }}
+  {{- if hasKey $services $serviceName }}{{ fail (printf "duplicate Service name %q" $serviceName) }}{{ end }}
+  {{- $_ := set $services $serviceName true }}
 {{- end }}
 {{- end }}
 {{- define "cloudsql-proxy.instanceHealthPort" -}}{{- default 0 .instance.healthCheckPort -}}{{- end }}

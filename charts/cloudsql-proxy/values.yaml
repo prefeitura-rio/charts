@@ -17,8 +17,8 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
-# Cloud SQL instances. Each item renders one Deployment and Service.
-# Names are derived as cloudsql-proxy-<project>-<instance>, sanitized and truncated to 63 characters.
+# Cloud SQL instances. Each item renders one Deployment and backend Service.
+# Backend Service names default to <project>-<instance>, sanitized and truncated to 63 characters.
 instances:
   - project: rj-iplanrio-dia
     instance: postgres
@@ -26,7 +26,7 @@ instances:
     port: 5432
     listenPort: 10000
     healthCheckPort: 9090
-    # Optional: configMapRef with projectId, region, and name keys.
+    # Optional: serviceName and configMapRef with projectId, region, and name keys.
 
   - project: rj-sme-danfe-ai
     instance: mysql
@@ -36,9 +36,13 @@ instances:
     healthCheckPort: 9091
 
 # Per-instance optional fields:
-# privateIp, autoIamAuthn, healthCheckPort, and configMapRef.
+# serviceName, privateIp, autoIamAuthn, healthCheckPort, and configMapRef.
 
 routing:
+  # Supported strategies: multiservice or istio-gateway.
+  # Leave empty to use the legacy enabled flag.
+  strategy: ""
+  # Deprecated: true is equivalent to strategy: istio-gateway when strategy is empty.
   enabled: false
   gateway:
     name: cloudsql-gateway

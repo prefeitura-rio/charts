@@ -1,0 +1,13 @@
+instances:
+  - project: project-a
+    instance: postgres
+    serviceName: database
+    region: us-central1
+    port: 5432
+    listenPort: 5432
+  - project: project-b
+    instance: mysql
+    serviceName: database
+    region: us-central1
+    port: 3306
+    listenPort: 3306

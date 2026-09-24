@@ -1,4 +1,4 @@
-{{- if .Values.routing.enabled }}
+{{- if eq (include "cloudsql-proxy.routingStrategy" .) "istio-gateway" }}
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
@@ -18,7 +18,7 @@ spec:
         - port: {{ include "cloudsql-proxy.instanceListenPort" $ctx }}
       route:
         - destination:
-            host: {{ include "cloudsql-proxy.instanceName" $ctx }}.{{ $.Release.Namespace }}.svc.cluster.local
+            host: {{ include "cloudsql-proxy.instanceServiceName" $ctx }}.{{ $.Release.Namespace }}.svc.cluster.local
             port:
               number: {{ include "cloudsql-proxy.instancePort" $ctx }}
     {{- end }}

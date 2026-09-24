@@ -4,10 +4,12 @@ Cloud SQL Proxy instances deployed:
 
 - {{ include "cloudsql-proxy.instanceName" $ctx }}
   Instance: {{ include "cloudsql-proxy.instanceProject" $ctx }}:{{ include "cloudsql-proxy.instanceRegion" $ctx }}:{{ include "cloudsql-proxy.instanceDatabase" $ctx }}
-  Backend: {{ include "cloudsql-proxy.instanceName" $ctx }}.{{ $.Release.Namespace }}.svc.cluster.local:{{ include "cloudsql-proxy.instancePort" $ctx }}
+  Backend: {{ include "cloudsql-proxy.instanceServiceName" $ctx }}.{{ $.Release.Namespace }}.svc.cluster.local:{{ include "cloudsql-proxy.instancePort" $ctx }}
   Frontend port: {{ include "cloudsql-proxy.instanceListenPort" $ctx }}
 {{- end }}
-{{- if .Values.routing.enabled }}
+
+Exposure strategy: {{ include "cloudsql-proxy.routingStrategy" . }}
+{{- if eq (include "cloudsql-proxy.routingStrategy" .) "istio-gateway" }}
 
 Istio/Tailscale frontend:
   {{ .Values.routing.tailscale.hostname }}:{{ (index .Values.instances 0).listenPort }} and the configured instance listen ports

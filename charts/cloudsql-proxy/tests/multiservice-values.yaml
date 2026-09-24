@@ -4,21 +4,15 @@ instances:
     serviceName: postgres
     region: us-central1
     port: 5432
-    listenPort: 10000
+    listenPort: 5432
   - project: rj-sme-danfe-ai
     instance: mysql
     serviceName: danfe
     region: us-central1
     port: 3306
-    listenPort: 10001
+    listenPort: 10000
 routing:
+  strategy: multiservice
   enabled: true
-  gateway:
-    name: cloudsql-gateway
-    namespace: istio-system
-    selector:
-      app: istio-ingressgateway
-      istio: ingressgateway
-  tailscale:
-    hostname: cloudsql-proxy
-    tags: tag:k8s-iplan
+serviceAccount:
+  existingServiceAccount: shared-cloudsql-proxy
