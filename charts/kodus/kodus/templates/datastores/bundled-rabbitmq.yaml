@@ -92,6 +92,7 @@ spec:
               value: "-rabbit heartbeat 60"
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
           startupProbe:
@@ -117,11 +118,21 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/rabbitmq
+            - name: tmp
+              mountPath: /tmp
+            - name: logs
+              mountPath: /var/log/rabbitmq
             - name: kodus-conf
               mountPath: /etc/rabbitmq/conf.d/20-kodus.conf
               subPath: 20-kodus.conf
               readOnly: true
       volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 100Mi
+        - name: logs
+          emptyDir:
+            sizeLimit: 100Mi
         - name: kodus-conf
           configMap:
             name: {{ $name }}-conf

@@ -88,6 +88,9 @@
 {{- end }}
 
 {{- define "kodus-common.rabbitmqEnv" -}}
+{{- if and (eq .Values.rabbitmq.mode "bundled") .Values.rabbitmq.bundled.password (not (regexMatch "^[A-Za-z0-9]+$" .Values.rabbitmq.bundled.password)) }}
+{{- fail "rabbitmq.bundled.password must contain only letters and numbers" }}
+{{- end }}
 {{- if eq .Values.rabbitmq.mode "bundled" }}
 - name: RABBITMQ_USER
   value: {{ .Values.rabbitmq.bundled.username | quote }}

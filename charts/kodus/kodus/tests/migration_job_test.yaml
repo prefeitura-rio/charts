@@ -1,0 +1,20 @@
+suite: Migration job
+templates:
+  - templates/migration-job.yaml
+release:
+  name: kodus
+tests:
+  - it: runs migrations and exits without starting the API server
+    documentSelector:
+      path: metadata.labels["app.kubernetes.io/component"]
+      value: migrations
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value: ["sh", "-c", "exit 0"]
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: RUN_MIGRATIONS, value: "true" }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: RUN_SEEDS, value: "true" }

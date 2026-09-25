@@ -114,6 +114,16 @@ tests:
           path: metadata.annotations["kodus.io/secrets"]
           value: existing-secret
 
+  - it: stores generated JWT secrets with one Kubernetes encoding layer
+    template: templates/secrets.yaml
+    documentSelector:
+      path: metadata.name
+      value: kodus-secrets
+    asserts:
+      - matchRegex:
+          path: data.API_JWT_SECRET
+          pattern: ^[A-Za-z0-9+/]{43}=$
+
   - it: reports Routes rather than Ingress on OpenShift
     set:
       platform: openshift

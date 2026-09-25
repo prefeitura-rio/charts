@@ -59,6 +59,7 @@ spec:
               value: {{ $b.database | quote }}
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
           startupProbe:
@@ -84,6 +85,12 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data/db
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 100Mi
   volumeClaimTemplates:
     - metadata:
         name: data

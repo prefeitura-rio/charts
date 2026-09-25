@@ -1,0 +1,46 @@
+suite: Bundled datastore security
+templates:
+  - templates/datastores/bundled-postgres.yaml
+  - templates/datastores/bundled-mongodb.yaml
+  - templates/datastores/bundled-rabbitmq.yaml
+release:
+  name: kodus
+tests:
+  - it: makes bundled Postgres root filesystem read-only
+    template: templates/datastores/bundled-postgres.yaml
+    documentIndex: 2
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content: { name: tmp, mountPath: /tmp }
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content: { name: runtime, mountPath: /var/run/postgresql }
+
+  - it: makes bundled MongoDB root filesystem read-only
+    template: templates/datastores/bundled-mongodb.yaml
+    documentIndex: 1
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content: { name: tmp, mountPath: /tmp }
+
+  - it: makes bundled RabbitMQ root filesystem read-only
+    template: templates/datastores/bundled-rabbitmq.yaml
+    documentIndex: 2
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content: { name: tmp, mountPath: /tmp }
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content: { name: logs, mountPath: /var/log/rabbitmq }

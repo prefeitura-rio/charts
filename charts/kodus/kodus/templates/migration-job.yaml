@@ -25,7 +25,7 @@ spec:
         - name: migrations
           image: {{ include "kodus-common.appImage" (dict "image" .Values.migrations.image "root" . "name" "migrations") }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default "Always" }}
-          args: ["sh", "-c", "echo '✔ migrations + seeds complete — exiting (Job)'"]
+          args: ["sh", "-c", "exit 0"]
           securityContext:
             {{- include "kodus-common.containerSecurityContext" . | nindent 12 }}
           envFrom:

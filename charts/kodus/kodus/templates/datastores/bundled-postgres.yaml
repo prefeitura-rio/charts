@@ -72,6 +72,7 @@ spec:
               value: /var/lib/postgresql/data/pgdata
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
           startupProbe:
@@ -97,9 +98,19 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
+            - name: tmp
+              mountPath: /tmp
+            - name: runtime
+              mountPath: /var/run/postgresql
             - name: initdb
               mountPath: /docker-entrypoint-initdb.d
       volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 100Mi
+        - name: runtime
+          emptyDir:
+            sizeLimit: 100Mi
         - name: initdb
           configMap:
             name: {{ $name }}-init

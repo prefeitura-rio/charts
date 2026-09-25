@@ -142,6 +142,16 @@ tests:
             valueFrom:
               secretKeyRef: { name: kodus-rabbitmq-default-user, key: password }
 
+  - it: rejects bundled RabbitMQ passwords that cannot be used in the URI
+    set:
+      rabbitmq:
+        bundled:
+          password: "unsafe@password"
+    template: templates/deployment.yaml
+    asserts:
+      - failedTemplate:
+          errorPattern: rabbitmq\.bundled\.password must contain only letters and numbers
+
   - it: takes the whole RabbitMQ URI from the user's secret in external mode
     set:
       rabbitmq:

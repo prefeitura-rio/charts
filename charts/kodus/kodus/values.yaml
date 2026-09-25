@@ -19,6 +19,7 @@ global:
     store: ""
     storeKind: SecretStore
     refreshInterval: "1h"
+    keyPrefix: kodus
   autoGenerateSecrets: true
   secrets:
     API_JWT_SECRET: ""
@@ -53,13 +54,13 @@ global:
     API_RATE_MAX_REQUEST: "100"
     API_RATE_INTERVAL: "1000"
     API_CLOUD_MODE: "false"
-    API_JWT_EXPIRES_IN: "365d"
+    API_JWT_EXPIRES_IN: "1h"
     API_JWT_REFRESH_EXPIRES_IN: "7d"
     API_WEBHOOKS_PORT: "3332"
     API_FRONTEND_URL: "http://{{ .Release.Name }}-web:3000"
     GLOBAL_API_CONTAINER_NAME: "kodus-api"
     API_DATABASE_ENV: "production"
-    API_DATABASE_DISABLE_SSL: "true"
+    API_DATABASE_DISABLE_SSL: "false"
     API_RABBITMQ_ENABLED: "true"
     API_RABBITMQ_WAIT: "true"
     RUN_MIGRATIONS: "false"
@@ -275,6 +276,7 @@ scc:
 
 networkPolicy:
   enabled: true
+  egressRules: []
   # Restrict ingress to the default nginx controller. Override both selectors
   # when using another ingress implementation.
   ingressControllerLabels:
