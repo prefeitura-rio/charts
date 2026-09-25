@@ -147,6 +147,7 @@ tests:
         hosts:
           web: { host: app.acme.io }
     asserts:
+      - equal: { path: data.API_MCP_SERVER_ENABLED, value: "false" }
       - equal: { path: data.API_MCP_MANAGER_CORS_ORIGINS, value: "" }
       - equal: { path: data.API_MCP_MANAGER_REDIRECT_URI, value: "" }
 
@@ -154,3 +155,14 @@ tests:
     asserts:
       - equal: { path: data.WEB_HOSTNAME_API, value: kodus-api }
       - equal: { path: data.API_FRONTEND_URL, value: "http://kodus-web:3000" }
+
+  - it: rejects conflicting external Secret sources
+    set:
+      global:
+        existingSecret: existing-secret
+        externalSecrets:
+          enabled: true
+          store: kodus-store
+    asserts:
+      - failedTemplate:
+          errorPattern: mutually exclusive

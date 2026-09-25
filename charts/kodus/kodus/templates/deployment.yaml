@@ -21,7 +21,7 @@ spec:
         {{- include "kodus-common.serviceSelectorLabels" (dict "root" $ "serviceName" $name) | nindent 8 }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") $ | sha256sum }}
-        checksum/secrets: {{ include (print $.Template.BasePath "/secrets.yaml") $ | sha256sum }}
+        checksum/secrets: {{ if or $.Values.global.existingSecret $.Values.global.externalSecrets.enabled }}{{ $.Values.global.secretVersion | default "" | sha256sum }}{{ else }}{{ include (print $.Template.BasePath "/secrets.yaml") $ | sha256sum }}{{ end }}
     spec:
       {{- $drainMs := (dig "API_WORKER_DRAIN_TIMEOUT_MS" "" $.Values.global.config) | default "60000" | toString | atoi }}
       terminationGracePeriodSeconds: {{ add (div $drainMs 1000) ($.Values.terminationGraceBufferSeconds | default 30 | int) }}

@@ -36,8 +36,10 @@ resource requests, and the absence of inline credentials.
 
 ## Stage 2: Deploy an isolated pilot
 
-Replace the example hosts and TLS Secret name in a local, untracked values
-file. Install into a namespace dedicated to the pilot:
+Replace the webhook host and TLS Secret name in a local, untracked values file.
+The committed pilot overlay intentionally exposes only the webhook; provide
+private access to the web UI and API separately through Tailscale, an internal
+Ingress, or port-forwarding. Install into a namespace dedicated to the pilot:
 
 ```bash
 helm upgrade --install kodus charts/kodus/kodus \

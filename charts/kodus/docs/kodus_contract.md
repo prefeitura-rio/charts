@@ -180,6 +180,7 @@ Required behavior:
 - `global.existingSecret` points to `kodus-secrets`.
 - `global.externalSecrets.enabled` remains `false`.
 - `global.autoGenerateSecrets` is `false`.
+- `global.secretVersion` is bumped whenever the referenced Secret rotates.
 - Secrets are populated by Infisical, never committed to Helm values.
 - GitHub and Bifrost keys are included in the generated Secret.
 - Datastore credentials remain in separate Secrets unless the organization
@@ -249,6 +250,15 @@ Validate:
 - Model availability.
 - Rate and concurrency limits.
 - A fallback provider or model, if supported and approved.
+
+When NetworkPolicy is enabled, ingress is restricted to the configured
+controller namespace and pod labels. Override
+`networkPolicy.ingressControllerNamespaceSelector` and
+`networkPolicy.ingressControllerLabels` for Tailscale, Istio, OpenShift, or
+another primary ingress implementation. Use
+`networkPolicy.additionalIngressSources` when more than one trusted controller
+must reach the services; leaving the primary selectors empty intentionally
+blocks controller ingress rather than allowing every namespace.
 
 The alternative is configuring Bifrost through Kodus's BYOK UI. For the initial
 controlled pilot, fixed environment configuration is more reproducible.

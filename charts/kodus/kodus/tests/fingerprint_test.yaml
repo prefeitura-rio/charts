@@ -9,6 +9,7 @@ tests:
   - it: labels a service with the version it is actually running
     set:
       imageTag: "9.9.9"
+    template: templates/deployment.yaml
     documentSelector:
       path: metadata.name
       value: kodus-api
@@ -26,6 +27,7 @@ tests:
         api:
           image:
             tag: "2.1.99"
+    template: templates/deployment.yaml
     documentSelector:
       path: metadata.name
       value: kodus-api
@@ -41,6 +43,7 @@ tests:
         api:
           image:
             tag: "2.1.99"
+    template: templates/deployment.yaml
     documentSelector:
       path: metadata.name
       value: kodus-web
@@ -52,6 +55,7 @@ tests:
   - it: keeps the version label within the 63-character limit
     set:
       imageTag: aaaaaaaaaa-bbbbbbbbbb-cccccccccc-dddddddddd-eeeeeeeeee-ffffffffff-gggggggggg
+    template: templates/deployment.yaml
     documentSelector:
       path: metadata.name
       value: kodus-api
@@ -61,6 +65,7 @@ tests:
           pattern: ^.{1,63}$
 
   - it: records the deployment shape on the ConfigMap
+    template: templates/configmap.yaml
     documentSelector:
       path: metadata.name
       value: kodus-config
@@ -87,6 +92,7 @@ tests:
             tag: "2.1.99"
         worker-analytics:
           enabled: false
+    template: templates/configmap.yaml
     documentSelector:
       path: metadata.name
       value: kodus-config
@@ -99,6 +105,7 @@ tests:
     set:
       global:
         existingSecret: my-vault-secret
+    template: templates/configmap.yaml
     documentSelector:
       path: metadata.name
       value: kodus-config
@@ -110,6 +117,7 @@ tests:
   - it: reports Routes rather than Ingress on OpenShift
     set:
       platform: openshift
+    template: templates/configmap.yaml
     documentSelector:
       path: metadata.name
       value: kodus-config
@@ -126,6 +134,7 @@ tests:
       global:
         config:
           NEXTAUTH_URL: https://internal.acme-corp.example
+    template: templates/configmap.yaml
     documentSelector:
       path: metadata.name
       value: kodus-config

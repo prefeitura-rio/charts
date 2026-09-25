@@ -7,6 +7,7 @@ release:
   name: kodus
 tests:
   - it: waits longer than the app spends draining
+    template: templates/deployment.yaml
     documentSelector:
       path: metadata.name
       value: kodus-worker
@@ -20,6 +21,7 @@ tests:
       global:
         config:
           API_WORKER_DRAIN_TIMEOUT_MS: "120000"
+    template: templates/deployment.yaml
     documentSelector:
       path: metadata.name
       value: kodus-worker
@@ -29,6 +31,7 @@ tests:
           value: 150
 
   - it: applies to every service, not just the workers
+    template: templates/deployment.yaml
     documentSelector:
       path: metadata.name
       value: kodus-api
@@ -42,6 +45,7 @@ tests:
       global:
         config:
           API_WORKER_DRAIN_TIMEOUT_MS: ""
+    template: templates/deployment.yaml
     documentSelector:
       path: metadata.name
       value: kodus-worker
@@ -51,6 +55,7 @@ tests:
           value: 90
 
   - it: ships the stale-job reaper settings
+    template: templates/configmap.yaml
     documentSelector:
       path: metadata.name
       value: kodus-config
@@ -63,6 +68,7 @@ tests:
           value: "180"
 
   - it: keeps the reaper threshold above the longest legitimate run
+    template: templates/configmap.yaml
     documentSelector:
       path: metadata.name
       value: kodus-config

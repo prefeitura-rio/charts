@@ -17,7 +17,7 @@ spec:
   tls:
     - hosts:
         {{- $hosts := dict }}
-        {{- range $name, $h := .Values.ingress.hosts }}{{- $_ := set $hosts $h.host true }}{{- end }}
+        {{- range $name, $h := .Values.ingress.hosts }}{{- if or (kindIs "invalid" $h.enabled) $h.enabled }}{{- $_ := set $hosts $h.host true }}{{- end }}{{- end }}
         {{- range $host, $_ := $hosts }}
         - {{ $host }}
         {{- end }}
@@ -27,6 +27,7 @@ spec:
   {{- end }}
   rules:
     {{- range $name, $h := .Values.ingress.hosts }}
+    {{- if or (kindIs "invalid" $h.enabled) $h.enabled }}
     - host: {{ $h.host }}
       http:
         paths:
@@ -37,5 +38,6 @@ spec:
                 name: {{ include "kodus-common.serviceFullname" (dict "root" $ "serviceName" $h.serviceName) }}
                 port:
                   name: http
+    {{- end }}
     {{- end }}
 {{- end }}

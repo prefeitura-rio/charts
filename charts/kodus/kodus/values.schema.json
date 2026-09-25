@@ -33,6 +33,7 @@
       "properties": {
         "autoGenerateSecrets": { "type": "boolean" },
         "existingSecret": { "type": "string" },
+        "secretVersion": { "type": "string" },
         "externalSecrets": {
           "type": "object",
           "properties": {
@@ -74,7 +75,22 @@
     },
     "networkPolicy": {
       "type": "object",
-      "properties": { "enabled": { "type": "boolean" } }
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "ingressControllerLabels": { "type": "object" },
+        "ingressControllerNamespaceSelector": { "type": "object" },
+        "additionalIngressSources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "namespaceSelector": { "type": "object" },
+              "podSelector": { "type": "object" }
+            },
+            "required": ["namespaceSelector", "podSelector"]
+          }
+        }
+      }
     },
     "autoscaling": {
       "type": "object",
@@ -88,7 +104,7 @@
           "description": "Pods that must stay up during a voluntary disruption. An integer must leave room below each service's replica floor or the chart refuses to render (disruptionsAllowed would be 0); a percentage such as \"50%\" scales with the replica count instead.",
           "oneOf": [
             { "type": "integer", "minimum": 0 },
-            { "type": "string", "pattern": "^[0-9]{1,3}%$" }
+            { "type": "string", "pattern": "^(100|[0-9]{1,2})%$" }
           ]
         }
       }

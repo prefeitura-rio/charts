@@ -35,10 +35,11 @@ helm upgrade --install kodus charts/kodus/kodus \
   --values charts/kodus/kodus/values-pilot.example.yaml
 ```
 
-Before connecting GitHub, replace the placeholder DNS names, create the TLS
-Secret referenced by the overlay, and configure the approved secret source for
-the LLM credential. Never commit API keys, GitHub App credentials, passwords,
-or signing keys to a values file.
+Before connecting GitHub, replace the placeholder webhook DNS name, create the
+TLS Secret referenced by the overlay, and configure private access to the web
+UI and API. Configure the approved secret source for the LLM credential. Never
+commit API keys, GitHub App credentials, passwords, or signing keys to a values
+file.
 
 See [`docs/kodus-pilot-pr-review.md`](../docs/kodus-pilot-pr-review.md) for
 the staged rollout and acceptance checks.
@@ -52,3 +53,7 @@ the result back to GitHub. It is not a synchronous step in the existing
 
 The Bifrost endpoint and DeepSeek model are documented in the pilot runbook,
 but the virtual key remains an external secret-management concern.
+
+When `global.existingSecret` or ExternalSecrets are used, bump
+`global.secretVersion` whenever the referenced Secret rotates so the workloads
+restart and receive the new environment variables.

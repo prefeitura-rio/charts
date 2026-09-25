@@ -9,8 +9,26 @@
 {{- end }}
 {{- if gt $floor 1 }}
 {{- $min := $.Values.pdb.minAvailable | default 1 }}
-{{- if ge ($min | int) $floor }}
-{{- fail (printf "ERROR: pdb.minAvailable is %v and service %q has a replica floor of %d, so disruptionsAllowed = %d - %v = 0. That PDB does not slow evictions down, it forbids them permanently, and `kubectl drain` will hang on those pods forever. Set pdb.minAvailable below %d, or raise services.%s.replicas." $min $name $floor $floor $min $floor $name) }}
+{{- if kindIs "string" $min }}
+  {{- if not (hasSuffix "%" $min) }}
+    {{- fail (printf "ERROR: pdb.minAvailable must be an integer or a percentage such as 50%%, got %q" $min) }}
+  {{- end }}
+  {{- $pctText := trimSuffix "%" $min }}
+  {{- if not (regexMatch "^[0-9]+$" $pctText) }}
+    {{- fail (printf "ERROR: pdb.minAvailable percentage must be a whole number, got %q" $min) }}
+  {{- end }}
+  {{- $pct := $pctText | int }}
+  {{- if gt $pct 100 }}
+    {{- fail (printf "ERROR: pdb.minAvailable percentage must be between 0%% and 100%%, got %q" $min) }}
+  {{- end }}
+  {{- $product := mul $floor $pct }}
+  {{- $required := div $product 100 }}
+  {{- if gt (mod $product 100) 0 }}{{- $required = add $required 1 }}{{- end }}
+  {{- if ge $required $floor }}
+    {{- fail (printf "ERROR: pdb.minAvailable is %v and service %q has a replica floor of %d, so Kubernetes requires all replicas to remain available. Set a lower percentage or raise services.%s.replicas." $min $name $floor $name) }}
+  {{- end }}
+{{- else if ge ($min | int) $floor }}
+  {{- fail (printf "ERROR: pdb.minAvailable is %v and service %q has a replica floor of %d, so disruptionsAllowed = %d - %v = 0. That PDB does not slow evictions down, it forbids them permanently, and `kubectl drain` will hang on those pods forever. Set pdb.minAvailable below %d, or raise services.%s.replicas." $min $name $floor $floor $min $floor $name) }}
 {{- end }}
 ---
 apiVersion: policy/v1

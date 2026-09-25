@@ -107,6 +107,14 @@ tests:
           value: 50%
           documentIndex: 0
 
+  - it: refuses a percentage budget that rounds up to every replica
+    set:
+      pdb:
+        minAvailable: 100%
+    asserts:
+      - failedTemplate:
+          errorPattern: 100%.*all replicas
+
   - it: emits nothing when disabled
     set:
       pdb:

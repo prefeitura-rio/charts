@@ -1,3 +1,6 @@
+{{- if and .Values.global.existingSecret .Values.global.externalSecrets.enabled }}
+{{- fail "global.existingSecret and global.externalSecrets.enabled are mutually exclusive" }}
+{{- end }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -37,6 +40,8 @@ data:
   {{- if not (index $cfg "API_MCP_MANAGER_CORS_ORIGINS") }}
   {{- $_ := set $cfg "API_MCP_MANAGER_CORS_ORIGINS" ($webBase | default "*") }}
   {{- end }}
+  {{- else }}
+  {{- $_ := set $cfg "API_MCP_SERVER_ENABLED" "false" }}
   {{- end }}
   {{- range $key, $value := $cfg }}
   {{ $key }}: {{ tpl (toString $value) $ | quote }}

@@ -7,6 +7,7 @@ release:
   name: kodus
 tests:
   - it: points at the chart's own StatefulSet in bundled mode
+    template: templates/deployment.yaml
     documentSelector:
       path: metadata.name
       value: kodus-api
@@ -28,6 +29,7 @@ tests:
     set:
       postgres: { mode: operator }
       mongodb: { mode: operator }
+    template: templates/deployment.yaml
     documentSelector:
       path: metadata.name
       value: kodus-api
@@ -67,6 +69,7 @@ tests:
           host: mongo.atlas.net
           existingSecret: atlas-creds
           passwordKey: null
+    template: templates/deployment.yaml
     documentSelector:
       path: metadata.name
       value: kodus-api
@@ -101,6 +104,7 @@ tests:
           errorPattern: postgres\.external\.existingSecret is required
 
   - it: builds the RabbitMQ URI from $(VAR) refs against the bundled vhost
+    template: templates/deployment.yaml
     documentSelector:
       path: metadata.name
       value: kodus-worker
@@ -120,6 +124,7 @@ tests:
   - it: reads both RabbitMQ credentials from the operator's default-user secret
     set:
       rabbitmq: { mode: operator }
+    template: templates/deployment.yaml
     documentSelector:
       path: metadata.name
       value: kodus-worker
@@ -142,6 +147,7 @@ tests:
       rabbitmq:
         mode: external
         external: { existingSecret: cloudamqp, uriKey: AMQP_URL }
+    template: templates/deployment.yaml
     documentSelector:
       path: metadata.name
       value: kodus-worker
@@ -154,6 +160,7 @@ tests:
               secretKeyRef: { name: cloudamqp, key: AMQP_URL }
 
   - it: keeps auth secrets mandatory and provider keys optional
+    template: templates/deployment.yaml
     documentSelector:
       path: metadata.name
       value: kodus-api
@@ -205,6 +212,7 @@ tests:
     set:
       global:
         existingSecret: kodus-vault-synced
+    template: templates/deployment.yaml
     documentSelector:
       path: metadata.name
       value: kodus-api
@@ -215,3 +223,21 @@ tests:
             name: API_CRYPTO_KEY
             valueFrom:
               secretKeyRef: { name: kodus-vault-synced, key: API_CRYPTO_KEY }
+
+  - it: mirrors NEXTAUTH_SECRET into the web secret when only one is supplied
+    template: templates/secrets.yaml
+    set:
+      global:
+        autoGenerateSecrets: false
+        secrets:
+          NEXTAUTH_SECRET: test-secret
+    documentSelector:
+      path: metadata.name
+      value: kodus-secrets
+    asserts:
+      - equal:
+          path: data.NEXTAUTH_SECRET
+          value: dGVzdC1zZWNyZXQ=
+      - equal:
+          path: data.WEB_NEXTAUTH_SECRET
+          value: dGVzdC1zZWNyZXQ=

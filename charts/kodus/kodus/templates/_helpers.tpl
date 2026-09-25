@@ -14,9 +14,9 @@
 {{- $host := "" -}}
 {{- $scheme := "https" -}}
 {{- if eq .Values.platform "openshift" -}}
-{{- if .Values.route.enabled -}}{{- with .Values.route.hosts.webhooks }}{{- $host = .host | default "" -}}{{- end -}}{{- end -}}
+{{- if .Values.route.enabled -}}{{- with .Values.route.hosts.webhooks }}{{- if or (kindIs "invalid" .enabled) .enabled }}{{- $host = .host | default "" -}}{{- end -}}{{- end -}}{{- end -}}
 {{- else -}}
-{{- if .Values.ingress.enabled -}}{{- with .Values.ingress.hosts.webhooks }}{{- $host = .host | default "" -}}{{- end -}}{{- end -}}
+{{- if .Values.ingress.enabled -}}{{- with .Values.ingress.hosts.webhooks }}{{- if or (kindIs "invalid" .enabled) .enabled }}{{- $host = .host | default "" -}}{{- end -}}{{- end -}}{{- end -}}
 {{- if not .Values.ingress.tls.enabled -}}{{- $scheme = "http" -}}{{- end -}}
 {{- end -}}
 {{- if and $host (not (contains "example.com" $host)) -}}{{ printf "%s://%s" $scheme $host }}{{- end -}}
@@ -30,9 +30,9 @@
 {{- $host := "" -}}
 {{- $scheme := "https" -}}
 {{- if eq .Values.platform "openshift" -}}
-{{- if .Values.route.enabled -}}{{- with .Values.route.hosts.web }}{{- $host = .host | default "" -}}{{- end -}}{{- end -}}
+{{- if .Values.route.enabled -}}{{- with .Values.route.hosts.web }}{{- if or (kindIs "invalid" .enabled) .enabled }}{{- $host = .host | default "" -}}{{- end -}}{{- end -}}{{- end -}}
 {{- else -}}
-{{- if .Values.ingress.enabled -}}{{- with .Values.ingress.hosts.web }}{{- $host = .host | default "" -}}{{- end -}}{{- end -}}
+{{- if .Values.ingress.enabled -}}{{- with .Values.ingress.hosts.web }}{{- if or (kindIs "invalid" .enabled) .enabled }}{{- $host = .host | default "" -}}{{- end -}}{{- end -}}{{- end -}}
 {{- if not .Values.ingress.tls.enabled -}}{{- $scheme = "http" -}}{{- end -}}
 {{- end -}}
 {{- if and $host (not (contains "example.com" $host)) -}}{{ printf "%s://%s" $scheme $host }}{{- end -}}

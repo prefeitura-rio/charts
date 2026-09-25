@@ -16,7 +16,7 @@ env:
   - appSecretsEnv: 6 required + optional cryptographic secrets
 ```
 
-There is no `envFrom: secretRef` for the whole `existingSecret`. Only explicitly listed keys are pulled from the Secret. This means GitHub App credentials (`API_GITHUB_CLIENT_SECRET`, `API_GITHUB_PRIVATE_KEY`, `WEB_OAUTH_GITHUB_CLIENT_SECRET`) are not handled by any secret template and fall through to `global.config` (ConfigMap).
+There is no `envFrom: secretRef` for the whole `existingSecret`. Only explicitly listed keys are pulled from the Secret. GitHub App credentials (`API_GITHUB_CLIENT_SECRET`, `API_GITHUB_PRIVATE_KEY`, `WEB_OAUTH_GITHUB_CLIENT_SECRET`) are explicitly injected through `secretKeyRef`; they must not be placed in `global.config` or a ConfigMap.
 
 ### Confirmed RabbitMQ Vhost
 

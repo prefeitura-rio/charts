@@ -53,19 +53,23 @@ spec:
   policyTypes:
     - Ingress
   ingress:
+    {{- if and $.Values.networkPolicy.ingressControllerLabels $.Values.networkPolicy.ingressControllerNamespaceSelector }}
     - from:
-        {{- if $.Values.networkPolicy.ingressControllerLabels }}
         - namespaceSelector:
             {{- toYaml ($.Values.networkPolicy.ingressControllerNamespaceSelector | default dict) | nindent 12 }}
           podSelector:
             matchLabels:
               {{- toYaml $.Values.networkPolicy.ingressControllerLabels | nindent 14 }}
-        {{- else }}
-        - namespaceSelector: {}
+        {{- range $.Values.networkPolicy.additionalIngressSources }}
+        - namespaceSelector:
+            {{- toYaml .namespaceSelector | nindent 12 }}
+          podSelector:
+            {{- toYaml .podSelector | nindent 12 }}
         {{- end }}
       ports:
         - port: {{ $svc.port }}
           protocol: TCP
+    {{- end }}
 {{- end }}
 {{- end }}
 {{- end }}

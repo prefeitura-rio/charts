@@ -9,6 +9,7 @@ global:
   config:
     NEXTAUTH_URL: "https://kodus-pilot.example.com"
     API_DATABASE_DISABLE_SSL: "true"
+    API_MCP_SERVER_ENABLED: "false"
     API_LOG_LEVEL: "info"
     API_LOG_PRETTY: "false"
 
@@ -46,14 +47,17 @@ ingress:
     secretName: kodus-pilot-tls
   hosts:
     web:
+      enabled: false
       host: kodus-pilot.example.com
       path: /
       serviceName: web
     api:
+      enabled: false
       host: kodus-api-pilot.example.com
       path: /
       serviceName: api
     webhooks:
+      enabled: true
       host: kodus-webhooks-pilot.example.com
       path: /
       serviceName: webhooks

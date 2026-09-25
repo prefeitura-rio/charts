@@ -12,6 +12,8 @@ global:
     kodus.io/data-classification: "confidential"
 
   existingSecret: ""
+  # Bump this value whenever an existing or externally-managed Secret rotates.
+  secretVersion: ""
   externalSecrets:
     enabled: false
     store: ""
@@ -234,14 +236,17 @@ ingress:
     secretName: ""
   hosts:
     web:
+      enabled: true
       host: kodus.example.com
       path: /
       serviceName: web
     api:
+      enabled: true
       host: api.kodus.example.com
       path: /
       serviceName: api
     webhooks:
+      enabled: true
       host: webhooks.kodus.example.com
       path: /
       serviceName: webhooks
@@ -270,8 +275,14 @@ scc:
 
 networkPolicy:
   enabled: true
-  ingressControllerLabels: {}
-  ingressControllerNamespaceSelector: {}
+  # Restrict ingress to the default nginx controller. Override both selectors
+  # when using another ingress implementation.
+  ingressControllerLabels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/name: ingress-nginx
+  ingressControllerNamespaceSelector:
+    kubernetes.io/metadata.name: ingress-nginx
+  additionalIngressSources: []
 
 autoscaling:
   enabled: true
