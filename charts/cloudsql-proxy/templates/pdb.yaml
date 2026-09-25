@@ -1,17 +1,21 @@
 {{- if .Values.podDisruptionBudget.enabled }}
+{{- range $instance := .Values.instances }}
+{{- $ctx := dict "root" $ "instance" $instance }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: {{ include "cloudsql-proxy.fullname" . }}
+  name: {{ include "cloudsql-proxy.instanceName" $ctx }}
   labels:
-    {{- include "cloudsql-proxy.labels" . | nindent 4 }}
+    {{- include "cloudsql-proxy.instanceLabels" $ctx | nindent 4 }}
 spec:
-  {{- if .Values.podDisruptionBudget.minAvailable }}
-  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
-  {{- else if .Values.podDisruptionBudget.maxUnavailable }}
-  maxUnavailable: {{ .Values.podDisruptionBudget.maxUnavailable }}
+  {{- if $.Values.podDisruptionBudget.minAvailable }}
+  minAvailable: {{ $.Values.podDisruptionBudget.minAvailable }}
+  {{- else if $.Values.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ $.Values.podDisruptionBudget.maxUnavailable }}
   {{- end }}
   selector:
     matchLabels:
-      {{- include "cloudsql-proxy.selectorLabels" . | nindent 6 }}
+      {{- include "cloudsql-proxy.instanceLabels" $ctx | nindent 6 }}
+---
+{{- end }}
 {{- end }}

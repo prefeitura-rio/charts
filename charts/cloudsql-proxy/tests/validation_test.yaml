@@ -1,0 +1,16 @@
+suite: values validation
+templates:
+  - deployment.yaml
+tests:
+  - it: rejects an unsupported routing strategy
+    values:
+      - invalid-strategy-values.yaml
+    asserts:
+      - failedTemplate:
+          errorMessage: 'routing.strategy must be one of multiservice or istio-gateway, got "unsupported"'
+  - it: rejects duplicate backend Service names
+    values:
+      - duplicate-service-values.yaml
+    asserts:
+      - failedTemplate:
+          errorMessage: 'duplicate Service name "database"'

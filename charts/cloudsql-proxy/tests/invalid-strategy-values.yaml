@@ -1,0 +1,8 @@
+instances:
+  - project: example
+    instance: postgres
+    region: us-central1
+    port: 5432
+    listenPort: 5432
+routing:
+  strategy: unsupported

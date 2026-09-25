@@ -1,0 +1,23 @@
+suite: exposure strategies
+templates:
+  - gateway.yaml
+  - virtualservice.yaml
+  - tailscale-service.yaml
+values:
+  - multiservice-values.yaml
+tests:
+  - it: does not render an Istio Gateway for multiservice
+    template: gateway.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: does not render an Istio VirtualService for multiservice
+    template: virtualservice.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: does not render a Tailscale frontend for multiservice
+    template: tailscale-service.yaml
+    asserts:
+      - hasDocuments:
+          count: 0

@@ -1,0 +1,27 @@
+instances:
+  - project: rj-iplanrio-dia
+    instance: postgres
+    region: us-central1
+    port: 5432
+    listenPort: 10000
+    healthCheckPort: 9090
+    configMapRef:
+      name: postgres-config
+      keys:
+        projectId: CLOUD_SQL_PROJECT_ID
+        region: CLOUD_SQL_INSTANCE_REGION
+        name: CLOUD_SQL_INSTANCE_NAME
+  - project: rj-sme-danfe-ai
+    instance: mysql
+    region: us-central1
+    port: 3306
+    listenPort: 10001
+    healthCheckPort: 9091
+    configMapRef:
+      name: danfe-config
+      keys:
+        projectId: CLOUD_SQL_PROJECT_ID
+        region: CLOUD_SQL_INSTANCE_REGION
+        name: CLOUD_SQL_INSTANCE_NAME
+serviceAccount:
+  existingServiceAccount: shared-cloudsql-proxy

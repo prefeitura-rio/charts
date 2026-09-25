@@ -1,0 +1,7 @@
+instances:
+  - project: rj-very-long-project-name-with-many-segments
+    instance: postgres-production-primary
+    region: us-central1
+    port: 5432
+    listenPort: 10000
+    healthCheckPort: 9090

@@ -1,0 +1,469 @@
+suite: test network policy
+templates:
+  - networkpolicy.yaml
+tests:
+  - it: should not render when networkPolicy is disabled
+    set:
+      networkPolicy.enabled: false
+      networkPolicy.ingress.from:
+        - namespace: ingress-nginx
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should not render when enabled but ingress and egress are both empty
+    set:
+      networkPolicy.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render only Ingress policyType when only ingress is configured
+    set:
+      networkPolicy.enabled: true
+      networkPolicy.ingress.from:
+        - namespace: ingress-nginx
+    asserts:
+      - isKind:
+          of: NetworkPolicy
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+      - equal:
+          path: spec.policyTypes
+          value:
+            - Ingress
+      - notExists:
+          path: spec.egress
+
+  - it: should render only Egress policyType when only egress is configured
+    set:
+      networkPolicy.enabled: true
+      networkPolicy.egress.to:
+        - ipBlock:
+            cidr: 203.0.113.0/24
+    asserts:
+      - equal:
+          path: spec.policyTypes
+          value:
+            - Egress
+      - notExists:
+          path: spec.ingress
+
+  - it: should render both policyTypes when ingress and egress are configured
+    set:
+      networkPolicy.enabled: true
+      networkPolicy.ingress.from:
+        - namespace: ingress-nginx
+      networkPolicy.egress.to:
+        - ipBlock:
+            cidr: 203.0.113.0/24
+    asserts:
+      - equal:
+          path: spec.policyTypes
+          value:
+            - Ingress
+            - Egress
+
+  - it: should select pods with the workload's own selector labels
+    set:
+      networkPolicy.enabled: true
+      networkPolicy.ingress.from:
+        - namespace: ingress-nginx
+    asserts:
+      - exists:
+          path: spec.podSelector.matchLabels
+
+  - it: should allow phase 1 ingress by namespace only
+    set:
+      networkPolicy.enabled: true
+      networkPolicy.ingress.from:
+        - namespace: checkout
+    asserts:
+      - equal:
+          path: spec.ingress[2].from[0].namespaceSelector.matchLabels["kubernetes.io/metadata.name"]
+          value: checkout
+      - notExists:
+          path: spec.ingress[2].from[0].podSelector
+
+  - it: should allow phase 3 ingress by namespace and workload
+    set:
+      networkPolicy.enabled: true
+      networkPolicy.ingress.from:
+        - namespace: checkout
+          workload: payments-api
+    asserts:
+      - equal:
+          path: spec.ingress[2].from[0].namespaceSelector.matchLabels["kubernetes.io/metadata.name"]
+          value: checkout
+      - equal:
+          path: spec.ingress[2].from[0].podSelector.matchLabels["app.kubernetes.io/name"]
+          value: payments-api
+
+  - it: should allow a custom podSelector escape hatch alongside namespace
+    set:
+      networkPolicy.enabled: true
+      networkPolicy.ingress.from:
+        - namespace: checkout
+          podSelector:
+            matchLabels:
+              custom-label: my-value
+    asserts:
+      - equal:
+          path: spec.ingress[2].from[0].podSelector.matchLabels.custom-label
+          value: my-value
+
+  - it: should allow a raw namespaceSelector escape hatch
+    set:
+      networkPolicy.enabled: true
+      networkPolicy.ingress.from:
+        - namespaceSelector:
+            matchExpressions:
+              - key: kubernetes.io/metadata.name
+                operator: In
+                values:
+                  - checkout
+                  - billing
+    asserts:
+      - equal:
+          path: spec.ingress[2].from[0].namespaceSelector.matchExpressions[0].values[1]
+          value: billing
+
+  - it: should allow an ipBlock escape hatch
+    set:
+      networkPolicy.enabled: true
+      networkPolicy.ingress.from:
+        - ipBlock:
+            cidr: 10.0.0.0/8
+            except:
+              - 10.0.1.0/24
+    asserts:
+      - equal:
+          path: spec.ingress[2].from[0].ipBlock.cidr
+          value: 10.0.0.0/8
+      - equal:
+          path: spec.ingress[2].from[0].ipBlock.except[0]
+          value: 10.0.1.0/24
+
+  - it: should restrict custom ingress ports when specified
+    set:
+      networkPolicy.enabled: true
+      networkPolicy.ingress.from:
+        - namespace: checkout
+      networkPolicy.ingress.ports:
+        - port: 8080
+          protocol: TCP
+    asserts:
+      - equal:
+          path: spec.ingress[2].ports[0].port
+          value: 8080
+
+  - it: should not restrict ports on custom ingress rule when not specified
+    set:
+      networkPolicy.enabled: true
+      networkPolicy.ingress.from:
+        - namespace: checkout
+    asserts:
+      - notExists:
+          path: spec.ingress[2].ports
+
+  - it: should always allow kubelet/istio-agent health check port on ingress when istio is enabled
+    set:
+      istio.enabled: true
+      networkPolicy.enabled: true
+      networkPolicy.ingress.from:
+        - namespace: checkout
+    asserts:
+      - equal:
+          path: spec.ingress[0].ports[0].port
+          value: 15020
+      - equal:
+          path: spec.ingress[0].from
+          value: []
+
+  - it: should always allow mesh Prometheus scraping on ingress when istio is enabled
+    set:
+      istio.enabled: true
+      networkPolicy.enabled: true
+      networkPolicy.ingress.from:
+        - namespace: checkout
+    asserts:
+      - equal:
+          path: spec.ingress[1].ports[0].port
+          value: 15090
+      - equal:
+          path: spec.ingress[1].from[0].namespaceSelector.matchLabels["kubernetes.io/metadata.name"]
+          value: istio-system
+
+  - it: should not add istio baseline ingress rules when istio is disabled
+    set:
+      istio.enabled: false
+      networkPolicy.enabled: true
+      networkPolicy.ingress.from:
+        - namespace: checkout
+    asserts:
+      - lengthEqual:
+          path: spec.ingress
+          count: 1
+      - equal:
+          path: spec.ingress[0].from[0].namespaceSelector.matchLabels["kubernetes.io/metadata.name"]
+          value: checkout
+
+  - it: should allow HBONE traffic on ingress in ambient mode instead of the sidecar ports
+    set:
+      istio.enabled: true
+      istio.dataplaneMode: ambient
+      networkPolicy.enabled: true
+      networkPolicy.ingress.from:
+        - namespace: checkout
+    asserts:
+      - equal:
+          path: spec.ingress[0].ports[0].port
+          value: 15008
+      - equal:
+          path: spec.ingress[0].from
+          value: []
+
+  - it: should allow kubelet health probes via the ambient link-local sentinel addresses
+    set:
+      istio.enabled: true
+      istio.dataplaneMode: ambient
+      networkPolicy.enabled: true
+      networkPolicy.ingress.from:
+        - namespace: checkout
+    asserts:
+      - equal:
+          path: spec.ingress[1].from[0].ipBlock.cidr
+          value: 169.254.7.127/32
+      - equal:
+          path: spec.ingress[1].from[1].ipBlock.cidr
+          value: fd16:9254:7127:1337:ffff:ffff:ffff:ffff/128
+      - notExists:
+          path: spec.ingress[1].ports
+
+  - it: should not add sidecar-only ports (15020/15090) on ingress in ambient mode
+    set:
+      istio.enabled: true
+      istio.dataplaneMode: ambient
+      networkPolicy.enabled: true
+      networkPolicy.ingress.from:
+        - namespace: checkout
+    asserts:
+      - lengthEqual:
+          path: spec.ingress
+          count: 3
+      - equal:
+          path: spec.ingress[2].from[0].namespaceSelector.matchLabels["kubernetes.io/metadata.name"]
+          value: checkout
+
+  - it: should keep the DNS/istiod egress baseline unchanged in ambient mode
+    set:
+      istio.enabled: true
+      istio.dataplaneMode: ambient
+      networkPolicy.enabled: true
+      networkPolicy.egress.to:
+        - ipBlock:
+            cidr: 203.0.113.0/24
+    asserts:
+      - equal:
+          path: spec.egress[0].to[0].namespaceSelector.matchLabels["kubernetes.io/metadata.name"]
+          value: kube-system
+      - equal:
+          path: spec.egress[1].to[0].namespaceSelector.matchLabels["kubernetes.io/metadata.name"]
+          value: istio-system
+      - equal:
+          path: spec.egress[1].ports[0].port
+          value: 15012
+
+  - it: should always allow DNS on egress
+    set:
+      networkPolicy.enabled: true
+      networkPolicy.egress.to:
+        - ipBlock:
+            cidr: 203.0.113.0/24
+    asserts:
+      - equal:
+          path: spec.egress[0].to[0].namespaceSelector.matchLabels["kubernetes.io/metadata.name"]
+          value: kube-system
+      - contains:
+          path: spec.egress[0].ports
+          content:
+            port: 53
+            protocol: UDP
+      - contains:
+          path: spec.egress[0].ports
+          content:
+            port: 53
+            protocol: TCP
+
+  - it: should always allow the istio control plane on egress when istio is enabled
+    set:
+      istio.enabled: true
+      networkPolicy.enabled: true
+      networkPolicy.egress.to:
+        - ipBlock:
+            cidr: 203.0.113.0/24
+    asserts:
+      - equal:
+          path: spec.egress[1].ports[0].port
+          value: 15012
+      - equal:
+          path: spec.egress[1].to[0].namespaceSelector.matchLabels["kubernetes.io/metadata.name"]
+          value: istio-system
+
+  - it: should not add istio control plane egress rule when istio is disabled
+    set:
+      istio.enabled: false
+      networkPolicy.enabled: true
+      networkPolicy.egress.to:
+        - ipBlock:
+            cidr: 203.0.113.0/24
+    asserts:
+      - lengthEqual:
+          path: spec.egress
+          count: 2
+      - equal:
+          path: spec.egress[1].to[0].ipBlock.cidr
+          value: 203.0.113.0/24
+
+  - it: should allow custom egress destination by namespace and workload
+    set:
+      istio.enabled: false
+      networkPolicy.enabled: true
+      networkPolicy.egress.to:
+        - namespace: default
+          workload: valkey
+    asserts:
+      - equal:
+          path: spec.egress[1].to[0].namespaceSelector.matchLabels["kubernetes.io/metadata.name"]
+          value: default
+      - equal:
+          path: spec.egress[1].to[0].podSelector.matchLabels["app.kubernetes.io/name"]
+          value: valkey
+
+  - it: should restrict custom egress ports when specified
+    set:
+      istio.enabled: false
+      networkPolicy.enabled: true
+      networkPolicy.egress.to:
+        - ipBlock:
+            cidr: 203.0.113.0/24
+      networkPolicy.egress.ports:
+        - port: 443
+          protocol: TCP
+    asserts:
+      - equal:
+          path: spec.egress[1].ports[0].port
+          value: 443
+
+  - it: should not mirror when both mirror toggles are false
+    set:
+      istio.enabled: false
+      networkPolicy.enabled: true
+      networkPolicy.ingress.from:
+        - namespace: checkout
+    asserts:
+      - equal:
+          path: spec.policyTypes
+          value:
+            - Ingress
+      - notExists:
+          path: spec.egress
+
+  - it: should mirror ingress.from into egress.to and activate egress when only that toggle is on
+    set:
+      istio.enabled: false
+      networkPolicy.enabled: true
+      networkPolicy.mirrorIngressToEgress: true
+      networkPolicy.ingress.from:
+        - namespace: checkout
+        - namespace: billing
+          workload: invoices-api
+    asserts:
+      - equal:
+          path: spec.policyTypes
+          value:
+            - Ingress
+            - Egress
+      - equal:
+          path: spec.egress[1].to[0].namespaceSelector.matchLabels["kubernetes.io/metadata.name"]
+          value: checkout
+      - equal:
+          path: spec.egress[1].to[1].podSelector.matchLabels["app.kubernetes.io/name"]
+          value: invoices-api
+
+  - it: should mirror egress.to into ingress.from and activate ingress when only that toggle is on
+    set:
+      istio.enabled: false
+      networkPolicy.enabled: true
+      networkPolicy.mirrorEgressToIngress: true
+      networkPolicy.egress.to:
+        - namespace: checkout
+    asserts:
+      - equal:
+          path: spec.policyTypes
+          value:
+            - Ingress
+            - Egress
+      - equal:
+          path: spec.ingress[0].from[0].namespaceSelector.matchLabels["kubernetes.io/metadata.name"]
+          value: checkout
+
+  - it: should keep direct entries as extras alongside mirrored peers on both sides
+    set:
+      istio.enabled: false
+      networkPolicy.enabled: true
+      networkPolicy.mirrorIngressToEgress: true
+      networkPolicy.mirrorEgressToIngress: true
+      networkPolicy.ingress.from:
+        - namespace: checkout
+      networkPolicy.egress.to:
+        - ipBlock:
+            cidr: 203.0.113.0/24
+    asserts:
+      - equal:
+          path: spec.ingress[0].from[0].ipBlock.cidr
+          value: 203.0.113.0/24
+      - equal:
+          path: spec.ingress[0].from[1].namespaceSelector.matchLabels["kubernetes.io/metadata.name"]
+          value: checkout
+      - equal:
+          path: spec.egress[1].to[0].namespaceSelector.matchLabels["kubernetes.io/metadata.name"]
+          value: checkout
+      - equal:
+          path: spec.egress[1].to[1].ipBlock.cidr
+          value: 203.0.113.0/24
+
+  - it: should not change the DNS/istio baseline when mirroring is enabled
+    set:
+      istio.enabled: true
+      networkPolicy.enabled: true
+      networkPolicy.mirrorIngressToEgress: true
+      networkPolicy.ingress.from:
+        - namespace: checkout
+    asserts:
+      - equal:
+          path: spec.egress[0].to[0].namespaceSelector.matchLabels["kubernetes.io/metadata.name"]
+          value: kube-system
+      - equal:
+          path: spec.egress[1].to[0].namespaceSelector.matchLabels["kubernetes.io/metadata.name"]
+          value: istio-system
+      - equal:
+          path: spec.egress[2].to[0].namespaceSelector.matchLabels["kubernetes.io/metadata.name"]
+          value: checkout
+
+  - it: should have hook annotations present
+    set:
+      networkPolicy.enabled: true
+      networkPolicy.ingress.from:
+        - namespace: checkout
+    asserts:
+      - equal:
+          path: metadata.annotations["helm.sh/hook"]
+          value: "post-install,post-upgrade"
+      - equal:
+          path: metadata.annotations["helm.sh/hook-weight"]
+          value: "0"
+      - equal:
+          path: metadata.annotations["helm.sh/hook-delete-policy"]
+          value: "before-hook-creation"

@@ -1,0 +1,21 @@
+{{- if eq (include "cloudsql-proxy.routingStrategy" .) "istio-gateway" }}
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: {{ .Values.routing.gateway.name }}
+  namespace: {{ .Values.routing.gateway.namespace }}
+  labels:
+    {{- include "cloudsql-proxy.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- toYaml .Values.routing.gateway.selector | nindent 4 }}
+  servers:
+    {{- range $instance := .Values.instances }}
+    - port:
+        number: {{ include "cloudsql-proxy.instanceListenPort" (dict "root" $ "instance" $instance) }}
+        name: tcp-{{ include "cloudsql-proxy.instanceName" (dict "root" $ "instance" $instance) | trunc 50 | trimSuffix "-" }}
+        protocol: TCP
+      hosts:
+        - "*"
+    {{- end }}
+{{- end }}

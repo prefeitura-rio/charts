@@ -1,0 +1,18 @@
+instances:
+  - project: rj-iplanrio-dia
+    instance: postgres
+    serviceName: postgres
+    region: us-central1
+    port: 5432
+    listenPort: 5432
+  - project: rj-sme-danfe-ai
+    instance: mysql
+    serviceName: danfe
+    region: us-central1
+    port: 3306
+    listenPort: 10000
+routing:
+  strategy: multiservice
+  enabled: true
+serviceAccount:
+  existingServiceAccount: shared-cloudsql-proxy
