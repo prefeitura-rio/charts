@@ -11,9 +11,6 @@ spec:
   {{- if not $.Values.autoscaling.enabled }}
   replicas: {{ $svc.replicas | default 1 }}
   {{- end }}
-  # Cap retained old ReplicaSets. The k8s default (10 per Deployment) accumulates
-  # across upgrades and can exhaust a namespace's replicaset quota (common in
-  # multi-tenant / OpenShift sandbox namespaces), which then blocks new rollouts.
   revisionHistoryLimit: {{ $.Values.revisionHistoryLimit | default 3 }}
   selector:
     matchLabels:
@@ -24,32 +21,8 @@ spec:
         {{- include "kodus-common.serviceSelectorLabels" (dict "root" $ "serviceName" $name) | nindent 8 }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") $ | sha256sum }}
-        # Roll pods when secrets change too (rotation / edited inline secret).
-        # secrets.yaml uses `lookup` for stability, so auto-generated values don't
-        # churn this hash — only a real change rolls the pods.
         checksum/secrets: {{ include (print $.Template.BasePath "/secrets.yaml") $ | sha256sum }}
     spec:
-      {{- /*
-        DERIVED from the app's own drain timeout, never written by hand. Kubernetes
-        sends SIGTERM, waits this long, then SIGKILLs — so a grace period below the
-        drain timeout makes the app's shutdown path dead code, killed before it can
-        finish. That was the state before this: the default 30s against
-        API_WORKER_DRAIN_TIMEOUT_MS of 600000 (10 minutes) meant every worker was
-        killed at 30 seconds, on every rollout, scale-down and node drain, leaving
-        in-flight jobs orphaned in PROCESSING.
-
-        Two numbers that must agree cannot be left to agree by hand — one of them
-        gets tuned and the other is forgotten. The buffer covers SIGTERM delivery
-        and connection teardown after the drain itself returns.
-
-        Note what this deliberately does NOT try to do: a Kodus review job may
-        legitimately run 105 minutes, and no grace period can accommodate that —
-        a node drain would take two hours and `helm upgrade --wait` would hang.
-        Draining means "stop consuming and let the queue reclaim the work", not
-        "finish it". Anything killed mid-flight is the stale-job reaper's problem
-        (WORKFLOW_STALE_JOB_* below), which is also the only net under OOMKill,
-        where no SIGTERM is delivered at all.
-      */}}
       {{- $drainMs := (dig "API_WORKER_DRAIN_TIMEOUT_MS" "" $.Values.global.config) | default "60000" | toString | atoi }}
       terminationGracePeriodSeconds: {{ add (div $drainMs 1000) ($.Values.terminationGraceBufferSeconds | default 30 | int) }}
       serviceAccountName: {{ include "kodus-common.serviceAccountName" $ }}
@@ -94,9 +67,6 @@ spec:
             {{- end }}
       volumes:
         {{- include "kodus-common.tmpVolume" $ | nindent 8 }}
-        {{- /* Per-service scratch dirs for frameworks that insist on writing inside
-               their own tree despite readOnlyRootFilesystem. emptyDir (not a PVC) is
-               deliberate: these hold derived caches, per-pod and safe to lose. */ -}}
         {{- range $i, $path := ($svc.writablePaths | default list) }}
         - name: writable-{{ $i }}
           emptyDir:

@@ -14,8 +14,8 @@ spec:
   securityContext:
     runAsNonRoot: true
     {{- if ne .Values.platform "openshift" }}
-    runAsUser: 65534          # busybox has no non-root USER; pin nobody
-    {{- end }}                {{/* openshift: SCC assigns the UID; 65534 would be rejected by restricted-v2 */}}
+    runAsUser: 65534
+    {{- end }}
     seccompProfile:
       type: RuntimeDefault
   containers:

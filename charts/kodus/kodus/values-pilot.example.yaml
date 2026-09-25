@@ -1,10 +1,3 @@
-# Non-secret pilot overlay.
-#
-# Replace the example.com hosts and create the referenced TLS Secret before
-# exposing this release. Application secrets may be auto-generated for this
-# short-lived pilot, but provider and GitHub credentials must come from the
-# approved secret-management path and must not be added here.
-
 platform: kubernetes
 imageTag: "2.1.31"
 
@@ -65,8 +58,6 @@ ingress:
       path: /
       serviceName: webhooks
 
-# Bundled stores keep the pilot self-contained. Replace these with external or
-# operator-managed stores before treating the deployment as production-ready.
 postgres:
   mode: bundled
   bundled:

@@ -1,12 +1,4 @@
-{{/*
-Database connection env vars. Per store, one of three modes:
-  bundled  → the StatefulSet + Secret this chart creates
-  external → user-provided values + existingSecret
-  operator → the operator-created Service + Secret
-Call with root ctx.
-*/}}
 {{- define "kodus-common.dbEnv" -}}
-{{/* ---- Postgres ---- */}}
 {{- if eq .Values.postgres.mode "bundled" }}
 - name: API_PG_DB_HOST
   value: {{ printf "%s-postgres" .Release.Name | quote }}
@@ -50,7 +42,6 @@ Call with root ctx.
 - name: API_PG_DB_DATABASE
   value: {{ .Values.postgres.external.database | quote }}
 {{- end }}
-{{/* ---- Mongo ---- */}}
 {{- if eq .Values.mongodb.mode "bundled" }}
 - name: API_MG_DB_HOST
   value: {{ printf "%s-mongodb" .Release.Name | quote }}
@@ -96,10 +87,6 @@ Call with root ctx.
 {{- end }}
 {{- end }}
 
-{{/*
-RabbitMQ connection env vars. Credentials are built in the pod env via $(VAR)
-refs (k8s resolves $(VAR) only inside the pod env block). Vhost is kodus-ai.
-*/}}
 {{- define "kodus-common.rabbitmqEnv" -}}
 {{- if eq .Values.rabbitmq.mode "bundled" }}
 - name: RABBITMQ_USER
@@ -133,19 +120,6 @@ refs (k8s resolves $(VAR) only inside the pod env block). Vhost is kodus-ai.
 {{- end }}
 {{- end }}
 
-{{/*
-App secrets env vars — from existingSecret or the chart-generated Secret.
-REQUIRED secrets are non-optional: the pod fails to start if the key is missing,
-a deliberate guard against booting with empty auth/crypto secrets. Note the
-underscore in API_JWT_REFRESH_SECRET (API_JWT_REFRESHSECRET is a legacy typo no
-longer read by code), and NEXTAUTH_SECRET is distinct from WEB_NEXTAUTH_SECRET
-(both required, mirrored to the same value).
-OPTIONAL secrets (LLM keys, MCP manager, webhook token) stay optional so a minimal
-install boots without them.
-NOTE for self-hosted Claude/Anthropic users: the Anthropic key goes into
-API_OPEN_AI_API_KEY (kodus-ai reads the single LLM key from that slot and selects
-the SDK by model-id prefix).
-*/}}
 {{- define "kodus-common.appSecretsEnv" -}}
 {{- $secretName := default (printf "%s-secrets" .Release.Name) .Values.global.existingSecret -}}
 {{- range $key := list "API_JWT_SECRET" "API_JWT_REFRESH_SECRET" "WEB_NEXTAUTH_SECRET" "NEXTAUTH_SECRET" "API_CRYPTO_KEY" "CODE_MANAGEMENT_SECRET" }}
@@ -155,7 +129,7 @@ the SDK by model-id prefix).
       name: {{ $secretName }}
       key: {{ $key }}
 {{- end }}
-{{- range $key := list "CODE_MANAGEMENT_WEBHOOK_TOKEN" "API_OPEN_AI_API_KEY" "API_MORPHLLM_API_KEY" "API_E2B_KEY" "API_MCP_MANAGER_JWT_SECRET" "API_MCP_MANAGER_ENCRYPTION_SECRET" }}
+{{- range $key := list "CODE_MANAGEMENT_WEBHOOK_TOKEN" "API_OPEN_AI_API_KEY" "API_MORPHLLM_API_KEY" "API_E2B_KEY" "API_MCP_MANAGER_JWT_SECRET" "API_MCP_MANAGER_ENCRYPTION_SECRET" "API_GITHUB_CLIENT_SECRET" "API_GITHUB_PRIVATE_KEY" "WEB_OAUTH_GITHUB_CLIENT_SECRET" }}
 - name: {{ $key }}
   valueFrom:
     secretKeyRef:

@@ -2,13 +2,6 @@
 {{- if not .Values.postgres.operator.image }}
 {{- fail "postgres.operator.image is required when postgres.mode=operator — it MUST include the pgvector extension (a stock CloudNativePG image does not)." }}
 {{- end }}
-{{/*
-CloudNativePG Cluster. Requires the cloudnative-pg operator pre-installed.
-CNPG auto-creates:
-  - Service {{ .Release.Name }}-postgres-rw  (read-write, port 5432)
-  - Secret  {{ .Release.Name }}-postgres-app (keys: username, password)
-consumed by the app via kodus-common.dbEnv.
-*/}}
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
@@ -16,8 +9,6 @@ metadata:
   labels:
     {{- include "kodus.labels" . | nindent 4 }}
 spec:
-  # Propagate app labels to CNPG-created pods/services so the allow-intra-app
-  # NetworkPolicy selects them (CNPG pods otherwise carry only cnpg.io/* labels).
   inheritedMetadata:
     labels:
       app.kubernetes.io/part-of: kodus

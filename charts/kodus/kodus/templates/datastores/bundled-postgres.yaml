@@ -34,21 +34,6 @@ metadata:
   labels:
     {{- include "kodus.labels" . | nindent 4 }}
 spec:
-  # NOTE: serviceName points at the ClusterIP Service above, not a headless one.
-  # The StatefulSet contract expects headless (clusterIP: None) — that is what
-  # makes the controller's pod.spec.subdomain resolve into per-pod DNS
-  # (<pod>-0.<svc>.<ns>.svc.cluster.local). Those records do not exist here.
-  #
-  # Harmless at replicas 1: nothing dials an individual pod, and clients reach the
-  # DB through the ClusterIP name. It would matter for a multi-replica datastore,
-  # where peers discover each other by per-pod DNS — but that is what postgres.mode
-  # "operator" (CloudNativePG) is for; bundled is deliberately single-instance.
-  #
-  # Not fixed in place because BOTH sides are immutable: serviceName cannot be
-  # changed on an existing StatefulSet, and a Service cannot go ClusterIP -> None.
-  # Correcting it means recreating the StatefulSet (delete with
-  # --cascade=orphan to keep the pods, or accept downtime) — a migration, not an
-  # upgrade. Do it only alongside real multi-replica support.
   serviceName: {{ $name }}
   replicas: 1
   selector:
@@ -62,18 +47,13 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/part-of: kodus
     spec:
-      automountServiceAccountToken: false   # DB doesn't call the k8s API
+      automountServiceAccountToken: false
       securityContext:
         {{- include "kodus-common.datastorePodSecurityContext" . | nindent 8 }}
       containers:
         - name: postgres
           image: {{ include "kodus-common.regPrefix" . }}{{ $b.image }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default "Always" }}
-          # The stock image defaults to max_connections=100, which the app tier can
-          # exhaust: api + worker + webhooks each hold a pool, so replicas × pool
-          # grows fast under autoscaling. Running out surfaces as
-          # "sorry, too many clients already" and reads as an app outage, not a DB
-          # limit. Keep this in step with autoscaling.maxReplicas.
           args: ["-c", "max_connections={{ $b.maxConnections }}"]
           ports:
             - name: postgres
@@ -94,16 +74,12 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
-          # pg_isready is a tiny C binary (sub-100ms, deterministic) — the right
-          # native check for Postgres. A startupProbe absorbs first-boot cost
-          # (initdb + CREATE EXTENSION vector) with retries, so liveness carries
-          # no inflated initialDelaySeconds and only restarts a genuinely dead DB.
           startupProbe:
             exec:
               command: ["pg_isready", "-U", {{ $b.username | quote }}, "-d", {{ $b.database | quote }}]
             periodSeconds: 5
             timeoutSeconds: 3
-            failureThreshold: 30        # up to ~2.5min for initdb + extension
+            failureThreshold: 30
           readinessProbe:
             exec:
               command: ["pg_isready", "-U", {{ $b.username | quote }}, "-d", {{ $b.database | quote }}]
@@ -128,9 +104,6 @@ spec:
           configMap:
             name: {{ $name }}-init
   volumeClaimTemplates:
-    # NOTE: volumeClaimTemplates is IMMUTABLE — adding fields here breaks
-    # `helm upgrade` on an existing release. doctor-k8s.sh finds these PVCs by the
-    # instance label the StatefulSet controller sets automatically.
     - metadata:
         name: data
       spec:

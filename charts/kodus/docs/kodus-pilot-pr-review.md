@@ -7,8 +7,9 @@ synchronous GitHub Actions step or a merge blocker.
 ## Prerequisites
 
 - Kubernetes 1.28+ and Helm 3.8+.
-- An ingress controller and a certificate for the web, API, and webhook hosts.
-- DNS records for the three public hosts in the pilot values file.
+- An ingress controller and a certificate for the public webhook host.
+- Tailscale access for the private web and API hosts.
+- DNS records for the public webhook host.
 - An approved secret source for the LLM credential and GitHub App credentials.
 - A GitHub App with repository read, pull-request review/comment, and webhook
   permissions approved by the platform owner.
@@ -72,7 +73,7 @@ Configure Kodus BYOK with:
 
 ```text
 Endpoint: https://bifrost.iplan.dados.rio/openai/v1
-Model:    Huawei/deepseek-v4-flash
+Model:    openai.gpt-5.6-luna
 ```
 
 The Bifrost virtual key must come from the approved secret manager. Its secret

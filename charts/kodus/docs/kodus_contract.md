@@ -13,7 +13,8 @@ not yet wired for a real GitHub organization or production secret management.
 
 Known gaps:
 
-- GitHub App and OAuth credentials are not supported by the chart Secret contract.
+- GitHub App and OAuth credentials require an approved Secret source and actual
+  provider credentials; the chart now supports their optional Secret injection.
 - The current `ExternalSecret` only exposes fixed `kodus/<KEY>` paths.
 - Infisical integration is not implemented.
 - Bifrost URL and model variables are absent from the chart defaults.
@@ -32,7 +33,7 @@ GitHub PR
   -> RabbitMQ
   -> Kodus worker
   -> Bifrost OpenAI-compatible API
-  -> Huawei/deepseek-v4-flash
+  -> openai.gpt-5.6-luna
   -> GitHub review comments
 ```
 
@@ -56,12 +57,13 @@ Record the following before creating private deployment values:
 
 ### 2. Reserve DNS and TLS
 
-Recommended host structure:
+The iplanrio deployment keeps the web UI and API private through Tailscale and
+publishes only the webhook endpoint:
 
 ```text
-Web:      https://<kodus-web-host>
-API:      https://<kodus-api-host>       # only if external API access is required
-Webhooks: https://<kodus-webhooks-host>
+Web:      https://kodus.<tailscale-domain>
+API:      https://kodus-api.<tailscale-domain>
+Webhooks: https://kodus-webhooks.iplan.dados.rio
 ```
 
 Required application URLs:
@@ -126,6 +128,10 @@ GitHub OAuth login:
 ```text
 WEB_OAUTH_GITHUB_CLIENT_SECRET
 ```
+
+The chart injects these sensitive GitHub values through `secretKeyRef` when
+`global.existingSecret` is configured. The non-sensitive App ID, installation
+URL, and OAuth client ID remain ConfigMap configuration.
 
 Non-secret GitHub configuration:
 
@@ -225,7 +231,7 @@ Add these non-secret values to the chart contract:
 
 ```text
 API_OPENAI_FORCE_BASE_URL=https://bifrost.iplan.dados.rio/openai/v1
-API_LLM_PROVIDER_MODEL=Huawei/deepseek-v4-flash
+API_LLM_PROVIDER_MODEL=openai.gpt-5.6-luna
 ```
 
 Inject only the virtual key through the Secret:
@@ -252,10 +258,10 @@ controlled pilot, fixed environment configuration is more reproducible.
 Keep the committed pilot overlay non-secret. Create an untracked or externally
 managed private overlay containing:
 
-- Actual DNS names.
+- Actual Tailscale and webhook DNS names.
 - TLS Secret name.
 - `global.existingSecret`.
-- Infisical or ExternalSecrets configuration.
+- SOPS-backed Secret configuration.
 - Datastore mode and Secret names.
 - Bifrost model configuration.
 - Any GitHub integration overrides.

@@ -1,17 +1,8 @@
 suite: PodDisruptionBudget
-# A PDB whose minAvailable equals the healthy pod count yields
-# disruptionsAllowed = 0 — evictions are not slowed, they are forbidden
-# permanently, and `kubectl drain` hangs on those pods forever.
-#
-# This is invisible to helm lint and kubeconform: the offending template rendered
-# perfectly valid YAML, and `minAvailable: 1` is a perfectly valid integer. Only
-# the arithmetic against the replica count exposes it, which is what these tests
-# assert.
 templates:
   - templates/pdb.yaml
 tests:
   - it: emits one PDB per service whose replica floor is above 1
-    # Defaults: api/web/webhooks/worker at 2, mcp-manager/worker-analytics at 1.
     asserts:
       - hasDocuments:
           count: 4
@@ -36,9 +27,6 @@ tests:
           count: 5
 
   - it: reads the floor from the HPA when autoscaling drives the count
-    # A Deployment's replicas field is ignored once an HPA targets it, so the
-    # floor is the HPA's minReplicas — which the chart seeds from the service's
-    # own replicas, falling back to autoscaling.minReplicas.
     set:
       autoscaling:
         enabled: true
@@ -65,7 +53,6 @@ tests:
       services:
         mcp-manager: { replicas: null }
     asserts:
-      # replicas unset + autoscaling off falls back to 1, so still no PDB for it.
       - hasDocuments:
           count: 4
 
@@ -86,10 +73,6 @@ tests:
           value: kodus
 
   - it: refuses a minAvailable that reaches the replica floor
-    # Skipping single-replica services fixes the DEFAULT. It does nothing to stop
-    # an operator from raising minAvailable to the replica count and rebuilding
-    # the same deadlock by hand — which is exactly what "make the PDB stricter"
-    # looks like if you don't know the arithmetic.
     set:
       pdb:
         minAvailable: 2
@@ -114,8 +97,6 @@ tests:
           documentIndex: 0
 
   - it: lets a percentage budget through untouched
-    # A percentage can't hit 0 disruptions the way an integer can, and `int` on
-    # "50%" is 0, so the guard has nothing to compare — it must not fire here.
     set:
       pdb:
         minAvailable: 50%

@@ -21,12 +21,11 @@ Kodus has been deployed to namespace {{ .Release.Namespace }} (release: {{ .Rele
 
 2. Check status:
    kubectl get pods -n {{ .Release.Namespace }}
-   ./scripts/doctor-k8s.sh -n {{ .Release.Namespace }}          # full health check
+   ./scripts/doctor-k8s.sh -n {{ .Release.Namespace }}
 
 3. Migrations run as a Job on each install/upgrade. Follow it with:
    kubectl logs -n {{ .Release.Namespace }} -l app.kubernetes.io/name=migrations --tail=-1
 
-{{/* ---- Attention items: not fatal, but features depend on them ---- */}}
 {{- $cfg := .Values.global.config }}
 {{- $inlineSecrets := and (not .Values.global.existingSecret) (not .Values.global.externalSecrets.enabled) }}
 {{- $warnHost := or (not $cfg.WEB_HOSTNAME_API) (has $cfg.WEB_HOSTNAME_API (list "localhost" "127.0.0.1" "0.0.0.0")) }}

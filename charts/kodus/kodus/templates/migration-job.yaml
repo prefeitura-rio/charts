@@ -1,10 +1,4 @@
 {{- if .Values.migrations.enabled }}
-# Migrations run as a normal Job (NOT a pre-install hook) so they can reach a
-# bundled datastore, which is created alongside — a pre-install hook would
-# deadlock waiting for a DB that Helm only creates after hooks complete. The
-# name carries the release revision so each `helm upgrade` creates a fresh Job
-# (Jobs are immutable); old ones self-clean via ttlSecondsAfterFinished. App
-# pods wait-for-deps and self-heal if they start before migrations finish.
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -31,12 +25,6 @@ spec:
         - name: migrations
           image: {{ include "kodus-common.appImage" (dict "image" .Values.migrations.image "root" . "name" "migrations") }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default "Always" }}
-          # The image ENTRYPOINT (prod-entrypoint) runs the migrations when
-          # RUN_MIGRATIONS=true, then `exec "$@"`. We override only the CMD ($@)
-          # so that after migrations the container exits 0 instead of booting the
-          # app (pm2/node) and running forever — that is what makes this a Job
-          # that COMPLETES. No migration logic is duplicated here; the entrypoint
-          # remains the single source of truth for which migrations run.
           args: ["sh", "-c", "echo '✔ migrations + seeds complete — exiting (Job)'"]
           securityContext:
             {{- include "kodus-common.containerSecurityContext" . | nindent 12 }}

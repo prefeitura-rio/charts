@@ -24,12 +24,6 @@ metadata:
   labels:
     {{- include "kodus.labels" . | nindent 4 }}
 spec:
-  # NOTE: serviceName points at the ClusterIP Service above, not a headless one,
-  # so per-pod DNS (<pod>-0.<svc>.<ns>.svc.cluster.local) is not created — see the
-  # long note in bundled-postgres.yaml. Harmless at replicas 1; it would matter for
-  # a replica set, where members discover each other by per-pod DNS. That is what
-  # mongodb.mode "operator" is for. Both serviceName and a Service's clusterIP are
-  # immutable, so correcting this is a StatefulSet recreation, not an upgrade.
   serviceName: {{ $name }}
   replicas: 1
   selector:
@@ -43,7 +37,7 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/part-of: kodus
     spec:
-      automountServiceAccountToken: false   # DB doesn't call the k8s API
+      automountServiceAccountToken: false
       securityContext:
         {{- include "kodus-common.datastorePodSecurityContext" . | nindent 8 }}
       containers:
@@ -67,19 +61,12 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
-          # Probes use tcpSocket, NOT `mongosh --eval`: mongosh is a Node.js shell
-          # with a multi-second cold start that, under CPU pressure, blows past
-          # any sane exec timeout. That made the liveness probe SIGKILL (137) a
-          # perfectly healthy mongod that was already listening → crash loop that
-          # took the app pods down with it. A listening 27017 is the right signal
-          # for a standalone bundled DB. startupProbe covers WiredTiger recovery
-          # so liveness never fires during a slow cold start.
           startupProbe:
             tcpSocket:
               port: mongo
             periodSeconds: 5
             timeoutSeconds: 3
-            failureThreshold: 30        # up to ~2.5min for WiredTiger recovery
+            failureThreshold: 30
           readinessProbe:
             tcpSocket:
               port: mongo
@@ -98,10 +85,6 @@ spec:
             - name: data
               mountPath: /data/db
   volumeClaimTemplates:
-    # NOTE: volumeClaimTemplates is IMMUTABLE — never add labels/fields here on an
-    # existing release or `helm upgrade` fails ("updates to statefulset spec ...
-    # are forbidden"). doctor-k8s.sh matches these PVCs by the instance label the
-    # StatefulSet controller sets automatically.
     - metadata:
         name: data
       spec:

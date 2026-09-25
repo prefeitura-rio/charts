@@ -1,10 +1,4 @@
 {{- if eq .Values.mongodb.mode "operator" }}
-{{/*
-MongoDB Community Operator. Requires mongodb-community-operator pre-installed.
-The user password is generated here (stable across upgrades via lookup) and
-referenced by both the CR (passwordSecretRef) and the app (kodus-common.dbEnv).
-Service {{ .Release.Name }}-mongodb-svc (port 27017).
-*/}}
 {{- $pwSecret := printf "%s-mongodb-password" .Release.Name }}
 {{- $existing := (lookup "v1" "Secret" .Release.Namespace $pwSecret) }}
 {{- $pw := "" }}
@@ -49,7 +43,6 @@ spec:
       scramCredentialsSecretName: {{ .Release.Name }}-mongodb-scram
   statefulSet:
     spec:
-      # Label the operator-created pods so the allow-intra-app NetworkPolicy covers them.
       template:
         metadata:
           labels:

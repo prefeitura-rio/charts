@@ -1,7 +1,3 @@
-# Dev overlay — relaxes the production/SOC 2 hardening for local clusters.
-# Usage: helm install kodus . -f values.yaml -f values-dev.yaml
-
-# One tag for the whole stack (dev uses latest). Prod: set a pinned release.
 imageTag: latest
 
 image:
@@ -41,7 +37,6 @@ global:
   labels:
     kodus.io/environment: "development"
     kodus.io/team: "dev"
-  # Dev: chart auto-generates all secrets (stable across upgrade).
   autoGenerateSecrets: true
 
 containerSecurityContext:
@@ -61,8 +56,6 @@ networkPolicy:
 resourceQuota:
   enabled: false
 
-# Dev uses bundled mode (StatefulSets this chart runs) with a small footprint —
-# a single `helm install` brings everything up, no operators/external needed.
 postgres:
   mode: bundled
   bundled:

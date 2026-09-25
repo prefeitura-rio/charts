@@ -10,8 +10,6 @@ metadata:
   {{- if or $.Values.route.hsts $.Values.route.annotations }}
   annotations:
     {{- if $.Values.route.hsts }}
-    # OpenShift Routes do NOT set HSTS by default (ingress-nginx does) — force it.
-    # Only honored on edge/reencrypt termination.
     haproxy.router.openshift.io/hsts_header: {{ $.Values.route.hsts | quote }}
     {{- end }}
     {{- with $.Values.route.annotations }}
