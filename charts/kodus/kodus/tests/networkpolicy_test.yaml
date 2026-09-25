@@ -1,0 +1,36 @@
+suite: NetworkPolicy egress
+templates:
+  - templates/networkpolicy.yaml
+release:
+  name: kodus
+tests:
+  - it: keeps egress open by default
+    documentSelector:
+      path: metadata.name
+      value: kodus-default-deny
+    asserts:
+      - equal:
+          path: spec.egress
+          value: [{}]
+
+  - it: renders configured egress rules
+    set:
+      networkPolicy:
+        egressRules:
+          - to:
+              - namespaceSelector:
+                  matchLabels:
+                    kubernetes.io/metadata.name: providers
+            ports:
+              - protocol: TCP
+                port: 443
+    documentSelector:
+      path: metadata.name
+      value: kodus-default-deny
+    asserts:
+      - equal:
+          path: spec.egress[0].to[0].namespaceSelector.matchLabels["kubernetes.io/metadata.name"]
+          value: providers
+      - equal:
+          path: spec.egress[0].ports[0].port
+          value: 443

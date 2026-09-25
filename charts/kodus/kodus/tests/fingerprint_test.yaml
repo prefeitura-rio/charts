@@ -1,0 +1,160 @@
+suite: Version reporting
+templates:
+  - templates/deployment.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+release:
+  name: kodus
+tests:
+  - it: labels a service with the version it is actually running
+    set:
+      imageTag: "9.9.9"
+    template: templates/deployment.yaml
+    documentSelector:
+      path: metadata.name
+      value: kodus-api
+    asserts:
+      - equal:
+          path: metadata.labels["app.kubernetes.io/version"]
+          value: "9.9.9"
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/kodustech/kodus-ai-api:9.9.9
+
+  - it: follows a single service's tag override without touching the others
+    set:
+      services:
+        api:
+          image:
+            tag: "2.1.99"
+    template: templates/deployment.yaml
+    documentSelector:
+      path: metadata.name
+      value: kodus-api
+    asserts:
+      - equal:
+          path: metadata.labels["app.kubernetes.io/version"]
+          value: "2.1.99"
+
+  - it: leaves other services on the stack-wide tag
+    set:
+      imageTag: "9.9.9"
+      services:
+        api:
+          image:
+            tag: "2.1.99"
+    template: templates/deployment.yaml
+    documentSelector:
+      path: metadata.name
+      value: kodus-web
+    asserts:
+      - equal:
+          path: metadata.labels["app.kubernetes.io/version"]
+          value: "9.9.9"
+
+  - it: keeps the version label within the 63-character limit
+    set:
+      imageTag: aaaaaaaaaa-bbbbbbbbbb-cccccccccc-dddddddddd-eeeeeeeeee-ffffffffff-gggggggggg
+    template: templates/deployment.yaml
+    documentSelector:
+      path: metadata.name
+      value: kodus-api
+    asserts:
+      - matchRegex:
+          path: metadata.labels["app.kubernetes.io/version"]
+          pattern: ^.{1,63}$
+
+  - it: records the deployment shape on the ConfigMap
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: kodus-config
+    asserts:
+      - equal:
+          path: metadata.annotations["kodus.io/platform"]
+          value: kubernetes
+      - equal:
+          path: metadata.annotations["kodus.io/datastores"]
+          value: postgres=bundled,mongodb=bundled,rabbitmq=bundled
+      - equal:
+          path: metadata.annotations["kodus.io/ingress"]
+          value: ingress
+      - equal:
+          path: metadata.annotations["kodus.io/secrets"]
+          value: chart-generated
+
+  - it: reports each enabled service's effective tag and omits disabled ones
+    set:
+      imageTag: "9.9.9"
+      services:
+        api:
+          image:
+            tag: "2.1.99"
+        worker-analytics:
+          enabled: false
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: kodus-config
+    asserts:
+      - equal:
+          path: metadata.annotations["kodus.io/services"]
+          value: api=2.1.99,mcp-manager=9.9.9,web=9.9.9,webhooks=9.9.9,worker=9.9.9
+
+  - it: distinguishes how secrets are sourced
+    set:
+      global:
+        existingSecret: my-vault-secret
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: kodus-config
+    asserts:
+      - equal:
+          path: metadata.annotations["kodus.io/secrets"]
+          value: existing-secret
+
+  - it: stores generated JWT secrets with one Kubernetes encoding layer
+    template: templates/secrets.yaml
+    documentSelector:
+      path: metadata.name
+      value: kodus-secrets
+    asserts:
+      - matchRegex:
+          path: data.API_JWT_SECRET
+          pattern: ^[A-Za-z0-9+/]{43}=$
+
+  - it: reports Routes rather than Ingress on OpenShift
+    set:
+      platform: openshift
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: kodus-config
+    asserts:
+      - equal:
+          path: metadata.annotations["kodus.io/ingress"]
+          value: route
+
+  - it: does not absorb hostnames or URLs from the release config
+    set:
+      ingress:
+        hosts:
+          web: { host: internal.acme-corp.example }
+      global:
+        config:
+          NEXTAUTH_URL: https://internal.acme-corp.example
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: kodus-config
+    asserts:
+      - notMatchRegex:
+          path: metadata.annotations["kodus.io/services"]
+          pattern: (acme-corp|https?://)
+      - notMatchRegex:
+          path: metadata.annotations["kodus.io/app-version"]
+          pattern: (acme-corp|https?://)
+      - notMatchRegex:
+          path: metadata.annotations["kodus.io/datastores"]
+          pattern: (acme-corp|https?://)

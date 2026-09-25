@@ -1,0 +1,48 @@
+{{- if and .Values.global.existingSecret .Values.global.externalSecrets.enabled }}
+{{- fail "global.existingSecret and global.externalSecrets.enabled are mutually exclusive" }}
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "kodus.fullname" . }}-config
+  labels:
+    {{- include "kodus.labels" . | nindent 4 }}
+  annotations:
+    kodus.io/chart-version: {{ .Chart.Version | quote }}
+    kodus.io/app-version: {{ .Values.imageTag | default .Chart.AppVersion | quote }}
+    kodus.io/platform: {{ .Values.platform | quote }}
+    kodus.io/datastores: {{ printf "postgres=%s,mongodb=%s,rabbitmq=%s" .Values.postgres.mode .Values.mongodb.mode .Values.rabbitmq.mode | quote }}
+    {{- $svcs := list }}
+    {{- range $name, $svc := .Values.services }}
+    {{- if or (kindIs "invalid" $svc.enabled) $svc.enabled }}
+    {{- $svcs = append $svcs (printf "%s=%s" $name ((dig "image" "tag" "" $svc) | default $.Values.imageTag | default $.Chart.AppVersion)) }}
+    {{- end }}
+    {{- end }}
+    kodus.io/services: {{ join "," $svcs | quote }}
+    kodus.io/ingress: {{ if eq .Values.platform "openshift" }}{{ if .Values.route.enabled }}route{{ else }}none{{ end }}{{ else }}{{ if .Values.ingress.enabled }}ingress{{ else }}none{{ end }}{{ end }}
+    kodus.io/secrets: {{ if .Values.global.externalSecrets.enabled }}external-secrets{{ else if .Values.global.existingSecret }}existing-secret{{ else if .Values.global.autoGenerateSecrets }}chart-generated{{ else }}inline{{ end }}
+    kodus.io/hardening: {{ printf "networkPolicy=%v,pdb=%v,autoscaling=%v" .Values.networkPolicy.enabled .Values.pdb.enabled .Values.autoscaling.enabled | quote }}
+data:
+  {{- $cfg := deepCopy .Values.global.config }}
+  {{- $base := include "kodus.webhooksBaseUrl" . }}
+  {{- if $base }}
+  {{- range $key, $seg := (include "kodus.webhookProviders" . | fromYaml) }}
+  {{- if not (index $cfg $key) }}
+  {{- $_ := set $cfg $key (printf "%s/%s/webhook" $base $seg) }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- if index .Values.services "mcp-manager" | dig "enabled" false }}
+  {{- $webBase := include "kodus.webBaseUrl" . }}
+  {{- if and $webBase (not (index $cfg "API_MCP_MANAGER_REDIRECT_URI")) }}
+  {{- $_ := set $cfg "API_MCP_MANAGER_REDIRECT_URI" (printf "%s/setup/mcp/oauth" $webBase) }}
+  {{- end }}
+  {{- if not (index $cfg "API_MCP_MANAGER_CORS_ORIGINS") }}
+  {{- $_ := set $cfg "API_MCP_MANAGER_CORS_ORIGINS" ($webBase | default "*") }}
+  {{- end }}
+  {{- else }}
+  {{- $_ := set $cfg "API_MCP_SERVER_ENABLED" "false" }}
+  {{- end }}
+  {{- range $key, $value := $cfg }}
+  {{ $key }}: {{ tpl (toString $value) $ | quote }}
+  {{- end }}

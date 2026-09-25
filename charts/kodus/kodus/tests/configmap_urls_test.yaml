@@ -1,0 +1,168 @@
+suite: ConfigMap — derived public URLs
+templates:
+  - templates/configmap.yaml
+release:
+  name: kodus
+tests:
+  - it: leaves the webhook URLs empty rather than guessing from the placeholder host
+    asserts:
+      - equal: { path: data.API_GITHUB_CODE_MANAGEMENT_WEBHOOK, value: "" }
+      - equal: { path: data.API_GITLAB_CODE_MANAGEMENT_WEBHOOK, value: "" }
+      - equal:
+          { path: data.GLOBAL_BITBUCKET_CODE_MANAGEMENT_WEBHOOK, value: "" }
+      - equal:
+          { path: data.GLOBAL_AZURE_REPOS_CODE_MANAGEMENT_WEBHOOK, value: "" }
+      - equal: { path: data.API_FORGEJO_CODE_MANAGEMENT_WEBHOOK, value: "" }
+      - equal: { path: data.API_MCP_MANAGER_REDIRECT_URI, value: "" }
+
+  - it: derives every provider webhook from the ingress host
+    set:
+      ingress:
+        hosts:
+          webhooks:
+            host: hooks.acme.io
+    asserts:
+      - equal:
+          path: data.API_GITHUB_CODE_MANAGEMENT_WEBHOOK
+          value: https://hooks.acme.io/github/webhook
+      - equal:
+          path: data.API_GITLAB_CODE_MANAGEMENT_WEBHOOK
+          value: https://hooks.acme.io/gitlab/webhook
+      - equal:
+          path: data.GLOBAL_BITBUCKET_CODE_MANAGEMENT_WEBHOOK
+          value: https://hooks.acme.io/bitbucket/webhook
+      - equal:
+          path: data.GLOBAL_AZURE_REPOS_CODE_MANAGEMENT_WEBHOOK
+          value: https://hooks.acme.io/azure-repos/webhook
+      - equal:
+          path: data.API_FORGEJO_CODE_MANAGEMENT_WEBHOOK
+          value: https://hooks.acme.io/forgejo/webhook
+
+  - it: follows the ingress TLS setting when choosing the scheme
+    set:
+      ingress:
+        tls:
+          enabled: false
+        hosts:
+          webhooks: { host: hooks.acme.io }
+          web: { host: app.acme.io }
+    asserts:
+      - equal:
+          path: data.API_GITHUB_CODE_MANAGEMENT_WEBHOOK
+          value: http://hooks.acme.io/github/webhook
+      - equal:
+          path: data.API_MCP_MANAGER_REDIRECT_URI
+          value: http://app.acme.io/setup/mcp/oauth
+
+  - it: reads the Route hosts on OpenShift, always over https
+    set:
+      platform: openshift
+      route:
+        hosts:
+          webhooks: { host: hooks.apps.ocp, serviceName: webhooks }
+          web: { host: app.apps.ocp, serviceName: web }
+    asserts:
+      - equal:
+          path: data.API_GITHUB_CODE_MANAGEMENT_WEBHOOK
+          value: https://hooks.apps.ocp/github/webhook
+      - equal:
+          path: data.API_MCP_MANAGER_REDIRECT_URI
+          value: https://app.apps.ocp/setup/mcp/oauth
+
+  - it: ignores the Ingress host on OpenShift and the Route host on Kubernetes
+    set:
+      platform: openshift
+      route:
+        enabled: false
+      ingress:
+        hosts:
+          webhooks: { host: hooks.acme.io }
+    asserts:
+      - equal: { path: data.API_GITHUB_CODE_MANAGEMENT_WEBHOOK, value: "" }
+
+  - it: prefers NEXTAUTH_URL over the ingress host and strips its trailing slash
+    set:
+      global:
+        config:
+          NEXTAUTH_URL: https://canonical.acme.io/
+      ingress:
+        hosts:
+          web: { host: app.acme.io }
+    asserts:
+      - equal:
+          path: data.API_MCP_MANAGER_REDIRECT_URI
+          value: https://canonical.acme.io/setup/mcp/oauth
+      - equal:
+          path: data.API_MCP_MANAGER_CORS_ORIGINS
+          value: https://canonical.acme.io
+
+  - it: derives the web URLs independently of the webhooks host
+    set:
+      ingress:
+        hosts:
+          web: { host: app.acme.io }
+    asserts:
+      - equal:
+          path: data.API_MCP_MANAGER_REDIRECT_URI
+          value: https://app.acme.io/setup/mcp/oauth
+      - equal: { path: data.API_GITHUB_CODE_MANAGEMENT_WEBHOOK, value: "" }
+
+  - it: never overwrites a URL the user set explicitly
+    set:
+      global:
+        config:
+          API_GITHUB_CODE_MANAGEMENT_WEBHOOK: https://proxy.internal/gh
+          API_MCP_MANAGER_CORS_ORIGINS: https://locked.example
+      ingress:
+        hosts:
+          webhooks: { host: hooks.acme.io }
+          web: { host: app.acme.io }
+    asserts:
+      - equal:
+          path: data.API_GITHUB_CODE_MANAGEMENT_WEBHOOK
+          value: https://proxy.internal/gh
+      - equal:
+          path: data.API_MCP_MANAGER_CORS_ORIGINS
+          value: https://locked.example
+      - equal:
+          path: data.API_GITLAB_CODE_MANAGEMENT_WEBHOOK
+          value: https://hooks.acme.io/gitlab/webhook
+
+  - it: scopes CORS to the web origin instead of falling back to "*"
+    set:
+      ingress:
+        hosts:
+          web: { host: app.acme.io }
+    asserts:
+      - equal:
+          path: data.API_MCP_MANAGER_CORS_ORIGINS
+          value: https://app.acme.io
+
+  - it: touches neither MCP value when mcp-manager is disabled
+    set:
+      services:
+        mcp-manager:
+          enabled: false
+      ingress:
+        hosts:
+          web: { host: app.acme.io }
+    asserts:
+      - equal: { path: data.API_MCP_SERVER_ENABLED, value: "false" }
+      - equal: { path: data.API_MCP_MANAGER_CORS_ORIGINS, value: "" }
+      - equal: { path: data.API_MCP_MANAGER_REDIRECT_URI, value: "" }
+
+  - it: resolves Release.Name templating inside values
+    asserts:
+      - equal: { path: data.WEB_HOSTNAME_API, value: kodus-api }
+      - equal: { path: data.API_FRONTEND_URL, value: "http://kodus-web:3000" }
+
+  - it: rejects conflicting external Secret sources
+    set:
+      global:
+        existingSecret: existing-secret
+        externalSecrets:
+          enabled: true
+          store: kodus-store
+    asserts:
+      - failedTemplate:
+          errorPattern: mutually exclusive

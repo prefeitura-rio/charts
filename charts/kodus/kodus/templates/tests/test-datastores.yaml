@@ -1,0 +1,58 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "kodus.fullname" . }}-test-datastores
+  labels:
+    {{- include "kodus.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  {{- include "kodus-common.imagePullSecrets" . | nindent 2 }}
+  securityContext:
+    runAsNonRoot: true
+    {{- if ne .Values.platform "openshift" }}
+    runAsUser: 65534
+    {{- end }}
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: check
+      image: {{ include "kodus-common.regPrefix" . }}{{ .Values.waitForDeps.image | default "busybox:1.37.0" }}
+      env:
+        {{- include "kodus-common.dbEnv" . | nindent 8 }}
+        {{- include "kodus-common.rabbitmqEnv" . | nindent 8 }}
+      command: ["sh", "-c"]
+      args:
+        - |
+          fail=0
+          probe() {
+            echo -n "  $1 -> $2:$3 ... "
+            if nc -w 3 "$2" "$3" </dev/null >/dev/null 2>&1; then
+              echo "ok"
+            else
+              echo "UNREACHABLE"; fail=1
+            fi
+          }
+          probe postgres "$API_PG_DB_HOST" "$API_PG_DB_PORT"
+          probe mongodb  "$API_MG_DB_HOST" "$API_MG_DB_PORT"
+           hostport=$(echo "$API_RABBITMQ_URI" | sed -e 's|^[^/]*//||' -e 's|^.*@||' -e 's|/.*$||')
+          rmqhost=$(echo "$hostport" | cut -d: -f1)
+          rmqport=$(echo "$hostport" | cut -s -d: -f2)
+          if [ -z "$rmqport" ]; then
+            case "$API_RABBITMQ_URI" in
+              amqps://*) rmqport=5671 ;;
+              *)         rmqport=5672 ;;
+            esac
+          fi
+          probe rabbitmq "$rmqhost" "$rmqport"
+          exit $fail
+      resources:
+        requests: { cpu: 10m, memory: 16Mi }
+        limits:   { cpu: 50m, memory: 32Mi }
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop: ["ALL"]

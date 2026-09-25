@@ -1,0 +1,124 @@
+suite: PodDisruptionBudget
+templates:
+  - templates/pdb.yaml
+tests:
+  - it: emits one PDB per service whose replica floor is above 1
+    asserts:
+      - hasDocuments:
+          count: 4
+
+  - it: skips a service pinned to a single replica
+    set:
+      services:
+        api: { replicas: 1 }
+        web: { replicas: 1 }
+        webhooks: { replicas: 1 }
+        worker: { replicas: 1 }
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: emits a PDB once a single-replica service is scaled up
+    set:
+      services:
+        mcp-manager: { replicas: 2 }
+    asserts:
+      - hasDocuments:
+          count: 5
+
+  - it: reads the floor from the HPA when autoscaling drives the count
+    set:
+      autoscaling:
+        enabled: true
+        minReplicas: 3
+      services:
+        mcp-manager: { replicas: null }
+        worker-analytics: { replicas: null }
+    asserts:
+      - hasDocuments:
+          count: 6
+
+  - it: reads the floor from the Deployment when autoscaling is off
+    set:
+      autoscaling:
+        enabled: false
+    asserts:
+      - hasDocuments:
+          count: 4
+
+  - it: treats an unset replicas as the autoscaling floor, not as one
+    set:
+      autoscaling:
+        enabled: false
+      services:
+        mcp-manager: { replicas: null }
+    asserts:
+      - hasDocuments:
+          count: 4
+
+  - it: keeps minAvailable at 1 so a floor of 2 still allows one eviction
+    documentIndex: 0
+    asserts:
+      - isKind:
+          of: PodDisruptionBudget
+      - equal:
+          path: spec.minAvailable
+          value: 1
+
+  - it: selects only its own service's pods
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/part-of"]
+          value: kodus
+
+  - it: refuses a minAvailable that reaches the replica floor
+    set:
+      pdb:
+        minAvailable: 2
+    asserts:
+      - failedTemplate:
+          errorPattern: disruptionsAllowed = 2 - 2 = 0
+
+  - it: allows a minAvailable that still leaves one disruption
+    set:
+      services:
+        api: { replicas: 3 }
+        web: { replicas: 3 }
+        webhooks: { replicas: 3 }
+        worker: { replicas: 3 }
+      pdb:
+        minAvailable: 2
+    asserts:
+      - hasDocuments: { count: 4 }
+      - equal:
+          path: spec.minAvailable
+          value: 2
+          documentIndex: 0
+
+  - it: lets a percentage budget through untouched
+    set:
+      pdb:
+        minAvailable: 50%
+    asserts:
+      - hasDocuments: { count: 4 }
+      - equal:
+          path: spec.minAvailable
+          value: 50%
+          documentIndex: 0
+
+  - it: refuses a percentage budget that rounds up to every replica
+    set:
+      pdb:
+        minAvailable: 100%
+    asserts:
+      - failedTemplate:
+          errorPattern: 100%.*all replicas
+
+  - it: emits nothing when disabled
+    set:
+      pdb:
+        enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0

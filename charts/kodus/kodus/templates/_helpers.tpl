@@ -1,0 +1,57 @@
+{{- define "kodus.fullname" -}}
+{{ include "kodus-common.fullname" . }}
+{{- end }}
+
+{{- define "kodus.labels" -}}
+{{ include "kodus-common.labels" . }}
+{{- end }}
+
+{{- define "kodus.serviceAccountName" -}}
+{{ include "kodus-common.serviceAccountName" . }}
+{{- end }}
+
+{{- define "kodus.webhooksBaseUrl" -}}
+{{- $host := "" -}}
+{{- $scheme := "https" -}}
+{{- if eq .Values.platform "openshift" -}}
+{{- if .Values.route.enabled -}}{{- with .Values.route.hosts.webhooks }}{{- if or (kindIs "invalid" .enabled) .enabled }}{{- $host = .host | default "" -}}{{- end -}}{{- end -}}{{- end -}}
+{{- else -}}
+{{- if .Values.ingress.enabled -}}{{- with .Values.ingress.hosts.webhooks }}{{- if or (kindIs "invalid" .enabled) .enabled }}{{- $host = .host | default "" -}}{{- end -}}{{- end -}}{{- end -}}
+{{- if not .Values.ingress.tls.enabled -}}{{- $scheme = "http" -}}{{- end -}}
+{{- end -}}
+{{- if and $host (not (contains "example.com" $host)) -}}{{ printf "%s://%s" $scheme $host }}{{- end -}}
+{{- end -}}
+
+{{- define "kodus.webBaseUrl" -}}
+{{- $url := (.Values.global.config.NEXTAUTH_URL | default "") -}}
+{{- if and $url (not (contains "example.com" $url)) -}}
+{{ trimSuffix "/" $url }}
+{{- else -}}
+{{- $host := "" -}}
+{{- $scheme := "https" -}}
+{{- if eq .Values.platform "openshift" -}}
+{{- if .Values.route.enabled -}}{{- with .Values.route.hosts.web }}{{- if or (kindIs "invalid" .enabled) .enabled }}{{- $host = .host | default "" -}}{{- end -}}{{- end -}}{{- end -}}
+{{- else -}}
+{{- if .Values.ingress.enabled -}}{{- with .Values.ingress.hosts.web }}{{- if or (kindIs "invalid" .enabled) .enabled }}{{- $host = .host | default "" -}}{{- end -}}{{- end -}}{{- end -}}
+{{- if not .Values.ingress.tls.enabled -}}{{- $scheme = "http" -}}{{- end -}}
+{{- end -}}
+{{- if and $host (not (contains "example.com" $host)) -}}{{ printf "%s://%s" $scheme $host }}{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "kodus.webhookProviders" -}}
+API_GITHUB_CODE_MANAGEMENT_WEBHOOK: github
+API_GITLAB_CODE_MANAGEMENT_WEBHOOK: gitlab
+GLOBAL_BITBUCKET_CODE_MANAGEMENT_WEBHOOK: bitbucket
+GLOBAL_AZURE_REPOS_CODE_MANAGEMENT_WEBHOOK: azure-repos
+API_FORGEJO_CODE_MANAGEMENT_WEBHOOK: forgejo
+{{- end }}
+
+{{- define "kodus.validateServiceNames" -}}
+{{- $reserved := list "postgres" "mongodb" "rabbitmq" }}
+{{- range $name, $svc := .Values.services }}
+{{- if has $name $reserved }}
+{{- fail (printf "ERROR: services.%s is a reserved name. The bundled %s StatefulSet labels its pods app.kubernetes.io/name=%s, so this service's selector would match the datastore pods instead of its own. Rename the service (e.g. %s-api)." $name $name $name $name) }}
+{{- end }}
+{{- end }}
+{{- end }}

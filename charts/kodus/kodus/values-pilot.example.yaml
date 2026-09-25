@@ -1,0 +1,81 @@
+platform: kubernetes
+imageTag: "2.1.31"
+
+global:
+  labels:
+    kodus.io/environment: pilot
+    kodus.io/team: quality-gate
+  autoGenerateSecrets: true
+  config:
+    NEXTAUTH_URL: "https://kodus-pilot.example.com"
+    API_DATABASE_DISABLE_SSL: "true"
+    API_MCP_SERVER_ENABLED: "false"
+    API_LOG_LEVEL: "info"
+    API_LOG_PRETTY: "false"
+
+services:
+  web:
+    replicas: 1
+  api:
+    replicas: 1
+  worker:
+    replicas: 1
+  webhooks:
+    replicas: 1
+  worker-analytics:
+    enabled: false
+  mcp-manager:
+    enabled: false
+
+autoscaling:
+  enabled: false
+
+pdb:
+  enabled: false
+
+networkPolicy:
+  enabled: true
+
+resourceQuota:
+  enabled: false
+
+ingress:
+  enabled: true
+  className: nginx
+  tls:
+    enabled: true
+    secretName: kodus-pilot-tls
+  hosts:
+    web:
+      enabled: false
+      host: kodus-pilot.example.com
+      path: /
+      serviceName: web
+    api:
+      enabled: false
+      host: kodus-api-pilot.example.com
+      path: /
+      serviceName: api
+    webhooks:
+      enabled: true
+      host: kodus-webhooks-pilot.example.com
+      path: /
+      serviceName: webhooks
+
+postgres:
+  mode: bundled
+  bundled:
+    storage:
+      size: 5Gi
+
+mongodb:
+  mode: bundled
+  bundled:
+    storage:
+      size: 5Gi
+
+rabbitmq:
+  mode: bundled
+  bundled:
+    storage:
+      size: 5Gi

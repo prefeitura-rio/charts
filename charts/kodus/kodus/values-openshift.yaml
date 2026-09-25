@@ -1,0 +1,20 @@
+platform: openshift
+
+podSecurityContext:
+  fsGroup: null
+
+scc:
+  create: false
+
+route:
+  enabled: true
+  hosts:
+    web:
+      host: kodus.apps.cluster.example.com
+      serviceName: web
+    api:
+      host: api.kodus.apps.cluster.example.com
+      serviceName: api
+    webhooks:
+      host: webhooks.kodus.apps.cluster.example.com
+      serviceName: webhooks

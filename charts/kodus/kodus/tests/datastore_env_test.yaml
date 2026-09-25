@@ -1,0 +1,253 @@
+suite: Datastore env wiring
+templates:
+  - templates/deployment.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+release:
+  name: kodus
+tests:
+  - it: points at the chart's own StatefulSet in bundled mode
+    template: templates/deployment.yaml
+    documentSelector:
+      path: metadata.name
+      value: kodus-api
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: API_PG_DB_HOST, value: kodus-postgres }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: API_MG_DB_HOST, value: kodus-mongodb }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: API_PG_DB_PASSWORD
+            valueFrom:
+              secretKeyRef: { name: kodus-postgres-secret, key: password }
+
+  - it: points at the operator-generated Services and Secrets in operator mode
+    set:
+      postgres: { mode: operator }
+      mongodb: { mode: operator }
+    template: templates/deployment.yaml
+    documentSelector:
+      path: metadata.name
+      value: kodus-api
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: API_PG_DB_HOST, value: kodus-postgres-rw }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: API_PG_DB_PASSWORD
+            valueFrom:
+              secretKeyRef: { name: kodus-postgres-app, key: password }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: API_MG_DB_HOST, value: kodus-mongodb-svc }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: API_MG_DB_PASSWORD
+            valueFrom:
+              secretKeyRef: { name: kodus-mongodb-password, key: password }
+
+  - it: reads host, port and secret key from values in external mode
+    set:
+      postgres:
+        mode: external
+        external:
+          host: pg.rds.amazonaws.com
+          username: kodus
+          database: kodus_db
+          existingSecret: rds-creds
+          passwordKey: POSTGRES_PASSWORD
+      mongodb:
+        mode: external
+        external:
+          host: mongo.atlas.net
+          existingSecret: atlas-creds
+          passwordKey: null
+    template: templates/deployment.yaml
+    documentSelector:
+      path: metadata.name
+      value: kodus-api
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: API_PG_DB_HOST, value: pg.rds.amazonaws.com }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: API_PG_DB_PORT, value: "5432" }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: API_PG_DB_PASSWORD
+            valueFrom:
+              secretKeyRef: { name: rds-creds, key: POSTGRES_PASSWORD }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: API_MG_DB_PASSWORD
+            valueFrom:
+              secretKeyRef: { name: atlas-creds, key: password }
+
+  - it: refuses to render external mode without the user's secret
+    template: templates/deployment.yaml
+    set:
+      postgres:
+        mode: external
+        external: { host: pg.example, existingSecret: "" }
+    asserts:
+      - failedTemplate:
+          errorPattern: postgres\.external\.existingSecret is required
+
+  - it: builds the RabbitMQ URI from $(VAR) refs against the bundled vhost
+    template: templates/deployment.yaml
+    documentSelector:
+      path: metadata.name
+      value: kodus-worker
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: API_RABBITMQ_URI
+            value: amqp://$(RABBITMQ_USER):$(RABBITMQ_PASS)@kodus-rabbitmq:5672/kodus-ai
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RABBITMQ_PASS
+            valueFrom:
+              secretKeyRef: { name: kodus-rabbitmq-secret, key: password }
+
+  - it: reads both RabbitMQ credentials from the operator's default-user secret
+    set:
+      rabbitmq: { mode: operator }
+    template: templates/deployment.yaml
+    documentSelector:
+      path: metadata.name
+      value: kodus-worker
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RABBITMQ_USER
+            valueFrom:
+              secretKeyRef: { name: kodus-rabbitmq-default-user, key: username }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RABBITMQ_PASS
+            valueFrom:
+              secretKeyRef: { name: kodus-rabbitmq-default-user, key: password }
+
+  - it: rejects bundled RabbitMQ passwords that cannot be used in the URI
+    set:
+      rabbitmq:
+        bundled:
+          password: "unsafe@password"
+    template: templates/deployment.yaml
+    asserts:
+      - failedTemplate:
+          errorPattern: rabbitmq\.bundled\.password must contain only letters and numbers
+
+  - it: takes the whole RabbitMQ URI from the user's secret in external mode
+    set:
+      rabbitmq:
+        mode: external
+        external: { existingSecret: cloudamqp, uriKey: AMQP_URL }
+    template: templates/deployment.yaml
+    documentSelector:
+      path: metadata.name
+      value: kodus-worker
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: API_RABBITMQ_URI
+            valueFrom:
+              secretKeyRef: { name: cloudamqp, key: AMQP_URL }
+
+  - it: keeps auth secrets mandatory and provider keys optional
+    template: templates/deployment.yaml
+    documentSelector:
+      path: metadata.name
+      value: kodus-api
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: API_JWT_REFRESH_SECRET
+            valueFrom:
+              secretKeyRef: { name: kodus-secrets, key: API_JWT_REFRESH_SECRET }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: API_OPEN_AI_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: kodus-secrets
+                key: API_OPEN_AI_API_KEY
+                optional: true
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: API_GITHUB_CLIENT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: kodus-secrets
+                key: API_GITHUB_CLIENT_SECRET
+                optional: true
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: API_GITHUB_PRIVATE_KEY
+            valueFrom:
+              secretKeyRef:
+                name: kodus-secrets
+                key: API_GITHUB_PRIVATE_KEY
+                optional: true
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: WEB_OAUTH_GITHUB_CLIENT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: kodus-secrets
+                key: WEB_OAUTH_GITHUB_CLIENT_SECRET
+                optional: true
+
+  - it: sources every app secret from global.existingSecret when set
+    set:
+      global:
+        existingSecret: kodus-vault-synced
+    template: templates/deployment.yaml
+    documentSelector:
+      path: metadata.name
+      value: kodus-api
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: API_CRYPTO_KEY
+            valueFrom:
+              secretKeyRef: { name: kodus-vault-synced, key: API_CRYPTO_KEY }
+
+  - it: mirrors NEXTAUTH_SECRET into the web secret when only one is supplied
+    template: templates/secrets.yaml
+    set:
+      global:
+        autoGenerateSecrets: false
+        secrets:
+          NEXTAUTH_SECRET: test-secret
+    documentSelector:
+      path: metadata.name
+      value: kodus-secrets
+    asserts:
+      - equal:
+          path: data.NEXTAUTH_SECRET
+          value: dGVzdC1zZWNyZXQ=
+      - equal:
+          path: data.WEB_NEXTAUTH_SECRET
+          value: dGVzdC1zZWNyZXQ=

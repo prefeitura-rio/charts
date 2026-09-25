@@ -1,0 +1,29 @@
+global:
+  config:
+    API_DATABASE_DISABLE_SSL: "false"
+
+postgres:
+  mode: external
+  external:
+    host: postgres.internal
+    port: 5432
+    username: kodus
+    database: kodus_db
+    existingSecret: kodus-pg
+    passwordKey: password
+
+mongodb:
+  mode: external
+  external:
+    host: mongo.internal
+    port: 27017
+    username: kodus
+    database: kodus_db
+    existingSecret: kodus-mongo
+    passwordKey: password
+
+rabbitmq:
+  mode: external
+  external:
+    existingSecret: kodus-rabbit
+    uriKey: uri

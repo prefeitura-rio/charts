@@ -1,0 +1,150 @@
+{{- if eq .Values.rabbitmq.mode "bundled" }}
+{{- $b := .Values.rabbitmq.bundled }}
+{{- $name := printf "%s-rabbitmq" .Release.Name }}
+{{- $memLimit := "1Gi" }}
+{{- if and $b.resources $b.resources.limits $b.resources.limits.memory }}{{- $memLimit = $b.resources.limits.memory | toString }}{{- end }}
+{{- $rmqMem := $memLimit | replace "Gi" "GiB" | replace "Mi" "MiB" | replace "Ki" "KiB" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}-conf
+  labels:
+    {{- include "kodus.labels" . | nindent 4 }}
+data:
+  20-kodus.conf: |
+    total_memory_available_override_value = {{ $rmqMem }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "kodus.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5672
+      targetPort: amqp
+      name: amqp
+  selector:
+    app.kubernetes.io/name: rabbitmq
+    app.kubernetes.io/instance: {{ .Release.Name }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "kodus.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ $name }}
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rabbitmq
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rabbitmq
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/part-of: kodus
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        {{- include "kodus-common.datastorePodSecurityContext" . | nindent 8 }}
+      initContainers:
+        - name: fix-cookie-perms
+          image: {{ include "kodus-common.regPrefix" . }}busybox:1.37.0
+          command: ["sh", "-c", "c=/var/lib/rabbitmq/.erlang.cookie; if [ -f \"$c\" ]; then chmod 600 \"$c\"; fi"]
+          securityContext:
+            runAsNonRoot: true
+            {{- if ne .Values.platform "openshift" }}
+            runAsUser: 999
+            {{- end }}
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits:   { cpu: 50m, memory: 64Mi }
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/rabbitmq
+      containers:
+        - name: rabbitmq
+          image: {{ include "kodus-common.regPrefix" . }}{{ $b.image }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "Always" }}
+          command: ["/usr/local/bin/init-definitions.sh"]
+          ports:
+            - name: amqp
+              containerPort: 5672
+          env:
+            - name: RABBITMQ_DEFAULT_USER
+              value: {{ $b.username | quote }}
+            - name: RABBITMQ_DEFAULT_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $name }}-secret
+                  key: password
+            - name: RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS
+              value: "-rabbit heartbeat 60"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          startupProbe:
+            tcpSocket:
+              port: amqp
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 40
+          readinessProbe:
+            exec:
+              command: ["rabbitmq-diagnostics", "-q", "check_running"]
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: amqp
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            {{- toYaml $b.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/rabbitmq
+            - name: tmp
+              mountPath: /tmp
+            - name: logs
+              mountPath: /var/log/rabbitmq
+            - name: kodus-conf
+              mountPath: /etc/rabbitmq/conf.d/20-kodus.conf
+              subPath: 20-kodus.conf
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 100Mi
+        - name: logs
+          emptyDir:
+            sizeLimit: 100Mi
+        - name: kodus-conf
+          configMap:
+            name: {{ $name }}-conf
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ $b.storage.size | default "8Gi" }}
+        {{- with $b.storage.storageClass }}
+        storageClassName: {{ . }}
+        {{- end }}
+{{- end }}

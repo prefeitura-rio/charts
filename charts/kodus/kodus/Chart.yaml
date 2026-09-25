@@ -1,0 +1,23 @@
+apiVersion: v2
+name: kodus
+description: Deploy Kodus AI (self-hosted) on Kubernetes
+type: application
+version: 0.2.3
+appVersion: "2.1.31"
+keywords:
+  - kodus
+  - ai
+  - code-review
+home: https://kodus.io
+icon: https://kodus.io/wp-content/uploads/2025/04/kodusinstaller.png
+sources:
+  - https://github.com/kodustech/kodus-installer
+maintainers:
+  - name: Kodus Team
+    email: support@kodus.io
+dependencies:
+  - name: kodus-common
+    version: "0.1.0"
+    repository: "file://../kodus-common"
+annotations:
+  kodus.io/required-operators: "cloudnative-pg,rabbitmq-cluster-operator,mongodb-community-operator"

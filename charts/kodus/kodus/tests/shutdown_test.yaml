@@ -1,0 +1,78 @@
+suite: Graceful shutdown
+templates:
+  - templates/deployment.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+release:
+  name: kodus
+tests:
+  - it: waits longer than the app spends draining
+    template: templates/deployment.yaml
+    documentSelector:
+      path: metadata.name
+      value: kodus-worker
+    asserts:
+      - equal:
+          path: spec.template.spec.terminationGracePeriodSeconds
+          value: 90
+
+  - it: follows the drain timeout when it is raised
+    set:
+      global:
+        config:
+          API_WORKER_DRAIN_TIMEOUT_MS: "120000"
+    template: templates/deployment.yaml
+    documentSelector:
+      path: metadata.name
+      value: kodus-worker
+    asserts:
+      - equal:
+          path: spec.template.spec.terminationGracePeriodSeconds
+          value: 150
+
+  - it: applies to every service, not just the workers
+    template: templates/deployment.yaml
+    documentSelector:
+      path: metadata.name
+      value: kodus-api
+    asserts:
+      - equal:
+          path: spec.template.spec.terminationGracePeriodSeconds
+          value: 90
+
+  - it: keeps a floor when the drain timeout is cleared
+    set:
+      global:
+        config:
+          API_WORKER_DRAIN_TIMEOUT_MS: ""
+    template: templates/deployment.yaml
+    documentSelector:
+      path: metadata.name
+      value: kodus-worker
+    asserts:
+      - equal:
+          path: spec.template.spec.terminationGracePeriodSeconds
+          value: 90
+
+  - it: ships the stale-job reaper settings
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: kodus-config
+    asserts:
+      - equal:
+          path: data.WORKFLOW_STALE_JOB_REAPER_CRON
+          value: "0 */10 * * * *"
+      - equal:
+          path: data.WORKFLOW_STALE_JOB_TIMEOUT_MINUTES
+          value: "180"
+
+  - it: keeps the reaper threshold above the longest legitimate run
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: kodus-config
+    asserts:
+      - matchRegex:
+          path: data.WORKFLOW_STALE_JOB_TIMEOUT_MINUTES
+          pattern: ^(1[6-9][0-9]|[2-9][0-9]{2,})$
