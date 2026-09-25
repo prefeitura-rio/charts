@@ -8,6 +8,7 @@ metadata:
     app.kubernetes.io/component: migrations
 spec:
   backoffLimit: 3
+  activeDeadlineSeconds: {{ .Values.migrations.activeDeadlineSeconds }}
   ttlSecondsAfterFinished: 600
   template:
     metadata:

@@ -199,6 +199,7 @@ services:
 
 migrations:
   enabled: true
+  activeDeadlineSeconds: 1200
   image:
     repository: ghcr.io/kodustech/kodus-ai-api
     tag: ""

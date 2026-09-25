@@ -47,19 +47,6 @@ GLOBAL_AZURE_REPOS_CODE_MANAGEMENT_WEBHOOK: azure-repos
 API_FORGEJO_CODE_MANAGEMENT_WEBHOOK: forgejo
 {{- end }}
 
-{{- define "kodus.secretKeysHex" -}}
-- API_CRYPTO_KEY
-- CODE_MANAGEMENT_SECRET
-- API_MCP_MANAGER_ENCRYPTION_SECRET
-{{- end }}
-{{- define "kodus.secretKeysB64" -}}
-- API_JWT_SECRET
-- API_JWT_REFRESH_SECRET
-- WEB_NEXTAUTH_SECRET
-- API_MCP_MANAGER_JWT_SECRET
-- CODE_MANAGEMENT_WEBHOOK_TOKEN
-{{- end }}
-
 {{- define "kodus.validateServiceNames" -}}
 {{- $reserved := list "postgres" "mongodb" "rabbitmq" }}
 {{- range $name, $svc := .Values.services }}

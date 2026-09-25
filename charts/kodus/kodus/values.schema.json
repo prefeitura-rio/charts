@@ -54,7 +54,10 @@
     "services": { "type": "object" },
     "migrations": {
       "type": "object",
-      "properties": { "enabled": { "type": "boolean" } }
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "activeDeadlineSeconds": { "type": "integer", "minimum": 1 }
+      }
     },
     "ingress": {
       "type": "object",
