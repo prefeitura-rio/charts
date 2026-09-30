@@ -15,7 +15,7 @@ spec:
   interval: {{ .Values.flux.imageUpdateOverwrite.interval | default "1m" }}
   sourceRef:
     kind: GitRepository
-    name: {{ $name }}
+    name: {{ $namespace }}
 
   git:
     checkout:
