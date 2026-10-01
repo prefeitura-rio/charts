@@ -1,5 +1,10 @@
 # Kodus Deployment Plan
 
+> The local Kodus chart and Prefeitura-rio OCI republish were retired. The
+> active deployment uses the upstream OCI chart directly. See
+> `kodus-upstream-refactor-plan.md` for the current implementation plan and
+> `modules/deployments/kodus.tf` in the Iplan repository for the deployment.
+
 ## Key Corrections To The Plan
 
 Reading the actual `deployment.yaml` template (lines 73-85) revealed how secrets are injected:

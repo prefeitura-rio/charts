@@ -1,5 +1,9 @@
 # Kodus Pilot PR Review Runbook
 
+> This document contains the original local-chart pilot commands. The local
+> chart is retired; use the Iplan Terraform deployment and
+> `kodus-upstream-refactor-plan.md` instead.
+
 This runbook stages Kodus as an advisory AI review service alongside the
 existing deterministic quality gate. It deliberately does not make Kodus a
 synchronous GitHub Actions step or a merge blocker.

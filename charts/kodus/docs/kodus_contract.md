@@ -1,5 +1,10 @@
 # Kodus Deployment Contract
 
+> The local Kodus chart was retired. The deployment now consumes the upstream
+> OCI chart and applies Iplan-specific behavior from Terraform and a Helm
+> post-renderer. See `kodus-upstream-refactor-plan.md` for the implementation
+> and current source of truth.
+
 This document defines the remaining work required to deploy and operate Kodus
 as the AI-assisted pull-request review service for the quality gate.
 
