@@ -88,7 +88,7 @@ The Iplan repository becomes the owner of:
 The expected new script location is:
 
 ```text
-/home/vitor/Projects/infra/iplan/modules/deployments/kodus-postrender.py
+/home/vitor/Projects/infra/iplan/modules/deployments/files/kodus/kodus-postrender.py
 ```
 
 The exact location may be adjusted if the repository has a stronger convention,

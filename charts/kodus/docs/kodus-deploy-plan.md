@@ -364,8 +364,9 @@ No PVC resize or storage migration is part of this change.
 
 ### Datastore Resource Requests And Limits
 
-The CloudPirates charts currently inherit empty resource requests and limits. Add
-explicit values to the three datastore Helm releases:
+The CloudPirates charts inherit empty resource requests and limits by default.
+The earlier values below were pilot scheduling baselines, not official Kodus
+minimum requirements:
 
 | Datastore | Requests | Limits |
 |---|---|---|
@@ -373,10 +374,11 @@ explicit values to the three datastore Helm releases:
 | MongoDB | `100m CPU`, `512Mi` | `500m CPU`, `1Gi` |
 | RabbitMQ | `100m CPU`, `256Mi` | `500m CPU`, `1Gi` |
 
-These are pilot baselines based on the existing PostgreSQL and RabbitMQ
-deployments, CloudPirates recommendations, and the single-replica Kodus setup.
-They are scheduling guarantees and boundaries, not measurements of actual peak
-usage. They must be reviewed after observing the deployed workloads.
+The active Iplan deployment intentionally leaves these blocks unset and follows
+the CloudPirates chart defaults to minimize reserved cluster capacity. The
+official Kodus documentation does not publish lower numeric datastore minimums;
+resource limits should be introduced only after observing actual workload usage
+and agreeing on an operational floor.
 
 The current Kodus application requests approximately `950m` CPU and `2.4Gi`
 memory for the single-replica web, API, worker, webhooks, and migration workload.
