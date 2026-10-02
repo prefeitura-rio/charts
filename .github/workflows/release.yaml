@@ -56,6 +56,21 @@ jobs:
           echo "chart=$CHART_NAME" >> "$GITHUB_OUTPUT"
           echo "skip=false" >> "$GITHUB_OUTPUT"
 
+      - name: Resolve chart directory
+        if: steps.chart.outputs.skip != 'true'
+        id: resolve
+        run: |
+          CHART=${{ steps.chart.outputs.chart }}
+          DIR="charts/$CHART"
+
+          # Some charts keep the application chart and library chart together
+          # under a nested directory, e.g. charts/kodus/kodus/.
+          if [ ! -f "$DIR/Chart.yaml" ] && [ -f "$DIR/$CHART/Chart.yaml" ]; then
+            DIR="$DIR/$CHART"
+          fi
+
+          echo "chart_dir=$DIR" >> "$GITHUB_OUTPUT"
+
       - name: Set up Helm
         if: steps.chart.outputs.skip != 'true'
         uses: azure/setup-helm@v5
@@ -80,7 +95,7 @@ jobs:
         id: version
         run: |
           CHART=${{ steps.chart.outputs.chart }}
-          CHART_YAML="charts/$CHART/Chart.yaml"
+          CHART_YAML="${{ steps.resolve.outputs.chart_dir }}/Chart.yaml"
 
           CURRENT=$(yq eval '.version' "$CHART_YAML")
           MAJOR=$(echo "$CURRENT" | cut -d. -f1)
@@ -94,7 +109,7 @@ jobs:
       - name: Inject version into Chart.yaml
         if: steps.chart.outputs.skip != 'true'
         run: |
-          yq e '.version = strenv(VERSION)' -i charts/${{ steps.chart.outputs.chart }}/Chart.yaml
+          yq e '.version = strenv(VERSION)' -i "${{ steps.resolve.outputs.chart_dir }}/Chart.yaml"
         env:
           VERSION: ${{ steps.version.outputs.version }}
 
@@ -109,18 +124,18 @@ jobs:
       - name: Build chart dependencies
         if: steps.chart.outputs.skip != 'true'
         run: |
-          CHART=${{ steps.chart.outputs.chart }}
-          if grep -q "^dependencies:" "charts/$CHART/Chart.yaml"; then
-            helm dependency update "charts/$CHART"
+          CHART_DIR="${{ steps.resolve.outputs.chart_dir }}"
+          if grep -q "^dependencies:" "$CHART_DIR/Chart.yaml"; then
+            helm dependency update "$CHART_DIR"
           fi
 
       - name: Test
         if: steps.chart.outputs.skip != 'true'
-        run: helm unittest charts/${{ steps.chart.outputs.chart }}
+        run: helm unittest "${{ steps.resolve.outputs.chart_dir }}"
 
       - name: Package
         if: steps.chart.outputs.skip != 'true'
-        run: helm package charts/${{ steps.chart.outputs.chart }} --destination ./packaged/
+        run: helm package "${{ steps.resolve.outputs.chart_dir }}" --destination ./packaged/
 
       - name: Push to GHCR
         if: steps.chart.outputs.skip != 'true'
@@ -132,9 +147,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add charts/${{ steps.chart.outputs.chart }}/Chart.yaml
-          if [ -f charts/${{ steps.chart.outputs.chart }}/Chart.lock ]; then
-            git add charts/${{ steps.chart.outputs.chart }}/Chart.lock
+          git add "${{ steps.resolve.outputs.chart_dir }}/Chart.yaml"
+          if [ -f "${{ steps.resolve.outputs.chart_dir }}/Chart.lock" ]; then
+            git add "${{ steps.resolve.outputs.chart_dir }}/Chart.lock"
           fi
           git commit -m "chore: bump ${{ steps.chart.outputs.chart }} to ${{ steps.version.outputs.version }} [skip ci]"
           git tag ${{ steps.version.outputs.tag }}
