@@ -87,11 +87,11 @@ spec:
               {{- end }}
               {{- $mountAsEnv := ternary $.Values.configMap.mountAsEnv true (hasKey $.Values.configMap "mountAsEnv") }}
               {{- $configMapEnv := and $.Values.configMap.enabled $mountAsEnv }}
-              {{- if or $job.envFrom $.Values.envFrom $.Values.infisicalSecret.enabled $configMapEnv }}
+              {{- if or $job.envFrom $.Values.envFrom (include "base-chart.infisicalEnabled" $) $configMapEnv }}
               envFrom:
-                {{- if $.Values.infisicalSecret.enabled }}
+                {{- if include "base-chart.infisicalEnabled" $ }}
                 - secretRef:
-                    name: {{ $.Values.infisicalSecret.secretName }}
+                    name: {{ include "base-chart.infisicalSecretName" $ }}
                 {{- end }}
                 {{- if $configMapEnv }}
                 - configMapRef:

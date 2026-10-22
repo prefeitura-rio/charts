@@ -120,3 +120,20 @@ networkPolicy.ingress.from / networkPolicy.egress.to.
 {{- end }}
 {{- end }}
 
+{{/*
+Verdadeiro (texto "true") quando infisicalSecret (v1alpha1) ou infisicalStaticSecret (v1beta1) está habilitado.
+*/}}
+{{- define "base-chart.infisicalEnabled" -}}
+{{- if or .Values.infisicalSecret.enabled .Values.infisicalStaticSecret.enabled -}}true{{- end -}}
+{{- end }}
+
+{{/*
+Nome do Secret do Kubernetes que o operador do Infisical gerencia, de qualquer um dos dois CRDs.
+*/}}
+{{- define "base-chart.infisicalSecretName" -}}
+{{- if .Values.infisicalStaticSecret.enabled -}}
+{{- .Values.infisicalStaticSecret.secretName -}}
+{{- else -}}
+{{- .Values.infisicalSecret.secretName -}}
+{{- end -}}
+{{- end }}

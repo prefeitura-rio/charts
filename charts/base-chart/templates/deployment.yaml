@@ -81,11 +81,11 @@ spec:
           {{- /* Inherit envFrom from deployment or use custom */ -}}
           {{- $initEnvFrom := .envFrom }}
           {{- $inheritEnvFrom := not (hasKey . "envFrom") }}
-          {{- if or $initEnvFrom (and $inheritEnvFrom $.Values.infisicalSecret.enabled) }}
+          {{- if or $initEnvFrom (and $inheritEnvFrom (include "base-chart.infisicalEnabled" $)) }}
           envFrom:
-            {{- if and $inheritEnvFrom $.Values.infisicalSecret.enabled }}
+            {{- if and $inheritEnvFrom (include "base-chart.infisicalEnabled" $) }}
             - secretRef:
-                name: {{ $.Values.infisicalSecret.secretName }}
+                name: {{ include "base-chart.infisicalSecretName" $ }}
             {{- end }}
             {{- with $initEnvFrom }}
             {{- toYaml . | nindent 12 }}
@@ -126,11 +126,11 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           {{- $mountAsEnv := ternary .Values.configMap.mountAsEnv true (hasKey .Values.configMap "mountAsEnv") }}
           {{- $configMapEnv := and .Values.configMap.enabled $mountAsEnv }}
-          {{- if or .Values.envFrom .Values.infisicalSecret.enabled $configMapEnv }}
+          {{- if or .Values.envFrom (include "base-chart.infisicalEnabled" .) $configMapEnv }}
           envFrom:
-            {{- if .Values.infisicalSecret.enabled }}
+            {{- if include "base-chart.infisicalEnabled" . }}
             - secretRef:
-                name: {{ .Values.infisicalSecret.secretName }}
+                name: {{ include "base-chart.infisicalSecretName" . }}
             {{- end }}
             {{- if $configMapEnv }}
             - configMapRef:

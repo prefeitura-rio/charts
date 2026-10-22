@@ -974,6 +974,45 @@ infisicalSecret:
       secretName: "infisical-universal-auth"
       secretNamespace: "infisical"
 
+# Infisical Static Secret - sincronização de secrets do Infisical (CRD v1beta1, operador 0.11 ou superior)
+# Substitui o InfisicalSecret (v1alpha1), que está obsoleto. Habilite só um dos dois.
+# Autenticação e conexão ficam em recursos InfisicalAuth e InfisicalConnection do cluster.
+# Mais informações: https://infisical.com/docs/integrations/platforms/kubernetes/infisical-static-secret-crd
+infisicalStaticSecret:
+  # Habilita a criação do InfisicalStaticSecret CRD (desabilitado por padrão)
+  enabled: false
+
+  # Nome do secret Kubernetes a ser criado (obrigatório quando enabled=true)
+  # Este nome é o secretRef usado em envFrom
+  secretName: ""
+
+  # InfisicalAuth do cluster que autentica no Infisical (obrigatório quando enabled=true)
+  infisicalAuthRef:
+    name: ""
+    namespace: ""
+
+  # Slug do projeto no Infisical (obrigatório quando enabled=true)
+  projectSlug: ""
+
+  # Slug do ambiente no Infisical (ex: dev, staging, prod) (obrigatório quando enabled=true)
+  envSlug: ""
+
+  # Caminho dos secrets no Infisical (padrão: "/")
+  secretsPath: "/"
+
+  # Busca secrets recursivamente nos subdiretórios (padrão: true)
+  recursive: true
+
+  # Intervalo entre sincronizações
+  refreshInterval: "60s"
+
+  # Política de criação do secret Kubernetes
+  # Orphan: mantém o secret mesmo se o InfisicalStaticSecret for deletado
+  # Owner: deleta o secret quando o InfisicalStaticSecret for deletado
+  creationPolicy: "Orphan"
+
+  managedSecretNamespace: ""
+
 # Flux Image Automation - atualização automática de imagens via GitOps
 # Mais informações: https://fluxcd.io/flux/components/image/
 #
