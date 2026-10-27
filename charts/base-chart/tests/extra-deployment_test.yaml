@@ -205,3 +205,61 @@ tests:
       - equal:
           path: metadata.annotations["helm.sh/hook-delete-policy"]
           value: "before-hook-creation"
+
+  - it: should default nodeSelector and tolerations to the chart values
+    set:
+      nodeSelector:
+        workload: data-relay
+      tolerations:
+        - key: workload
+          operator: Equal
+          value: data-relay
+          effect: NoSchedule
+      extraDeployments:
+        worker:
+          enabled: true
+          command: ["echo"]
+    asserts:
+      - equal:
+          path: spec.template.spec.nodeSelector
+          value:
+            workload: data-relay
+      - equal:
+          path: spec.template.spec.tolerations[0].key
+          value: workload
+
+  - it: should let an entry override nodeSelector and tolerations
+    set:
+      nodeSelector:
+        workload: data-relay
+      extraDeployments:
+        worker:
+          enabled: true
+          command: ["echo"]
+          nodeSelector:
+            workload: other
+          tolerations:
+            - key: workload
+              operator: Equal
+              value: other
+              effect: NoSchedule
+    asserts:
+      - equal:
+          path: spec.template.spec.nodeSelector
+          value:
+            workload: other
+      - equal:
+          path: spec.template.spec.tolerations[0].value
+          value: other
+
+  - it: should render no scheduling fields when none are set
+    set:
+      extraDeployments:
+        worker:
+          enabled: true
+          command: ["echo"]
+    asserts:
+      - notExists:
+          path: spec.template.spec.nodeSelector
+      - notExists:
+          path: spec.template.spec.tolerations
