@@ -932,6 +932,30 @@ podDisruptionBudget:
   # minAvailable: "50%"
   # maxUnavailable: "30%"
 
+# Infisical - instâncias disponíveis e a instância usada por infisicalSecret e infisicalStaticSecret
+# old: instância legada (padrão). secrets: instância central.
+# Cada instância define o InfisicalAuth do cluster (v1beta1), o endereço da API e o secret de
+# credenciais Universal Auth (v1alpha1). Os campos de infisicalSecret e infisicalStaticSecret têm prioridade.
+infisical:
+  instance: old
+  instances:
+    old:
+      authRef:
+        name: infisical
+        namespace: infisical
+      hostAPI: ""
+      credentialsRef:
+        secretName: infisical-universal-auth
+        secretNamespace: infisical
+    secrets:
+      authRef:
+        name: secrets
+        namespace: infisical
+      hostAPI: https://secrets.dados.rio/api
+      credentialsRef:
+        secretName: secrets-universal-auth
+        secretNamespace: infisical
+
 # Infisical Secret - sincronização de secrets do Infisical
 # Mais informações: https://infisical.com/docs/integrations/platforms/kubernetes/overview
 infisicalSecret:
@@ -942,6 +966,9 @@ infisicalSecret:
   # Este nome deve corresponder ao secretRef usado em envFrom
   # Exemplo: se envFrom.secretRef.name = "ato-api-secrets", use secretName: "ato-api-secrets"
   secretName: ""
+
+  # Endereço da API do Infisical. Vazio: usa o da instância escolhida em infisical.instance
+  hostAPI: ""
 
   # Slug do projeto no Infisical (obrigatório quando enabled=true)
   projectSlug: ""
@@ -969,10 +996,11 @@ infisicalSecret:
       name: ""
       namespace: "default"
 
+  # Vazio: usa as credenciais da instância escolhida em infisical.instance
   universalAuth:
     credentialsRef:
-      secretName: "infisical-universal-auth"
-      secretNamespace: "infisical"
+      secretName: ""
+      secretNamespace: ""
 
 # Infisical Static Secret - sincronização de secrets do Infisical (CRD v1beta1, operador 0.11 ou superior)
 # Substitui o InfisicalSecret (v1alpha1), que está obsoleto. Habilite só um dos dois.
@@ -986,7 +1014,8 @@ infisicalStaticSecret:
   # Este nome é o secretRef usado em envFrom
   secretName: ""
 
-  # InfisicalAuth do cluster que autentica no Infisical (obrigatório quando enabled=true)
+  # InfisicalAuth do cluster que autentica no Infisical
+  # Vazio: usa o InfisicalAuth da instância escolhida em infisical.instance
   infisicalAuthRef:
     name: ""
     namespace: ""

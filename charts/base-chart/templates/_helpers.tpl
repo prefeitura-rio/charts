@@ -121,6 +121,17 @@ networkPolicy.ingress.from / networkPolicy.egress.to.
 {{- end }}
 
 {{/*
+Configuração da instância do Infisical escolhida em infisical.instance, em YAML.
+Falha quando a instância não existe em infisical.instances.
+*/}}
+{{- define "base-chart.infisicalInstance" -}}
+{{- if not (hasKey .Values.infisical.instances .Values.infisical.instance) -}}
+{{- fail "infisical.instance must be one of the keys of infisical.instances" -}}
+{{- end -}}
+{{- toYaml (get .Values.infisical.instances .Values.infisical.instance) -}}
+{{- end }}
+
+{{/*
 Verdadeiro (texto "true") quando infisicalSecret (v1alpha1) ou infisicalStaticSecret (v1beta1) está habilitado.
 */}}
 {{- define "base-chart.infisicalEnabled" -}}
