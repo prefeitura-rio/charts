@@ -1,5 +1,6 @@
 {{- range $name, $spec := .Values.extraDeployments }}
 {{- if $spec.enabled }}
+{{- $labels := mergeOverwrite (include "base-chart.labels" $ | fromYaml) (dict "app.kubernetes.io/name" (printf "%s-%s" (include "base-chart.name" $) $name) "app.kubernetes.io/component" $name) }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -10,8 +11,7 @@ metadata:
     "helm.sh/hook-weight": "0"
     "helm.sh/hook-delete-policy": before-hook-creation
   labels:
-    {{- include "base-chart.labels" $ | nindent 4 }}
-    app.kubernetes.io/component: {{ $name }}
+    {{- toYaml $labels | nindent 4 }}
 spec:
   replicas: {{ $spec.replicaCount | default 1 }}
   {{- if $.Values.revisionHistoryLimit }}
@@ -19,13 +19,13 @@ spec:
   {{- end }}
   selector:
     matchLabels:
-      {{- include "base-chart.selectorLabels" $ | nindent 6 }}
+      app.kubernetes.io/name: {{ index $labels "app.kubernetes.io/name" }}
+      app.kubernetes.io/instance: {{ $.Release.Name }}
       app.kubernetes.io/component: {{ $name }}
   template:
     metadata:
       labels:
-        {{- include "base-chart.labels" $ | nindent 8 }}
-        app.kubernetes.io/component: {{ $name }}
+        {{- toYaml $labels | nindent 8 }}
     spec:
       imagePullSecrets:
         {{- include "base-chart.imagePullSecrets" $ | nindent 8 }}

@@ -263,3 +263,25 @@ tests:
           path: spec.template.spec.nodeSelector
       - notExists:
           path: spec.template.spec.tolerations
+
+  - it: should not match the selector of the main service
+    release:
+      name: app
+    set:
+      extraDeployments:
+        worker:
+          enabled: true
+          command: ["echo"]
+    asserts:
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/name"]
+          value: base-chart-worker
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/instance"]
+          value: app
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/name"]
+          value: base-chart-worker
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/instance"]
+          value: app
