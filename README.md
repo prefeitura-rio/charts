@@ -39,7 +39,7 @@ devenv tasks run helm:test
 1. Fork and create a feature branch
 2. Make changes and ensure tests pass
 3. Update documentation
-4. Submit a pull request with a commit message starting with `<chart-name>:` to trigger a release
+4. Submit a pull request with a commit message starting with `<chart-name>:` (or `<type>(<chart-name>):`, e.g. `feat(base-chart): ...`) to trigger a release
 
 Follow [Helm best practices](https://helm.sh/docs/chart_best_practices/) and [SemVer](https://semver.org/) for versioning.
 

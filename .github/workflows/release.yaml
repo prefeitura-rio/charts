@@ -32,7 +32,7 @@ jobs:
           COMMIT_MSG=$(git log -1 --pretty=%s)
           echo "Commit: $COMMIT_MSG"
 
-          # Match "<chart-name>: ..." pattern
+          # Match "<chart-name>: ..." or "<type>(<chart-name>)!: ..." pattern
           if [[ "$COMMIT_MSG" =~ ^\[skip\ ci\] ]] || [[ "$COMMIT_MSG" =~ ^chore:\ bump ]]; then
             echo "Skipping CI commit"
             echo "skip=true" >> "$GITHUB_OUTPUT"
@@ -40,6 +40,12 @@ jobs:
           fi
 
           CHART_NAME=$(echo "$COMMIT_MSG" | grep -oP '^[a-z0-9_-]+(?=:)' || true)
+
+          # Conventional Commits with the chart as scope, e.g. a squash merge
+          # titled "feat(base-chart): add probes [OPS-12] (#40)"
+          if [ -z "$CHART_NAME" ]; then
+            CHART_NAME=$(echo "$COMMIT_MSG" | grep -oP '^[a-z]+\(\K[a-z0-9_-]+(?=\)!?:)' || true)
+          fi
 
           if [ -z "$CHART_NAME" ]; then
             echo "No chart name found in commit message — skipping"
