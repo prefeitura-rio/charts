@@ -16,7 +16,7 @@ consume them with a pinned version.
   dependencies, lints and unit-tests the charts the PR changes (all charts when
   the workflow itself changes).
 - `.github/workflows/release.yaml`: runs on push to `main` and publishes one
-  chart (see Releases).
+  chart (see Rules).
 - `devenv.nix`: the same checks as Nix tasks (`helm:lint`, `helm:test`), for
   people who use devenv.
 
