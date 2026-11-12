@@ -1,0 +1,103 @@
+name: Chart CI
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chart-ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  HELM_VERSION: "v3.19.0"
+  HELM_UNITTEST_VERSION: "1.1.0"
+
+jobs:
+  test:
+    name: helm lint and unittest
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          # The pull_request ref is a merge commit: its first parent is the
+          # base branch, so HEAD^1..HEAD is exactly what the PR changes.
+          fetch-depth: 2
+
+      - name: Find changed charts
+        id: charts
+        run: |
+          set -euo pipefail
+
+          # Resolve charts/<name> to its Chart.yaml directory. Some charts keep
+          # the application chart under a nested directory, e.g. charts/kodus/kodus/.
+          resolve() {
+            local name="$1" dir="charts/$1"
+            if [ ! -f "$dir/Chart.yaml" ] && [ -f "$dir/$name/Chart.yaml" ]; then
+              dir="$dir/$name"
+            fi
+            [ -f "$dir/Chart.yaml" ] || return 0
+            # Library charts cannot be linted or tested on their own.
+            if [ "$(awk '$1 == "type:" { print $2; exit }' "$dir/Chart.yaml")" = "library" ]; then
+              return 0
+            fi
+            printf '%s\n' "$dir"
+          }
+
+          CHANGED=$(git diff --name-only HEAD^1 HEAD)
+          echo "Changed files:"
+          printf '%s\n' "$CHANGED"
+
+          # A change to this workflow tests every chart.
+          if grep -qx '.github/workflows/pr.yaml' <<< "$CHANGED"; then
+            NAMES=$(find charts -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort)
+          else
+            NAMES=$(printf '%s\n' "$CHANGED" | sed -n 's#^charts/\([^/]*\)/.*#\1#p' | sort -u)
+          fi
+
+          DIRS=""
+          for name in $NAMES; do
+            DIRS="$DIRS $(resolve "$name")"
+          done
+          DIRS=$(echo $DIRS)
+
+          if [ -z "$DIRS" ]; then
+            echo "No chart changed — nothing to test"
+          else
+            echo "Charts to test: $DIRS"
+          fi
+          echo "dirs=$DIRS" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Helm
+        if: steps.charts.outputs.dirs != ''
+        uses: azure/setup-helm@v5
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Install helm-unittest
+        if: steps.charts.outputs.dirs != ''
+        run: |
+          mkdir -p "$(helm env HELM_PLUGINS)/helm-unittest"
+          curl -fsSL "https://github.com/helm-unittest/helm-unittest/releases/download/v${HELM_UNITTEST_VERSION}/helm-unittest-linux-amd64-${HELM_UNITTEST_VERSION}.tgz" \
+            | tar -xz -C "$(helm env HELM_PLUGINS)/helm-unittest"
+          helm plugin list
+
+      - name: Lint and test
+        if: steps.charts.outputs.dirs != ''
+        env:
+          DIRS: ${{ steps.charts.outputs.dirs }}
+        run: |
+          set -euo pipefail
+          for dir in $DIRS; do
+            echo "::group::$dir"
+            if grep -q "^dependencies:" "$dir/Chart.yaml"; then
+              helm dependency build "$dir"
+            fi
+            helm lint "$dir"
+            helm unittest "$dir"
+            echo "::endgroup::"
+          done
