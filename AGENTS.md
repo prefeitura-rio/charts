@@ -22,9 +22,9 @@ consume them with a pinned version.
 
 ## Checks
 
-Use Helm 3 (the PR workflow pins `v3.19.0`; the release workflow takes the
-latest Helm 3) and the helm-unittest plugin `1.1.0`, the version both workflows
-install:
+Use Helm `v3.19.0`, the version the PR workflow pins (the release workflow
+does not pin Helm and installs the latest release, currently Helm 4), and the
+helm-unittest plugin `1.1.0`, the version both workflows install:
 
 ```bash
 helm plugin install https://github.com/helm-unittest/helm-unittest --version v1.1.0
