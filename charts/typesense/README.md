@@ -30,6 +30,8 @@ With `apiKeySecret.name` set, `TYPESENSE_API_KEY` is read with
 (expanded by Kubernetes) and `apiKey` is ignored. Rendering fails if
 `apiKeySecret.name` is set and `apiKeySecret.key` is empty. Leaving
 `apiKeySecret.name` empty (the default) keeps the plain-text `apiKey` behavior.
+The Secret must exist before the pods start: if it or the key is missing, the
+pods stay in `CreateContainerConfigError`.
 
 | Value | Default | Description |
 | --- | --- | --- |

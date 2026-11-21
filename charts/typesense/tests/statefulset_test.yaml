@@ -136,16 +136,30 @@ tests:
       apiKey: test-literal-key
       apiKeySecret.name: typesense-api-key
     asserts:
-      - notMatchRegexRaw:
-          pattern: test-literal-key
-      - contains:
+      - equal:
           path: spec.template.spec.containers[0].env
-          content:
-            name: TYPESENSE_API_KEY
-            valueFrom:
-              secretKeyRef:
-                name: typesense-api-key
-                key: api-key
+          value:
+            - name: TYPESENSE_DATA_DIR
+              value: /data
+            - name: TYPESENSE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: typesense-api-key
+                  key: api-key
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value:
+            - --data-dir
+            - /data
+            - --api-key
+            - $(TYPESENSE_API_KEY)
+            - --listen-port
+            - "8108"
+            - --nodes
+            - /etc/typesense/nodes/nodes
+            - --reset-peers-on-error
+            - --healthy-read-lag
+            - "3600"
 
   - it: should keep the Secret reference with a single replica
     set:
