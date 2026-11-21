@@ -1,0 +1,69 @@
+{{- if .Values.canary.enabled }}
+{{- $webhooks := list }}
+{{- if and .Values.canary.analysis.loadTester .Values.canary.analysis.loadTester.enabled }}
+  {{- $duration := .Values.canary.analysis.loadTester.duration | default .Values.canary.analysis.interval | default "1m" }}
+  {{- $qps := .Values.canary.analysis.loadTester.qps | default 10 }}
+  {{- $conn := .Values.canary.analysis.loadTester.connections | default 2 }}
+  {{- $port := .Values.service.port | default 80 }}
+  {{- $path := .Values.canary.analysis.loadTester.path | default "" }}
+  {{- $host := printf "%s.%s.svc.cluster.local:%v%s" (include "base-chart.fullname" .) .Release.Namespace $port $path }}
+  {{- $cmd := printf "hey -z %s -q %v -c %v http://%s" $duration $qps $conn $host }}
+  {{- $loadTesterHook := dict "name" "load-test" "url" (.Values.canary.analysis.loadTester.url | default "http://flagger-loadtester.test/") "timeout" (.Values.canary.analysis.loadTester.timeout | default "5s") "metadata" (dict "type" "cmd" "cmd" $cmd) }}
+  {{- $webhooks = append $webhooks $loadTesterHook }}
+{{- end }}
+{{- if .Values.canary.analysis.webhooks }}
+  {{- $webhooks = concat $webhooks .Values.canary.analysis.webhooks }}
+{{- end }}
+apiVersion: flagger.app/v1beta1
+kind: Canary
+metadata:
+  name: {{ include "base-chart.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "base-chart.labels" . | nindent 4 }}
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "base-chart.fullname" . }}
+  {{- if .Values.autoscaling.enabled }}
+  autoscalerRef:
+    apiVersion: {{ if .Values.autoscaling.keda.enabled }}keda.sh/v1alpha1{{ else }}autoscaling/v2{{ end }}
+    kind: {{ if .Values.autoscaling.keda.enabled }}ScaledObject{{ else }}HorizontalPodAutoscaler{{ end }}
+    name: {{ include "base-chart.fullname" . }}
+  {{- end }}
+  service:
+    port: {{ .Values.service.port }}
+    targetPort: {{ .Values.service.containerPort }}
+    gateways:
+      {{- toYaml .Values.canary.service.gateways | nindent 6 }}
+    {{- if .Values.canary.service.hosts }}
+    hosts:
+      {{- toYaml .Values.canary.service.hosts | nindent 6 }}
+    {{- end }}
+    {{- if .Values.istio.virtualService.pathBasedRouting.enabled }}
+    match:
+      - uri:
+          prefix: "/{{ .Values.istio.virtualService.pathBasedRouting.servicePath | default (include "base-chart.name" .) }}/"
+    rewrite:
+      uri: "/"
+    {{- end }}
+  analysis:
+    interval: {{ .Values.canary.analysis.interval | default "30s" }}
+    threshold: {{ .Values.canary.analysis.threshold | default 5 }}
+    maxWeight: {{ .Values.canary.analysis.maxWeight | default 50 }}
+    stepWeight: {{ .Values.canary.analysis.stepWeight | default 10 }}
+    metrics:
+      - name: request-success-rate
+        thresholdRange:
+          min: {{ .Values.canary.analysis.metrics.minSuccessRate | default 99 }}
+        interval: 2m
+      - name: request-duration
+        thresholdRange:
+          max: {{ .Values.canary.analysis.metrics.maxDurationMs | default 500 }}
+        interval: 2m
+    {{- if $webhooks }}
+    webhooks:
+      {{- toYaml $webhooks | nindent 6 }}
+    {{- end }}
+{{- end }}

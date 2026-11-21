@@ -284,27 +284,54 @@ tests:
         hasDocuments:
           count: 0
 
-  - it: "scenario: canary deployment setup"
+  - it: "scenario: flagger canary deployment with routing"
     templates:
+      - deployment.yaml
+      - service.yaml
+      - canary.yaml
       - virtualservice.yaml
+    release:
+      name: myapp
+      namespace: prod
     set:
+      service:
+        port: 80
+        containerPort: 8080
+      canary:
+        enabled: true
+        service:
+          gateways:
+            - mesh
+            - istio-system/public-gateway
+          hosts:
+            - app.example.com
       istio:
         virtualService:
-          hosts:
-            - api.example.com
           pathBasedRouting:
             enabled: true
-            servicePath: api
-          canary:
-            enabled: true
-            weight: 10
+            servicePath: my-service
     asserts:
-      - equal:
-          path: spec.http[0].route[0].weight
-          value: 90
-      - equal:
-          path: spec.http[0].route[1].weight
-          value: 10
-      - matchRegex:
-          path: spec.http[0].route[1].destination.host
-          pattern: ".*-canary"
+      - template: canary.yaml
+        isKind:
+          of: Canary
+      - template: canary.yaml
+        equal:
+          path: spec.service.port
+          value: 80
+      - template: canary.yaml
+        equal:
+          path: spec.service.targetPort
+          value: 8080
+      - template: canary.yaml
+        equal:
+          path: spec.service.hosts
+          value:
+            - app.example.com
+      - template: canary.yaml
+        equal:
+          path: spec.service.match[0].uri.prefix
+          value: "/my-service/"
+      - template: virtualservice.yaml
+        hasDocuments:
+          count: 0
+

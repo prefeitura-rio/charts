@@ -1,0 +1,220 @@
+suite: Test Flagger Canary Deployment
+templates:
+  - canary.yaml
+
+tests:
+  - it: should not render when canary is disabled
+    set:
+      canary.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render basic Canary resource with defaults
+    set:
+      canary.enabled: true
+      service.port: 80
+      service.containerPort: 8080
+      canary.service.gateways:
+        - mesh
+        - istio-system/public-gateway
+    asserts:
+      - isKind:
+          of: Canary
+      - equal:
+          path: apiVersion
+          value: flagger.app/v1beta1
+      - equal:
+          path: spec.targetRef.kind
+          value: Deployment
+      - equal:
+          path: spec.service.port
+          value: 80
+      - equal:
+          path: spec.service.targetPort
+          value: 8080
+      - equal:
+          path: spec.service.gateways
+          value:
+            - mesh
+            - istio-system/public-gateway
+      - equal:
+          path: spec.analysis.interval
+          value: "1m"
+      - equal:
+          path: spec.analysis.threshold
+          value: 5
+      - equal:
+          path: spec.analysis.maxWeight
+          value: 50
+      - equal:
+          path: spec.analysis.stepWeight
+          value: 10
+      - equal:
+          path: spec.analysis.metrics[0].thresholdRange.min
+          value: 99
+      - equal:
+          path: spec.analysis.metrics[1].thresholdRange.max
+          value: 500
+
+  - it: should render standard HPA autoscalerRef when autoscaling is enabled
+    set:
+      canary.enabled: true
+      service.port: 80
+      service.containerPort: 8080
+      canary.service.gateways: ["mesh"]
+      autoscaling.enabled: true
+      autoscaling.keda.enabled: false
+    asserts:
+      - equal:
+          path: spec.autoscalerRef.apiVersion
+          value: autoscaling/v2
+      - equal:
+          path: spec.autoscalerRef.kind
+          value: HorizontalPodAutoscaler
+
+  - it: should render KEDA ScaledObject autoscalerRef when keda is enabled
+    set:
+      canary.enabled: true
+      service.port: 80
+      service.containerPort: 8080
+      canary.service.gateways: ["mesh"]
+      autoscaling.enabled: true
+      autoscaling.keda.enabled: true
+    asserts:
+      - equal:
+          path: spec.autoscalerRef.apiVersion
+          value: keda.sh/v1alpha1
+      - equal:
+          path: spec.autoscalerRef.kind
+          value: ScaledObject
+
+  - it: should render custom hosts and path-based routing
+    set:
+      canary.enabled: true
+      service.port: 80
+      service.containerPort: 8080
+      canary.service.gateways: ["mesh"]
+      canary.service.hosts:
+        - "app.example.com"
+      istio.virtualService.pathBasedRouting.enabled: true
+      istio.virtualService.pathBasedRouting.servicePath: "my-service"
+    asserts:
+      - equal:
+          path: spec.service.hosts
+          value:
+            - "app.example.com"
+      - equal:
+          path: spec.service.match[0].uri.prefix
+          value: "/my-service/"
+      - equal:
+          path: spec.service.rewrite.uri
+          value: "/"
+
+  - it: should render custom analysis thresholds and metrics
+    set:
+      canary.enabled: true
+      service.port: 80
+      service.containerPort: 8080
+      canary.service.gateways: ["mesh"]
+      canary.analysis.interval: "15s"
+      canary.analysis.threshold: 10
+      canary.analysis.maxWeight: 30
+      canary.analysis.stepWeight: 5
+      canary.analysis.metrics.minSuccessRate: 95
+      canary.analysis.metrics.maxDurationMs: 300
+    asserts:
+      - equal:
+          path: spec.analysis.interval
+          value: "15s"
+      - equal:
+          path: spec.analysis.threshold
+          value: 10
+      - equal:
+          path: spec.analysis.maxWeight
+          value: 30
+      - equal:
+          path: spec.analysis.stepWeight
+          value: 5
+      - equal:
+          path: spec.analysis.metrics[0].thresholdRange.min
+          value: 95
+      - equal:
+          path: spec.analysis.metrics[1].thresholdRange.max
+          value: 300
+
+  - it: should generate load-test webhook with default settings
+    release:
+      name: my-release
+      namespace: prod
+    set:
+      canary.enabled: true
+      service.port: 8080
+      service.containerPort: 8080
+      canary.service.gateways: ["mesh"]
+      canary.analysis.loadTester.enabled: true
+    asserts:
+      - equal:
+          path: spec.analysis.webhooks[0].name
+          value: "load-test"
+      - equal:
+          path: spec.analysis.webhooks[0].url
+          value: "http://flagger-loadtester.test/"
+      - equal:
+          path: spec.analysis.webhooks[0].timeout
+          value: "5s"
+      - equal:
+          path: spec.analysis.webhooks[0].metadata.type
+          value: "cmd"
+      - matchRegex:
+          path: spec.analysis.webhooks[0].metadata.cmd
+          pattern: '^hey -z 1m -q 10 -c 2 http:\/\/.*\.prod\.svc\.cluster\.local:8080$'
+
+  - it: should generate load-test webhook with custom duration, qps, and path
+    release:
+      name: my-release
+      namespace: prod
+    set:
+      canary.enabled: true
+      service.port: 8080
+      service.containerPort: 8080
+      canary.service.gateways: ["mesh"]
+      canary.analysis.loadTester.enabled: true
+      canary.analysis.loadTester.duration: "2m"
+      canary.analysis.loadTester.qps: 25
+      canary.analysis.loadTester.connections: 5
+      canary.analysis.loadTester.path: "/health"
+      canary.analysis.loadTester.url: "http://custom-loadtester:8080/"
+      canary.analysis.loadTester.timeout: "10s"
+    asserts:
+      - equal:
+          path: spec.analysis.webhooks[0].url
+          value: "http://custom-loadtester:8080/"
+      - equal:
+          path: spec.analysis.webhooks[0].timeout
+          value: "10s"
+      - matchRegex:
+          path: spec.analysis.webhooks[0].metadata.cmd
+          pattern: '^hey -z 2m -q 25 -c 5 http:\/\/.*\.prod\.svc\.cluster\.local:8080\/health$'
+
+  - it: should combine load-test webhook with additional custom webhooks
+    set:
+      canary.enabled: true
+      service.port: 80
+      service.containerPort: 8080
+      canary.service.gateways: ["mesh"]
+      canary.analysis.loadTester.enabled: true
+      canary.analysis.webhooks:
+        - name: slack-alert
+          type: post-rollout
+          url: "https://hooks.slack.com/services/xxx"
+    asserts:
+      - equal:
+          path: spec.analysis.webhooks[0].name
+          value: "load-test"
+      - equal:
+          path: spec.analysis.webhooks[1].name
+          value: "slack-alert"
+      - equal:
+          path: spec.analysis.webhooks[1].type
+          value: "post-rollout"
