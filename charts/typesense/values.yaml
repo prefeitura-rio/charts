@@ -48,7 +48,17 @@ ingress:
       tlsSecret: typesense.local-tls
       annotations: {}
 
+# API key passed to Typesense in plain text (env TYPESENSE_API_KEY and --api-key).
+# Ignored when apiKeySecret.name is set.
 apiKey: "xyz"
+
+# Read the API key from an existing Secret instead of apiKey, so the key does not
+# appear in the StatefulSet or pod spec. The Secret is not created by this chart.
+apiKeySecret:
+  # Name of the Secret. Empty keeps the plain-text apiKey behavior.
+  name: ""
+  # Key inside the Secret that holds the API key.
+  key: api-key
 
 pdb:
   enabled: true
