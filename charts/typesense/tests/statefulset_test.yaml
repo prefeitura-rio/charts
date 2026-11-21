@@ -84,3 +84,103 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].resources.limits.memory
           value: 4Gi
+
+  - it: should pass the literal apiKey in env and args when apiKeySecret is not set
+    set:
+      apiKey: test-literal-key
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TYPESENSE_API_KEY
+            value: test-literal-key
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: test-literal-key
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          content: $(TYPESENSE_API_KEY)
+      - equal:
+          path: spec.template.spec.containers[0].args[3]
+          value: test-literal-key
+
+  - it: should read the api key from an existing Secret when apiKeySecret.name is set
+    set:
+      apiKey: test-literal-key
+      apiKeySecret:
+        name: typesense-api-key
+        key: token
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TYPESENSE_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: typesense-api-key
+                key: token
+      - equal:
+          path: spec.template.spec.containers[0].args[2]
+          value: --api-key
+      - equal:
+          path: spec.template.spec.containers[0].args[3]
+          value: $(TYPESENSE_API_KEY)
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          content: test-literal-key
+      - notExists:
+          path: spec.template.spec.containers[0].env[1].value
+
+  - it: should not render the literal apiKey anywhere in the container when apiKeySecret.name is set
+    set:
+      apiKey: test-literal-key
+      apiKeySecret.name: typesense-api-key
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].env
+          value:
+            - name: TYPESENSE_DATA_DIR
+              value: /data
+            - name: TYPESENSE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: typesense-api-key
+                  key: api-key
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value:
+            - --data-dir
+            - /data
+            - --api-key
+            - $(TYPESENSE_API_KEY)
+            - --listen-port
+            - "8108"
+            - --nodes
+            - /etc/typesense/nodes/nodes
+            - --reset-peers-on-error
+            - --healthy-read-lag
+            - "3600"
+
+  - it: should keep the Secret reference with a single replica
+    set:
+      replicas: 1
+      apiKeySecret.name: typesense-api-key
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value:
+            - --data-dir
+            - /data
+            - --api-key
+            - $(TYPESENSE_API_KEY)
+            - --listen-port
+            - "8108"
+
+  - it: should fail when apiKeySecret.name is set without apiKeySecret.key
+    set:
+      apiKeySecret:
+        name: typesense-api-key
+        key: ""
+    asserts:
+      - failedTemplate:
+          errorMessage: apiKeySecret.key is required when apiKeySecret.name is set

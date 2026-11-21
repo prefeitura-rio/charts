@@ -1,3 +1,4 @@
+{{- $apiKeySecret := .Values.apiKeySecret | default dict }}
 apiVersion: apps/v1
 kind: StatefulSet 
 metadata:
@@ -47,7 +48,14 @@ spec:
             - name: TYPESENSE_DATA_DIR
               value: {{ .Values.persistence.path }}
             - name: TYPESENSE_API_KEY
+              {{- if $apiKeySecret.name }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $apiKeySecret.name | quote }}
+                  key: {{ required "apiKeySecret.key is required when apiKeySecret.name is set" $apiKeySecret.key | quote }}
+              {{- else }}
               value: {{ .Values.apiKey }}
+              {{- end }}
             {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -60,7 +68,11 @@ spec:
             - --data-dir
             - /data
             - --api-key
+            {{- if $apiKeySecret.name }}
+            - "$(TYPESENSE_API_KEY)"
+            {{- else }}
             - {{ .Values.apiKey }}
+            {{- end }}
             - --listen-port
             - "{{ .Values.applicationPort }}"
             {{- if ne (toString .Values.replicas) "1" }}
